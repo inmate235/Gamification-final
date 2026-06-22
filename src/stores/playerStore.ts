@@ -86,11 +86,14 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
     })),
 
   spendTokens: (amount) => {
+    // Reject non-positive or non-integer amounts to prevent negative-spend
+    // token-increase exploits. Only a positive integer may be deducted.
+    if (!Number.isInteger(amount) || amount <= 0) return false;
     let success = false;
     set((state) => {
       if (state.tokens < amount) return state; // insufficient -> no-op
       success = true;
-      return { tokens: Math.max(0, state.tokens - Math.round(amount)) };
+      return { tokens: Math.max(0, state.tokens - amount) };
     });
     return success;
   },

@@ -106,3 +106,20 @@
 - `curl http://localhost:3000/mall` — shows "Redirecting" (defensive guard works without survey answers).
 - Design system tokens verified in compiled HTML: `#0a0a0f` background, `#d4af37` gold, `bezel-card`, `glow-gold`, `cubic-bezier(0.32,0.72,0,1)`, `ring-white/10`.
 - agent-browser could not launch (CDP `Target.createTarget` blocked); fell back to curl-based verification.
+
+### Feature: fix-spendtokens-negative
+
+**What was built:**
+- Fixed blocking scrutiny-review issue in `playerStore.spendTokens`: the action previously accepted negative amounts, which bypassed the `state.tokens < amount` insufficient-balance guard (e.g. `0 < -5` is false) and then computed `tokens - Math.round(-5)`, effectively *adding* tokens.
+- Added input validation at the top of `spendTokens`: if `amount` is not an integer or is `<= 0`, the action returns `false` immediately without mutating state. The deduction path now uses `amount` directly (already validated as a positive integer) instead of re-rounding.
+- Added 3 new test cases in `src/stores/__tests__/playerStore.test.ts`: rejects negative amounts (returns false, balance unchanged), rejects zero amounts, and rejects non-integer amounts (e.g. 3.5).
+
+**Key decisions:**
+- Chose to `return false` (rather than throw) for invalid input to match the existing `spendTokens` contract which already returns `false` for insufficient funds. This keeps callers' error handling uniform.
+- Validated with `Number.isInteger(amount)` to also reject `NaN`, `Infinity`, and fractional values in a single check, since `Number.isInteger` returns false for all of those.
+- Removed the now-redundant `Math.round(amount)` in the deduction path since `amount` is guaranteed to be an integer after validation.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 161/161 passing across 15 test files (3 new: negative rejection, zero rejection, non-integer rejection).

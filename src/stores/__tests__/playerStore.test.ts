@@ -51,6 +51,27 @@ describe("playerStore", () => {
     expect(usePlayerStore.getState().tokens).toBe(0);
   });
 
+  it("spendTokens rejects negative amounts and does not change the balance", () => {
+    usePlayerStore.getState().addTokens(10);
+    const ok = usePlayerStore.getState().spendTokens(-5);
+    expect(ok).toBe(false);
+    expect(usePlayerStore.getState().tokens).toBe(10);
+  });
+
+  it("spendTokens rejects zero amounts", () => {
+    usePlayerStore.getState().addTokens(10);
+    const ok = usePlayerStore.getState().spendTokens(0);
+    expect(ok).toBe(false);
+    expect(usePlayerStore.getState().tokens).toBe(10);
+  });
+
+  it("spendTokens rejects non-integer amounts", () => {
+    usePlayerStore.getState().addTokens(10);
+    const ok = usePlayerStore.getState().spendTokens(3.5);
+    expect(ok).toBe(false);
+    expect(usePlayerStore.getState().tokens).toBe(10);
+  });
+
   it("setTier updates the tier", () => {
     usePlayerStore.getState().setTier("gold");
     expect(usePlayerStore.getState().tier).toBe("gold");
