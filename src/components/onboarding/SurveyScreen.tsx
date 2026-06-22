@@ -14,6 +14,7 @@ import {
 } from "@/lib/bartle";
 import { classifyBartleType } from "@/lib/bartle";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 
 /**
  * SurveyScreen — the style profile survey at `/survey`.
@@ -73,6 +74,7 @@ export function SurveyScreen() {
 
   const setSurveyAnswers = usePlayerStore((s) => s.setSurveyAnswers);
   const setBartleType = usePlayerStore((s) => s.setBartleType);
+  const advanceToMall = useOnboardingStore((s) => s.advanceToMall);
 
   const totalQuestions = SURVEY_QUESTIONS.length;
   const currentQuestion = SURVEY_QUESTIONS[currentIndex];
@@ -108,6 +110,9 @@ export function SurveyScreen() {
           setSurveyAnswers(newAnswers);
           if (bartleType) setBartleType(bartleType);
 
+          // Mark onboarding complete so the /mall route guard allows entry.
+          advanceToMall();
+
           if (!navigatedRef.current) {
             navigatedRef.current = true;
             router.push("/mall");
@@ -127,6 +132,7 @@ export function SurveyScreen() {
       router,
       setBartleType,
       setSurveyAnswers,
+      advanceToMall,
     ]
   );
 

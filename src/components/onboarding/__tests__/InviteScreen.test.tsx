@@ -66,10 +66,12 @@ vi.mock("@/components/onboarding/ParticleField", () => ({
 }));
 
 import { InviteScreen } from "@/components/onboarding/InviteScreen";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 
 describe("InviteScreen", () => {
   beforeEach(() => {
     pushMock.mockClear();
+    useOnboardingStore.getState().reset();
   });
 
   it("renders invite code input and ENTER MALL button", () => {
@@ -189,5 +191,27 @@ describe("InviteScreen", () => {
       },
       { timeout: 5000 }
     );
+  });
+
+  it("advances the onboarding step to 'survey' on valid code submission", async () => {
+    const user = userEvent.setup();
+    render(<InviteScreen />);
+    const input = screen.getByLabelText("Invite code");
+    await user.type(input, "MURKY-2025-ABC");
+    const button = screen.getByRole("button", { name: /ENTER MALL/i });
+    await user.click(button);
+
+    // The step should advance immediately on submit (before the nav timer)
+    await waitFor(() => {
+      expect(useOnboardingStore.getState().onboardingStep).toBe("survey");
+    });
+  });
+
+  it("does NOT advance the onboarding step on invalid submission", async () => {
+    const user = userEvent.setup();
+    render(<InviteScreen />);
+    const button = screen.getByRole("button", { name: /ENTER MALL/i });
+    await user.click(button); // empty submission
+    expect(useOnboardingStore.getState().onboardingStep).toBe("invite");
   });
 });

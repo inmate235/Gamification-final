@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { ParticleField } from "./ParticleField";
+import { useOnboardingStore } from "@/stores/onboardingStore";
 
 /**
  * InviteScreen — the entry gate at `/`.
@@ -51,6 +52,7 @@ type Phase = "input" | "welcome";
 
 export function InviteScreen() {
   const router = useRouter();
+  const advanceToSurvey = useOnboardingStore((s) => s.advanceToSurvey);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("input");
@@ -86,12 +88,15 @@ export function InviteScreen() {
     setSubmitting(true);
     setPhase("welcome");
 
+    // Mark invite code validated so the /survey route guard allows entry.
+    advanceToSurvey();
+
     // Auto-advance to survey after the welcome animation completes.
     if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
     welcomeTimerRef.current = setTimeout(() => {
       router.push("/survey");
     }, 3200);
-  }, [code, submitting, validateCode, router]);
+  }, [code, submitting, validateCode, router, advanceToSurvey]);
 
   /* --- Input change handler --- */
 
@@ -120,6 +125,7 @@ export function InviteScreen() {
 
   const skipAnimation = useCallback(() => {
     if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
+    // Step is already advanced to 'survey' on submit; just navigate.
     router.push("/survey");
   }, [router]);
 

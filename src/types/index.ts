@@ -226,6 +226,25 @@ export interface SessionState {
 }
 
 /* ============================================================================
+   Onboarding
+   ========================================================================== */
+
+/**
+ * The forward-only onboarding flow step.
+ * - 'invite': user is at `/` and has not yet validated an invite code.
+ * - 'survey': invite code validated; user may be at `/survey` or beyond.
+ * - 'mall':   survey completed; user may be at `/mall`.
+ *
+ * The step only advances forward (invite -> survey -> mall) and is used by
+ * route guards to prevent bypassing onboarding via direct URL navigation.
+ */
+export type OnboardingStep = "invite" | "survey" | "mall";
+
+export interface OnboardingState {
+  onboardingStep: OnboardingStep;
+}
+
+/* ============================================================================
    UI
    ========================================================================== */
 

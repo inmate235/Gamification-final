@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Sparkle } from "@phosphor-icons/react/dist/ssr";
 import { usePlayerStore } from "@/stores/playerStore";
+import { OnboardingGuard } from "@/components/onboarding/OnboardingGuard";
 
 /**
  * Mall route `/mall` — defensive stub.
@@ -12,37 +11,20 @@ import { usePlayerStore } from "@/stores/playerStore";
  * The full mall experience (SVG map, fog-of-war, status bar, bottom panel) is
  * built in a subsequent feature. This stub ensures the onboarding forward flow
  * (/ -> /survey -> /mall) works end-to-end and provides a defensive guard: if
- * a user navigates directly to /mall without completing onboarding (no survey
- * answers), they are redirected back to /.
+ * a user navigates directly to /mall without completing onboarding (survey not
+ * done), the OnboardingGuard redirects them back to /.
  */
 
 export default function MallPage() {
-  const router = useRouter();
+  return (
+    <OnboardingGuard requiredStep="mall">
+      <MallStub />
+    </OnboardingGuard>
+  );
+}
+
+function MallStub() {
   const surveyAnswers = usePlayerStore((s) => s.surveyAnswers);
-  const hasCompletedOnboarding = Object.keys(surveyAnswers).length > 0;
-
-  // Defensive guard: redirect to / if onboarding not completed.
-  // This is an external-system sync (navigation), not a state-derive pattern.
-  useEffect(() => {
-    if (!hasCompletedOnboarding) {
-      router.replace("/");
-    }
-  }, [hasCompletedOnboarding, router]);
-
-  if (!hasCompletedOnboarding) {
-    return (
-      <main className="relative z-10 flex min-h-[100dvh] items-center justify-center px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-          className="text-sm text-[#a1a1aa]"
-        >
-          Redirecting to invite entry…
-        </motion.div>
-      </main>
-    );
-  }
 
   return (
     <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-6 py-16">
