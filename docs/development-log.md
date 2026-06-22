@@ -29,3 +29,33 @@
 - `npx vitest run` — 9/9 passing.
 - `npm run dev` — Ready on port 3000; `curl http://localhost:3000` returns 200 with rendered content, Geist font variable classes on `<html>`, and compiled CSS containing all design tokens (gold/amethyst/teal/bg/radial-gradient/noise).
 - agent-browser could not launch (environment blocks CDP `Target.createTarget`); fell back to curl-based HTML/CSS verification.
+
+### Feature: game-state-stores
+
+**What was built:**
+- All 7 Zustand stores with typed state and actions, plus initial state matching architecture.md:
+  - `playerStore` — tokens, tier, tierXP, streak (count/lastVisit/broken/recoveryWindow), bartleType, surveyAnswers, perks, trialPerks. Actions: addTokens, spendTokens (returns success bool, no negative balance), setTier, addTierXP, incrementStreak, breakStreak, activateRecovery, addPerk (routes trial perks to `trialPerks`, earned/gifted to `perks`), removePerk, expireTrialPerks, setBartleType, setSurveyAnswers, reset. Tier multipliers exported (Bronze 1x, Silver 1.5x, Gold 2x, Neodymium 3x) plus `applyTierMultiplier` helper.
+  - `mapStore` — zones, stores, fogState, playerPosition, explorationPercent. Actions: moveToZone (adjacency-enforced, no-op on current zone), revealZone (memory-based), updatePlayerPosition, setExplorationPercent, getVisibleStores, getZone, isAdjacent, reset. Exports the non-linear `calculateExploration` curve (first 50% of zones -> 0-40%, second 50% -> 40-50%, capped at 99% on full reveal to preserve perpetual-near-completion).
+  - `taskStore` — activeTasks (never empty), completedTasks, taskChain. Actions: completeTask (auto-generates next task, rejects time-gated completions before gate elapses), generateNextTask, getTimeGatedTasks, escalateTaskDifficulty, addTask, seedInitialTasks, reset. Task templates cover all 3 types (explore-zone, find-token, visit-stores) with chain escalation (reward + chainLevel, difficulty + floor(chainLevel/2)).
+  - `economyStore` — flashSales, spinningWheel, rewardDensity, deficitMultiplier. Actions: triggerFlashSale, removeFlashSale, makeWheelAvailable, spinWheel (cooldown-enforced), updateRewardDensity (hook->chase at 15 min), calculateDeficitPrice (balance + 2..3), setDeficitMultiplier, reset. Exports `calculateDeficitPrice` pure function and `WHEEL_COOLDOWN_MS` (3 min).
+  - `socialStore` — phantoms, leaderboard, proximityAlerts. Actions: movePhantoms, updateLeaderboard (includes player entry, contiguous 1-indexed ranks, sorted by tokenCount desc), triggerProximityAlert (correct pluralization), generatePhantomActivity, dismissProximityAlert, reset.
+  - `sessionStore` — sessionStart, sessionMinutes, exitAttempts, exitFrictionLayer, eventQueue. Actions: startSession, tick (updates sessionMinutes from elapsed), registerExitAttempt (caps at 3, layer mirrors attempts), resetExitAttempts, scheduleEvent, processEvents (returns due events, marks processed), clearProcessedEvents, reset.
+  - `uiStore` — activeOverlay, overlayData, bottomPanelExpanded. Actions: showOverlay, hideOverlay, toggleBottomPanel, setBottomPanelExpanded, reset.
+- Static data files:
+  - `src/data/mallData.ts` — 5 zones (Entrance, East Wing, West Wing, Central Plaza, Food Court) with SVG polygon points, centers, and the exact adjacency graph (Z1<->Z2, Z1<->Z3, Z2<->Z4, Z3<->Z4, Z4<->Z5). 10 stores distributed per spec (Z1:2, Z2:3, Z3:2, Z4:0, Z5:3) with category, position, icon, amplified visitor counts, and deal info. Helpers: getZoneById, getStoreById, areZonesAdjacent, storesByZone.
+  - `src/data/reviewData.ts` — deterministic fake 5-star reviews (mulberry32 PRNG seeded by store id) with 85% 5-star / 15% 4-star distribution, author names, avatar seeds, dates, category-appropriate text. No "sponsored"/"ad" disclosure labels.
+  - `src/data/phantomData.ts` — 8 phantom personas with names, tiers, token counts, zone positions, actions. Initial leaderboard with contiguous 1-indexed ranks. Helpers: getPhantomById, phantomJustAbove, samplePhantomAction.
+- `src/engine/EventScheduler.ts` — singleton game loop on a 1-second `setInterval` tick. Each tick: updates sessionMinutes, checks reward density hook->chase shift (fires `onRewardDensityShift`), recalculates deficit pricing, re-enables spinning wheel after cooldown (fires `onWheelAvailable`), moves phantoms every 5th tick, updates leaderboard every 10th tick, expires trial perks, and processes the scheduled event queue (fires `onProcessEvent` per due event). Exposes `getEventScheduler()` singleton accessor and `resetEventSchedulerSingleton()` for tests. `tick()` is public so tests can drive the loop deterministically without real timers.
+
+**Key decisions:**
+- `addPerk` routes by `perk.type`: trial perks go to `trialPerks` (so `expireTrialPerks` can filter them), earned/gifted go to `perks`. This matches the architecture's separation of active vs. endowment-effect perks.
+- `calculateExploration` caps at 99% on full reveal to preserve the perpetual-near-completion hook (Section 4.5.4 phantom progress). The non-linear curve is exported and unit-tested against the documented values (1/5->16%, 2/5->32%, 3/5->42%, 5/5->99%).
+- `spendTokens` returns a boolean and no-ops on insufficient balance rather than throwing, so callers can branch on success without try/catch. Balance is clamped at 0.
+- `completeTask` returns the completed `Task` (or null for unknown id / time-gate not elapsed) so callers can credit the reward and trigger celebrations from a single call.
+- EventScheduler reads `sessionMinutes` *after* calling `session.tick()` (not from a stale snapshot captured before the tick) so reward-density shifts fire on the correct tick.
+- Review disclosure test uses a word-boundary regex (`/\bad\b/`) rather than substring matching, so legitimate words like "advertised" don't false-positive.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 123/123 passing across 12 test files (playerStore 18, mapStore 15, taskStore 11, economyStore 11, socialStore 9, sessionStore 10, uiStore 6, mallData 15, phantomData 7, EventScheduler 12, utils 5, button 4).
