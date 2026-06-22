@@ -317,3 +317,38 @@ export function areZonesAdjacent(zoneA: string, zoneB: string): boolean {
   if (!a) return false;
   return a.adjacentZoneIds.includes(zoneB);
 }
+
+/**
+ * Returns the corridor path (as SVG coordinate points) the player avatar
+ * should trace when moving from `fromZoneId` to `toZoneId`.
+ *
+ * The path is: [fromCenter, corridorMidpoint, toCenter]. The midpoint sits
+ * on the corridor between the two zone centers so the avatar visibly follows
+ * the corridor rather than cutting a straight diagonal through walls.
+ */
+export function getCorridorPath(
+  fromZoneId: string,
+  toZoneId: string
+): { x: number; y: number }[] {
+  const from = getZoneById(fromZoneId);
+  const to = getZoneById(toZoneId);
+  if (!from || !to) {
+    return [from?.center ?? { x: 500, y: 1090 }, to?.center ?? { x: 500, y: 1090 }];
+  }
+  const mid = {
+    x: Math.round((from.center.x + to.center.x) / 2),
+    y: Math.round((from.center.y + to.center.y) / 2),
+  };
+  return [from.center, mid, to.center];
+}
+
+/* ============================================================================
+   Reward constants
+   ========================================================================== */
+
+/** Base token reward granted when a zone is first revealed (exploration). */
+export const EXPLORE_REWARD = 3;
+/** Bonus token granted on the player's very first move from the entrance. */
+export const FIRST_TOKEN_BONUS = 1;
+/** Large reward for reaching the furthest zone (Food Court secret token). */
+export const FOOD_COURT_SECRET_REWARD = 10;

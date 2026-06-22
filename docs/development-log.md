@@ -123,3 +123,36 @@
 - `npx tsc --noEmit` — clean (exit 0).
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 161/161 passing across 15 test files (3 new: negative rejection, zero rejection, non-integer rejection).
+
+## Milestone 2: Mall World (map/fog)
+
+### Feature: mall-map-and-navigation
+
+**What was built:**
+- Full `/mall` experience replacing the defensive stub: SVG-based 2D floor plan, fog-of-war, click-to-move navigation, store detail overlay, status bar, and bottom task panel.
+- `MallExperience` (`src/components/mall/MallExperience.tsx`) composes the persistent chrome (`StatusBar` top, `TaskPanel` bottom) with the `MallMap` and the overlay system (`StoreDetail`, `Celebration`). Starts/stops the `EventScheduler` game loop on mount/unmount.
+- `MallMap` (`src/components/mall/MallMap.tsx`): inline `<svg viewBox="0 0 1000 1200">` rendering the 5 zones as `<polygon>` elements in the documented spatial arrangement (Entrance bottom, East Wing right, West Wing left, Central Plaza center-upper, Food Court top). Dashed corridor `<line>`s connect adjacent zones. Radial gradient atmosphere, edge-glow SVG filter on revealed zone borders, and a per-zone reachability hint (pulsing gold overlay on adjacent moveable zones). Click-to-move handler enforces adjacency, blocks movement while the store-detail overlay is open, awards exploration tokens on first reveal, and triggers the first-token celebration on the initial move from the entrance.
+- `PlayerAvatar` (`src/components/mall/PlayerAvatar.tsx`): pulsing gold dot with a multi-ring glow (pulsing outer ring + mid glow + core + inner highlight). Animates along the corridor path (from-center → corridor midpoint → to-center) using Framer Motion keyframes with `cubic-bezier(0.32,0.72,0,1)`, not a straight diagonal. Visually distinct from store markers.
+- `FogOverlay` + `FogFilterDefs` (`src/components/mall/FogOverlay.tsx`): unexplored zones covered with a dark mist `<feTurbulence>` + `<feDisplacementMap>` SVG filter over a radial dark gradient, plus an extra darkening veil. `pointerEvents="none"` so clicks pass through to adjacent reachable zones. Fades out with the premium easing on reveal.
+- `ZoneLabel` (`src/components/mall/ZoneLabel.tsx`): canonical zone names shown ONLY on revealed zones (hidden while fogged).
+- `StoreMarker` (`src/components/mall/StoreMarker.tsx`): category-colored rounded-rect pins with a distinct Phosphor icon per category (fashion/tech/lifestyle/food/accessories). Rendered only within revealed zones. Tapping opens the store detail overlay.
+- `StatusBar` (`src/components/mall/StatusBar.tsx`): fixed top double-bezel glass pill showing token count (gold), tier badge (tier-colored with tier glow), streak counter (amethyst flame), and the non-linear exploration progress bar (teal gradient with glow). All values read reactively from `playerStore` / `mapStore`.
+- `TaskPanel` (`src/components/tasks/TaskPanel.tsx`): fixed bottom double-bezel panel, present and expandable/collapsible via `uiStore.toggleBottomPanel`. Placeholder content for the breadcrumb task system (built in a subsequent feature).
+- `StoreDetail` overlay (`src/components/overlays/StoreDetail.tsx`): glass overlay showing store name, category, amplified visitor count framed as "Shoppers now browsing", current deal info, and fake 5-star reviews (all ratings 4-5, author/avatar/date/text, NO disclosure labels). Dismissable via backdrop click, X button, or Escape. Aggregate star rating displayed.
+- `Celebration` overlay (`src/components/overlays/Celebration.tsx`): transient token-earned celebration with a particle burst and gold coin, auto-dismisses after 1.8s. Does not block map interaction.
+- `getCorridorPath` helper + reward constants (`EXPLORE_REWARD`, `FIRST_TOKEN_BONUS`, `FOOD_COURT_SECRET_REWARD`) added to `src/data/mallData.ts`.
+- `/mall` page updated to render `MallExperience` (wrapped in the existing `OnboardingGuard`).
+
+**Key decisions:**
+- The fog overlay is rendered above zones/stores/labels but with `pointerEvents="none"` so it visually obscures unexplored content without blocking clicks on adjacent reachable zones (per VAL-MAP-026).
+- Player avatar corridor animation uses Framer Motion keyframes derived from `getCorridorPath` (3 points: from-center, midpoint, to-center) with `times: [0, 0.5, 1]` so the avatar visibly follows the corridor rather than teleporting. The path is stored in state updated via `useEffect` (reading the previous zone from a ref) to comply with the React hooks lint rules (no setState in useMemo, no ref access during render).
+- Token rewards on zone reveal use the existing `applyTierMultiplier` so tier multipliers apply to exploration rewards. The first move from the entrance adds the `FIRST_TOKEN_BONUS` and shows a "+1 Token!" celebration (per Day 1 minute 2:00). The Food Court first reveal grants the large `FOOD_COURT_SECRET_REWARD` with a "Secret Token!" message.
+- The module-level `firstMoveDone` flag is session-only (intentionally not persisted) and reset between tests via `__resetFirstMoveFlag`.
+- CDP `Target.createTarget` is blocked in this environment (per AGENTS.md), so manual verification used curl: root route returns the invite screen with mystic-premium tokens, `/mall` returns 200 with the defensive guard placeholder (server-side onboarding step defaults to 'invite'), dev log shows no compile/render errors.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 211/211 passing across 24 test files (50 new tests: corridor helpers, MallMap SVG/fog/markers/navigation/celebration, StatusBar, TaskPanel, StoreDetail reviews/visitor-count/dismissal, Celebration auto-dismiss; mall-route-guard test updated for the new full-experience render).
+- `npm run dev` — Ready on port 3000; `curl http://localhost:3000` returns 200 with invite screen markers and compiled CSS containing gold `#d4af37`, background `#0a0a0f`, and `cubic-bezier(0.32,...)` tokens; `curl http://localhost:3000/mall` returns 200; dev log clean of errors.
+

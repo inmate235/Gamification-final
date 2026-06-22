@@ -56,15 +56,68 @@ vi.mock("framer-motion", () => {
       h1: mk("h1"),
       h2: mk("h2"),
       p: mk("p"),
+      g: mk("g"),
+      circle: mk("circle"),
+      polygon: mk("polygon"),
+      rect: mk("rect"),
+      line: mk("line"),
+      path: mk("path"),
+      foreignObject: mk("foreignObject"),
     },
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
   };
 });
 
+/* --- Mock @phosphor-icons so icons render as simple spans --- */
+vi.mock("@phosphor-icons/react/dist/ssr", () => {
+  const make = (name: string) => {
+    const Cmp = (props: { size?: number; weight?: string; color?: string }) =>
+      React.createElement("span", {
+        "data-icon": name,
+        "data-size": props.size,
+      });
+    Cmp.displayName = `Icon-${name}`;
+    return Cmp;
+  };
+  const names = [
+    "Coin",
+    "Fire",
+    "MapPin",
+    "X",
+    "Star",
+    "Users",
+    "Tag",
+    "CaretDown",
+    "ListChecks",
+    "Storefront",
+    "Hanger",
+    "DeviceMobileCamera",
+    "Cpu",
+    "Watch",
+    "Sunglasses",
+    "Lamp",
+    "House",
+    "Coffee",
+    "Fish",
+    "Hamburger",
+  ];
+  const obj: Record<string, ReturnType<typeof make>> = {};
+  for (const n of names) obj[n] = make(n);
+  return obj;
+});
+
+/* --- Mock the EventScheduler singleton so no real setInterval runs --- */
+vi.mock("@/engine/EventScheduler", () => ({
+  getEventScheduler: () => ({ start: vi.fn(), stop: vi.fn(), setHandlers: vi.fn() }),
+  resetEventSchedulerSingleton: vi.fn(),
+}));
+
 import MallPage from "@/app/mall/page";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useMapStore } from "@/stores/mapStore";
+import { useUIStore } from "@/stores/uiStore";
 
 describe("/mall route guard", () => {
   beforeEach(() => {
@@ -72,6 +125,8 @@ describe("/mall route guard", () => {
     replaceMock.mockClear();
     useOnboardingStore.getState().reset();
     usePlayerStore.getState().reset();
+    useMapStore.getState().reset();
+    useUIStore.getState().reset();
   });
 
   it("redirects to / when onboarding is not complete (step='invite')", async () => {
@@ -81,8 +136,8 @@ describe("/mall route guard", () => {
       expect(replaceMock).toHaveBeenCalledWith("/");
     });
 
-    // The mall content must NOT be rendered while redirecting
-    expect(screen.queryByText(/Welcome to the Mall/i)).not.toBeInTheDocument();
+    // The mall map must NOT be rendered while redirecting
+    expect(screen.queryByTestId("mall-map")).not.toBeInTheDocument();
     expect(screen.getByText(/Redirecting/i)).toBeInTheDocument();
   });
 
@@ -94,18 +149,19 @@ describe("/mall route guard", () => {
       expect(replaceMock).toHaveBeenCalledWith("/");
     });
 
-    expect(screen.queryByText(/Welcome to the Mall/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("mall-map")).not.toBeInTheDocument();
   });
 
-  it("renders the mall content when onboarding is complete (step='mall')", () => {
+  it("renders the mall experience when onboarding is complete (step='mall')", () => {
     useOnboardingStore.getState().advanceToMall();
-    // Provide survey answers so the stub shows a non-zero count
     usePlayerStore.getState().setSurveyAnswers({ q1: "a", q2: "b", q3: "c" });
 
     render(<MallPage />);
 
-    expect(screen.getByText(/Welcome to the Mall/i)).toBeInTheDocument();
-    expect(screen.getByText(/Onboarding complete/i)).toBeInTheDocument();
+    // The full mall experience is now rendered: status bar, map, bottom panel
+    expect(screen.getByTestId("mall-map")).toBeInTheDocument();
+    expect(screen.getByTestId("status-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("task-panel")).toBeInTheDocument();
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
@@ -114,7 +170,7 @@ describe("/mall route guard", () => {
     useOnboardingStore.getState().advanceToMall();
     render(<MallPage />);
 
-    expect(screen.getByText(/Welcome to the Mall/i)).toBeInTheDocument();
+    expect(screen.getByTestId("mall-map")).toBeInTheDocument();
     expect(useOnboardingStore.getState().onboardingStep).toBe("mall");
   });
 });
