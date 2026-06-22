@@ -59,3 +59,50 @@
 - `npx tsc --noEmit` — clean (exit 0).
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 123/123 passing across 12 test files (playerStore 18, mapStore 15, taskStore 11, economyStore 11, socialStore 9, sessionStore 10, uiStore 6, mallData 15, phantomData 7, EventScheduler 12, utils 5, button 4).
+
+### Feature: onboarding-invite-and-survey
+
+**What was built:**
+- Invite entry screen at `/` (`src/components/onboarding/InviteScreen.tsx`):
+  - Invite code input with format validation (`XXXX-XXXX-XXX` pattern). Empty submission blocked with inline error. Invalid code shows error state. Error clears on retype.
+  - "You've Been Chosen" welcome animation with 32-particle ParticleField (`src/components/onboarding/ParticleField.tsx`), pulsing gold glow ring, staggered text reveal, and "Tap to continue" hint. Uses Framer Motion AnimatePresence for phase transitions.
+  - Social proof display ("Invited by Sarah, Gold member") on both the input card and the welcome animation.
+  - Exclusivity/scarcity messaging ("Invite Only · Members Exclusive", "1,247 members · Limited spots remaining").
+  - ENTER MALL button with button-in-button trailing arrow icon (Mystic Premium pattern).
+  - Enter key submission supported. Idempotent rapid double-submission guard.
+  - Auto-advances to `/survey` after 3.2s welcome animation (or tap to skip).
+- Survey screen at `/survey` (`src/components/onboarding/SurveyScreen.tsx`):
+  - 3 questions: (1) style preference with 4 image-card options (gradient backgrounds + Phosphor icons), (2) social vs solo shopping (2 options), (3) deals vs discovery motivation (2 options).
+  - Auto-advance on selection (650ms delay for visual feedback before advancing). No explicit "Next" button.
+  - Visual selection feedback: gold ring + glow on selected option, animated check badge (spring animation).
+  - Progress dots (3 dots, current dot elongated with gold glow).
+  - Question transitions via Framer Motion AnimatePresence (slide + blur).
+  - No skip button — single forward flow.
+  - Idempotent rapid double-click guard.
+- Bartle type classification (`src/lib/bartle.ts`):
+  - Scoring system: each answer option contributes points to Bartle types (achiever, explorer, socializer, killer). Highest score wins, ties broken deterministically (achiever > explorer > socializer > killer).
+  - Classification is covert — never displayed to the user (verified by test: DOM text scan for type names returns no matches).
+  - All 4 types are reachable through different answer combinations (verified by test).
+  - Answers stored in `playerStore.surveyAnswers` as `Record<string, string>`. Bartle type stored in `playerStore.bartleType`.
+- Defensive mall stub at `/mall` (`src/app/mall/page.tsx`):
+  - Redirects to `/` if no survey answers (onboarding not completed). Shows "Redirecting to invite entry…" during redirect.
+  - Shows "Welcome to the Mall" placeholder with onboarding completion confirmation when survey answers exist.
+  - Bartle type is intentionally NOT displayed (covert classification per Section 6A).
+- Route wiring: `/` -> InviteScreen, `/survey` -> SurveyScreen, `/mall` -> MallPage stub.
+
+**Key decisions:**
+- Bartle scoring maps style preference to killer (bold), achiever (classic), explorer (trendy), socializer (cozy). Social question adds socializer/killer for friends, achiever/explorer for solo. Motivation question adds achiever/killer for deals, explorer/socializer for discovery. This ensures all 4 types are reachable.
+- Valid invite code format is ` /^[A-Z]{5}-\d{4}-[A-Z]{3}$/` — a mocked format that any matching code accepts (no backend to validate against).
+- ParticleField generates particles in `useEffect` (not `useMemo`) to satisfy React's purity rules (Math.random is impure during render). The `set-state-in-effect` lint rule is disabled for this one-time decorative initialization.
+- Mall page defensive guard uses `useEffect` for the `router.replace("/")` call (external system sync) and derives the redirecting state from `surveyAnswers` directly (no separate `redirecting` state to avoid `set-state-in-effect` lint violation).
+- Framer Motion mock in tests uses `vi.mock` with a lazy-evaluated factory (not `vi.hoisted`) because the factory needs `React` which isn't available at hoisting time. The factory creates `forwardRef` components that strip motion props and render plain DOM elements.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 158/158 passing across 15 test files (35 new: bartle 13, InviteScreen 10, SurveyScreen 12).
+- `curl http://localhost:3000` — invite page renders with "ENTER MALL", "Invite Only", "Invited by Sarah, Gold member", invite code input, double-bezel card, gold accents.
+- `curl http://localhost:3000/survey` — survey renders with "Style Profile", "Which style speaks to you?", 4 style options, 3 progress dots, "Question 1 of 3".
+- `curl http://localhost:3000/mall` — shows "Redirecting" (defensive guard works without survey answers).
+- Design system tokens verified in compiled HTML: `#0a0a0f` background, `#d4af37` gold, `bezel-card`, `glow-gold`, `cubic-bezier(0.32,0.72,0,1)`, `ring-white/10`.
+- agent-browser could not launch (CDP `Target.createTarget` blocked); fell back to curl-based verification.
