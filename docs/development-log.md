@@ -18,7 +18,7 @@
 - Placeholder home page at `/` rendering the Mystic Premium hero (double-bezel card, gold gradient headline, teal status pill).
 
 **Key decisions:**
-- `next lint` was removed in Next.js 16; switched the lint command to `npx eslint .` using `eslint-config-next` flat-config exports (`/core-web-vitals`, `/typescript`) imported directly into `eslint.config.mjs`. Updated `services.yaml` accordingly. The original FlatCompat approach hit a circular-structure bug in ESLint 9 + eslint-config-next 16.
+- The deprecated Next.js lint CLI was removed in Next.js 16; the lint script now runs `npx eslint .` using `eslint-config-next` flat-config exports (`/core-web-vitals`, `/typescript`) imported directly into `eslint.config.mjs`. Updated `services.yaml` accordingly. The original FlatCompat approach hit a circular-structure bug in ESLint 9 + eslint-config-next 16.
 - Tailwind 4 `@theme` block used for all design tokens so they generate utility classes (e.g. `bg-accent-gold`, `text-accent-teal`) and CSS variables simultaneously.
 - Noise overlay implemented as an inline SVG `feTurbulence` data-URI on `body::before` (fixed, `pointer-events-none`, `opacity: 0.03`) per design-system.md.
 - `noUncheckedIndexedAccess` left `false` to avoid friction with the map `fogState` record lookups planned for the next feature.
