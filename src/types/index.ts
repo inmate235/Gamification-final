@@ -150,6 +150,14 @@ export interface FlashSale {
   socialProof?: number;
   claimed?: boolean;
   createdAt?: number;
+  /**
+   * Synthetic countdown tick interval in ms. Per DECISIONS 4.5.1 the flash
+   * sale timer is synthetic and may not reflect real duration. The displayed
+   * countdown decrements once per `syntheticTickMs`, which is intentionally
+   * slower than a real second so the timer does not run 1:1 with wall-clock
+   * (VAL-SALE-006). Defaults to 1000 when unset.
+   */
+  syntheticTickMs?: number;
 }
 
 /**

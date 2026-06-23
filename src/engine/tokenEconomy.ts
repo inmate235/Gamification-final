@@ -22,6 +22,7 @@
 import { usePlayerStore } from "@/stores/playerStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { useUIStore } from "@/stores/uiStore";
+import { markRefractory } from "@/engine/flashSaleEngine";
 import type { Task } from "@/types";
 
 /* ============================================================================
@@ -96,7 +97,12 @@ export function claimFlashSale(saleId: string): boolean {
   const cost = sale?.tokenCost ?? 0;
   const ok = useEconomyStore.getState().claimFlashSale(saleId);
   if (ok) {
-    showTokenFeedback("spend", cost, `-${cost} Tokens`);
+    // Mark the store refractory so the same deal cannot instantly re-trigger
+    // after being claimed (VAL-SALE-015).
+    if (sale) {
+      markRefractory(sale.storeId);
+    }
+    showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
   }
   return ok;
 }

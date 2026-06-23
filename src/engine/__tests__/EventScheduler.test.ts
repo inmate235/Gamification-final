@@ -11,6 +11,7 @@ import { useSocialStore } from "@/stores/socialStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useMapStore } from "@/stores/mapStore";
+import { resetFlashSaleEngine } from "@/engine/flashSaleEngine";
 
 describe("EventScheduler", () => {
   let scheduler: EventScheduler;
@@ -24,6 +25,10 @@ describe("EventScheduler", () => {
     useSocialStore.getState().reset();
     useUIStore.getState().reset();
     useTaskStore.getState().reset();
+    resetFlashSaleEngine();
+    // Deterministic RNG so the proximity flash-sale check never spuriously
+    // triggers during scheduler unit tests.
+    vi.spyOn(Math, "random").mockReturnValue(0.999);
     resetEventSchedulerSingleton();
     scheduler = new EventScheduler();
   });
@@ -31,6 +36,7 @@ describe("EventScheduler", () => {
   afterEach(() => {
     scheduler.stop();
     resetEventSchedulerSingleton();
+    vi.restoreAllMocks();
   });
 
   it("is not running until start() is called", () => {

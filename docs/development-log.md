@@ -216,3 +216,37 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx vitest run` — 280/280 passing across 30 test files (30 new tests: taskGenerator target/reward/chain/time-gate/avoid, taskEngine completion-by-correct-action/tier-multiplier/time-gate/never-empty, TaskPanel cards/reward/expand-collapse/countdown, updated taskStore targetZone assertions).
 - `npm run dev` — Ready on port 3000; `curl /` and `curl /mall` → 200; no compile errors in dev log; design tokens (gold/amethyst/teal/bezel-card) present in compiled CSS.
 - agent-browser CDP `Target.createTarget` is blocked in this environment (per AGENTS.md); fell back to curl-based verification plus the React Testing Library component tests which render TaskPanel with real task data and assert description, reward, count, expand/collapse, and time-gate countdown rendering.
+
+### Feature: flash-sales
+
+**What was built:**
+- `src/engine/flashSaleEngine.ts` — the flash sale orchestrator implementing the proximity-triggered, synthetic-timer, personalized dark-pattern sale system:
+  - **Proximity triggering**: `proximityCandidateStores` gathers stores in the player's current zone plus adjacent *revealed* zones; `selectProximityStore` picks one near the player (VAL-SALE-001, -017).
+  - **Personalization**: `getPreferredCategory` maps the survey `style` answer to a store category (bold→tech, classic→fashion, trendy→accessories, cozy→food); the selected store prefers the user's category (VAL-SALE-009). `buildAndPushSale` sets `personalized=true` when matched and layers a category-flavored item description.
+  - **Synthetic timers**: sales carry `syntheticTickMs` (1400ms, slower than a real second) so the countdown does not run 1:1 with wall-clock (VAL-SALE-006).
+  - **Deficit-engineered cost**: `calculateDeficitPrice` (balance + 2..3) is frozen per sale so the deal is always just out of reach (VAL-SALE-008).
+  - **Social proof**: amplified `socialProof` number 12–71 with "people viewing this deal" label (VAL-SALE-010).
+  - **Refractory period**: a module-level registry (`markRefractory`/`isRefractory`) blocks a dismissed/claimed store from re-triggering for 45s (VAL-SALE-019).
+  - **Probability increases with time-in-mall**: `saleProbabilityForSession` rises linearly from 0.06 at minute 0 to a 0.22 cap (VAL-SALE-014). `triggerProximityFlashSale` rolls this chance each check.
+  - **Dismiss / expire**: `dismissFlashSale` (Maybe Later) removes the sale + refractories the store without charging; `expireFlashSale` removes the sale on natural timer expiry with no charge (VAL-SALE-012, -020).
+- `src/types/index.ts` — added `FlashSale.syntheticTickMs` for the synthetic countdown.
+- `src/engine/EventScheduler.ts` — the 1s game loop now runs a proximity flash-sale check every 2nd tick. When a sale triggers and no overlay is open, it surfaces the flash-sale overlay directly (VAL-SALE-018); otherwise the sale stays pending and the Deal Radar button surfaces it. Added `onFlashSaleTriggered` handler and `resetFlashSaleEngine` on teardown.
+- `src/components/overlays/FlashSale.tsx` — reworked overlay:
+  - Shows store name + category, discount, item description, synthetic countdown, token cost, and social proof.
+  - Countdown uses `sale.syntheticTickMs` and pauses while the claimed state shows.
+  - "Maybe Later" / X / Escape / backdrop dismiss via `dismissFlashSale` (no charge + refractory).
+  - "Grab Deal" deducts tokens via `claimFlashSale` and shows an inline "Deal Claimed!" state before the spend celebration takes over (VAL-SALE-015).
+  - `FlashSaleEntryButton` is now proximity-driven: it surfaces *pending* sales (with a count badge) rather than manually spawning random sales.
+- `src/engine/tokenEconomy.ts` — `claimFlashSale` now marks the claimed store refractory and shows a "Deal Claimed! -N Tokens" spend confirmation.
+
+**Key decisions:**
+- Refractory state lives in the engine module (session-only) rather than bloating `economyStore`; it is exposed via accessors and reset on scheduler teardown / tests.
+- Personalization reuses the existing survey `style` question (no new survey field needed); the four aesthetics map deterministically to the five store categories.
+- The synthetic timer is implemented as a slower tick interval rather than a wall-clock-inaccurate label, which both satisfies the "may not reflect real duration" requirement and keeps the countdown visually decrementing.
+- Browser automation remained blocked (CDP `Target.createTarget`), so verification used the curl fallback: `/` and `/mall` return 200 with no compile/runtime errors in the dev log, plus the full unit/component suite.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 337/337 passing (19 new flashSaleEngine tests, 9 FlashSale overlay tests, 12 EventScheduler tests, plus all prior suites).
+- `npm run dev` — Ready on port 3000; `curl /` and `curl /mall` return 200; dev log clean of errors/warnings.
