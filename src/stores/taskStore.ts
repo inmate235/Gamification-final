@@ -7,103 +7,18 @@
  *
  * The task list is NEVER empty: completing a task immediately auto-generates
  * a new one with an escalated chain level and slightly larger reward.
+ * Generation is delegated to `engine/taskGenerator` so every task references
+ * a real map location (zone id, and store ids for visit-stores tasks).
  */
 
 import { create } from "zustand";
-import type { Task, TaskState, TaskType } from "@/types";
-import { zones } from "@/data/mallData";
-
-/* ============================================================================
-   Task pool / templates
-   ========================================================================== */
-
-interface TaskTemplate {
-  type: TaskType;
-  description: string;
-  baseReward: number;
-  difficulty: number;
-}
-
-const TASK_TEMPLATES: TaskTemplate[] = [
-  {
-    type: "explore-zone",
-    description: "Explore the {zoneName}",
-    baseReward: 3,
-    difficulty: 1,
-  },
-  {
-    type: "find-token",
-    description: "Find a hidden token in the {zoneName}",
-    baseReward: 4,
-    difficulty: 2,
-  },
-  {
-    type: "visit-stores",
-    description: "Visit {count} stores in the {zoneName}",
-    baseReward: 5,
-    difficulty: 3,
-  },
-  {
-    type: "explore-zone",
-    description: "Discover a new wing of the mall",
-    baseReward: 4,
-    difficulty: 2,
-  },
-  {
-    type: "find-token",
-    description: "Collect the secret token at the Food Court",
-    baseReward: 10,
-    difficulty: 4,
-  },
-];
-
-const TIME_GATE_MS = 15 * 60 * 1000; // 15 minutes
-
-/* ============================================================================
-   Helpers
-   ========================================================================== */
-
-let taskCounter = 0;
-
-function nextTaskId(): string {
-  taskCounter += 1;
-  return `task-${taskCounter}`;
-}
-
-function pickZoneName(rng: () => number = Math.random): string {
-  const zone = zones[Math.floor(rng() * zones.length)];
-  return zone?.name ?? "Entrance";
-}
-
-function renderTemplate(
-  template: TaskTemplate,
-  chainLevel: number,
-  rng: () => number = Math.random
-): Task {
-  const zoneName = pickZoneName(rng);
-  const description = template.description
-    .replace("{zoneName}", zoneName)
-    .replace("{count}", String(2 + (chainLevel % 3)));
-  const reward = template.baseReward + chainLevel;
-  const difficulty = template.difficulty + Math.floor(chainLevel / 2);
-  const timeGated = chainLevel > 0 && rng() < 0.3; // ~30% time-gated after first
-  const now = Date.now();
-  return {
-    id: nextTaskId(),
-    type: template.type,
-    description,
-    reward,
-    timeGated,
-    gateUntil: timeGated ? now + TIME_GATE_MS : undefined,
-    difficulty,
-    chainLevel,
-  };
-}
-
-function pickTemplate(rng: () => number = Math.random): TaskTemplate {
-  const t = TASK_TEMPLATES[Math.floor(rng() * TASK_TEMPLATES.length)];
-  return t ?? TASK_TEMPLATES[0]!;
-}
+import type { Task, TaskState } from "@/types";
+import {
+  generateTask,
+  generateInitialTasks,
+  __resetTaskIdCounter,
+} from "@/engine/taskGenerator";
+import { useMapStore } from "./mapStore";
 
 /* ============================================================================
    Store
@@ -119,17 +34,14 @@ export interface TaskStore extends TaskState {
   reset: () => void;
 }
 
+/** Current set of revealed zone ids (used to keep find-token tasks solvable). */
+function revealedZoneIds(): Set<string> {
+  const fog = useMapStore.getState().fogState;
+  return new Set(Object.keys(fog).filter((id) => fog[id]));
+}
+
 function buildInitialTasks(): Task[] {
-  // Seed 2-3 initial tasks at chain level 0 so the panel is never empty.
-  const seeded: Task[] = [];
-  const seenTypes = new Set<TaskType>();
-  for (const template of TASK_TEMPLATES) {
-    if (seenTypes.has(template.type)) continue;
-    if (seeded.length >= 2) break;
-    seeded.push(renderTemplate(template, 0));
-    seenTypes.add(template.type);
-  }
-  return seeded;
+  return generateInitialTasks(revealedZoneIds());
 }
 
 const initialTasks = buildInitialTasks();
@@ -173,8 +85,18 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   generateNextTask: (chainLevel) => {
     const nextChain = chainLevel ?? get().taskChain + 1;
-    const template = pickTemplate();
-    return renderTemplate(template, nextChain);
+    // Avoid instantly regenerating the same task type+zone as the most
+    // recently completed task (VAL-TASK-019).
+    const last =
+      get().completedTasks[get().completedTasks.length - 1] ?? null;
+    return generateTask({
+      chainLevel: nextChain,
+      revealedZoneIds: revealedZoneIds(),
+      avoid:
+        last && last.targetZone
+          ? { type: last.type, targetZone: last.targetZone }
+          : undefined,
+    });
   },
 
   getTimeGatedTasks: () =>
@@ -194,12 +116,14 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set({ activeTasks: buildInitialTasks() });
   },
 
-  reset: () =>
+  reset: () => {
+    __resetTaskIdCounter();
     set({
       activeTasks: buildInitialTasks(),
       completedTasks: [],
       taskChain: 0,
-    }),
+    });
+  },
 }));
 
 export default useTaskStore;

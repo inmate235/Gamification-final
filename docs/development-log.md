@@ -192,3 +192,27 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx vitest run` — 253/253 passing across 28 test files (44 new tests: playerStore.awardTokens tier multipliers, economyStore shortcuts/deficit/flash-sale spending, mapStore shortcut adjacency, engine tokenEconomy earn/spend/tier/feedback, Celebration earn-vs-spend, ShortcutUnlock overlay, FlashSale overlay; mall-route-guard icon mock updated for new Phosphor icons).
 - `npm run build` — Compiled successfully; all routes prerendered.
 - `npm run dev` — Ready on port 3000; `curl http://localhost:3000` → 200; new component testids present in client chunks.
+
+## Milestone 3: Economy & Engagement — Breadcrumb Task System
+
+### Feature: breadcrumb-tasks
+
+**What was built:**
+- `src/engine/taskGenerator.ts` — canonical breadcrumb task auto-generation. Pure `generateTask()` produces tasks that reference REAL map locations: every task carries a `targetZone` (a real zone id from mallData), and `visit-stores` tasks carry `targetStores` (real store ids within that zone). Four weighted templates cover all three task types (explore-zone, find-token, visit-stores) plus a premium Food Court secret-token variant. Chain escalation: `reward = baseReward + chainLevel`, `difficulty = base + floor(chainLevel/2)`. Time-gating: ~30% of tasks after chain level 0 carry a 15-minute `gateUntil`. Best-effort avoidance of regenerating the just-completed task's exact type+zone (VAL-TASK-019). `generateInitialTasks()` seeds 2-3 varied, never-gated tasks at chain level 0 so the panel is never empty on first load.
+- `src/engine/taskEngine.ts` — orchestrates completion by the CORRECT action only (VAL-TASK-018): `onPlayerEnterZone` completes explore-zone tasks whose targetZone matches; `onZoneRevealed` completes find-token tasks whose targetZone matches (token found on first fog clear); `onStoreVisited` records the visit in mapStore and completes visit-stores tasks once all target stores are visited. Each completion calls `taskStore.completeTask` (auto-generates a new escalated task — VAL-TASK-002/008/009) then `awardTaskReward` (tier-multiplied reward + celebration — VAL-TASK-014/015/021). Time-gated tasks are rejected before the gate elapses (VAL-TASK-010).
+- `src/stores/taskStore.ts` — refactored to delegate generation to `taskGenerator`; `generateNextTask` reads current revealed zones (so find-token targets stay solvable) and avoids the last completed task; `reset` re-seeds and resets the id counter.
+- `src/stores/mapStore.ts` + `src/types/index.ts` — added `visitedStores: string[]` and a `visitStore(storeId)` action to track which stores the player has opened (for visit-stores tasks).
+- `src/components/tasks/TaskPanel.tsx` — full rewrite replacing the placeholder. Double-bezel expandable/collapsible bottom panel (toggle via `uiStore.toggleBottomPanel`). Renders the active task list (2-4 at once) as cards, each showing a type-colored icon (Compass/teal, Coin/gold, Storefront/amethyst), the human-readable description referencing a real zone, the token reward (+N, gold), and a live 15-min countdown for time-gated tasks (VAL-TASK-011). Task count badge in the handle. Framer Motion layout animations with `cubic-bezier(0.32,0.72,0,1)`.
+- `src/components/mall/MallMap.tsx` — wired the task engine into navigation: on zone entry `onPlayerEnterZone` runs (explore-zone), on first fog reveal `onZoneRevealed` runs (find-token), on store-marker click `onStoreVisited` runs (visit-stores). Task-completion celebrations are sequenced 700ms after the exploration celebration so both feedbacks are visible.
+
+**Key decisions:**
+- Task completion is driven by real player actions (zone entry, fog reveal, store open), not arbitrary clicks — satisfying VAL-TASK-018. `find-token` completes on first reveal (token found there) while `explore-zone` completes on any entry, giving a real behavioral distinction.
+- Generation prefers unrevealed zones for `find-token` so the task is always solvable (the token is found on first reveal).
+- The `awardTaskReward` path applies the tier multiplier (1x/1.5x/2x/3x) and shows the earn celebration, reusing the existing token-economy single-balance flow (VAL-TOKEN-019).
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — 0 errors.
+- `npx vitest run` — 280/280 passing across 30 test files (30 new tests: taskGenerator target/reward/chain/time-gate/avoid, taskEngine completion-by-correct-action/tier-multiplier/time-gate/never-empty, TaskPanel cards/reward/expand-collapse/countdown, updated taskStore targetZone assertions).
+- `npm run dev` — Ready on port 3000; `curl /` and `curl /mall` → 200; no compile errors in dev log; design tokens (gold/amethyst/teal/bezel-card) present in compiled CSS.
+- agent-browser CDP `Target.createTarget` is blocked in this environment (per AGENTS.md); fell back to curl-based verification plus the React Testing Library component tests which render TaskPanel with real task data and assert description, reward, count, expand/collapse, and time-gate countdown rendering.

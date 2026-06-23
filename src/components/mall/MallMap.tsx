@@ -13,6 +13,7 @@ import {
   ZONE_FOOD_COURT,
   getZoneById,
 } from "@/data/mallData";
+import { onPlayerEnterZone, onZoneRevealed, onStoreVisited } from "@/engine/taskEngine";
 import type { Store, Zone } from "@/types";
 import { FogFilterDefs, FogOverlay } from "./FogOverlay";
 import { ZoneLabel } from "./ZoneLabel";
@@ -113,15 +114,28 @@ export function MallMap() {
             kind: "earn",
           });
         }
-      } else if (isFirstMove) {
-        // First move into an already-revealed zone still finds the first token.
-        addTokens(FIRST_TOKEN_BONUS);
-        showOverlay("celebration", {
-          message: `+${FIRST_TOKEN_BONUS} Token!`,
-          amount: FIRST_TOKEN_BONUS,
-          kind: "earn",
-        });
-        firstMoveDone = true;
+        // Breadcrumb task checks: a token was found on reveal (find-token)
+        // and the player entered the zone (explore-zone). Delayed slightly so
+        // the exploration celebration is visible before any task celebration.
+        window.setTimeout(() => {
+          onZoneRevealed(zone.id);
+          onPlayerEnterZone(zone.id);
+        }, 700);
+      } else {
+        if (isFirstMove) {
+          // First move into an already-revealed zone still finds the first token.
+          addTokens(FIRST_TOKEN_BONUS);
+          showOverlay("celebration", {
+            message: `+${FIRST_TOKEN_BONUS} Token!`,
+            amount: FIRST_TOKEN_BONUS,
+            kind: "earn",
+          });
+          firstMoveDone = true;
+          window.setTimeout(() => onPlayerEnterZone(zone.id), 700);
+        } else {
+          // Already-revealed zone: only explore-zone tasks can complete here.
+          onPlayerEnterZone(zone.id);
+        }
       }
     },
     [
@@ -139,6 +153,10 @@ export function MallMap() {
   /* --- Store marker click --- */
   const handleStoreClick = useCallback(
     (store: Store) => {
+      // Opening a store counts as "visiting" it for visit-stores tasks.
+      // onStoreVisited records the visit and completes any task whose target
+      // stores have all been visited (showing a celebration on completion).
+      onStoreVisited(store.id);
       showOverlay("store-detail", store);
     },
     [showOverlay]

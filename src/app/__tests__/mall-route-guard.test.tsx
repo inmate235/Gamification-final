@@ -90,6 +90,7 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     "Tag",
     "CaretDown",
     "ListChecks",
+    "Compass",
     "Storefront",
     "Hanger",
     "DeviceMobileCamera",

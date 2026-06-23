@@ -101,6 +101,8 @@ export interface MapState {
   playerPosition: PlayerPosition;
   fogState: FogState;
   explorationPercent: number;
+  /** Store ids the player has opened (visited) this session. */
+  visitedStores: string[];
 }
 
 /* ============================================================================

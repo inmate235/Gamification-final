@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useTaskStore } from "@/stores/taskStore";
+import { useMapStore } from "@/stores/mapStore";
 
 describe("taskStore", () => {
   beforeEach(() => {
+    useMapStore.getState().reset();
     useTaskStore.getState().reset();
   });
 
-  it("initializes with at least one active task", () => {
-    expect(useTaskStore.getState().activeTasks.length).toBeGreaterThanOrEqual(1);
+  it("initializes with at least two active tasks", () => {
+    expect(useTaskStore.getState().activeTasks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("initial tasks reference real zone ids via targetZone", () => {
+    const zones = useMapStore.getState().zones.map((z) => z.id);
+    for (const t of useTaskStore.getState().activeTasks) {
+      expect(t.targetZone).toBeDefined();
+      expect(zones).toContain(t.targetZone);
+    }
   });
 
   it("starts with chain level 0 and empty completedTasks", () => {

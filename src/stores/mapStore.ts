@@ -66,6 +66,8 @@ export interface MapStore extends MapState {
   getVisibleStores: () => Store[];
   getZone: (zoneId: string) => Zone | undefined;
   isAdjacent: (fromZoneId: string, toZoneId: string) => boolean;
+  /** Record that the player opened a store (for visit-stores tasks). */
+  visitStore: (storeId: string) => void;
   reset: () => void;
 }
 
@@ -94,6 +96,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
   playerPosition: { ...initialPlayerPosition },
   fogState: { ...initialFogState },
   explorationPercent: initialExploration,
+  visitedStores: [],
 
   moveToZone: (zoneId) => {
     const state = get();
@@ -158,6 +161,13 @@ export const useMapStore = create<MapStore>((set, get) => ({
     );
   },
 
+  visitStore: (storeId) =>
+    set((state) =>
+      state.visitedStores.includes(storeId)
+        ? state
+        : { visitedStores: [...state.visitedStores, storeId] }
+    ),
+
   reset: () =>
     set({
       zones: initialZones.map((z) => ({ ...z })),
@@ -165,6 +175,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
       playerPosition: { ...initialPlayerPosition },
       fogState: { ...initialFogState },
       explorationPercent: initialExploration,
+      visitedStores: [],
     }),
 }));
 
