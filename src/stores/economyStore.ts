@@ -19,7 +19,9 @@ import { shortcuts as shortcutSeed, unlockedShortcutEdges } from "@/data/shortcu
    ========================================================================== */
 
 export const HOOK_PHASE_MINUTES = 15; // 0-15 min = hook, 15+ = chase
-export const WHEEL_COOLDOWN_MS = 3 * 60 * 1000; // 3 minute cooldown between spins
+export const WHEEL_COOLDOWN_MS = 30 * 1000; // 30s cooldown between spins
+/** Delay from session start before the wheel first becomes available. */
+export const INITIAL_WHEEL_DELAY_MS = 5 * 1000; // 5s — wheel not always available (VAL-WHEEL-001)
 
 /* ============================================================================
    Deficit pricing engine (architecture.md)

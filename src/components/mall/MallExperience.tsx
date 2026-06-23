@@ -10,6 +10,7 @@ import { StoreDetail } from "@/components/overlays/StoreDetail";
 import { Celebration } from "@/components/overlays/Celebration";
 import { ShortcutUnlock, ShortcutEntryButton } from "@/components/overlays/ShortcutUnlock";
 import { FlashSale, FlashSaleEntryButton } from "@/components/overlays/FlashSale";
+import { SpinningWheel, SpinningWheelEntryButton } from "@/components/overlays/SpinningWheel";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -54,11 +55,13 @@ export function MallExperience() {
       {/* Floating spend-opportunity entry points (always visible) */}
       <FlashSaleEntryButton />
       <ShortcutEntryButton />
+      <SpinningWheelEntryButton />
 
       {/* Overlays */}
       <StoreDetail />
       <ShortcutUnlock />
       <FlashSale />
+      <SpinningWheel />
       <Celebration />
     </main>
   );

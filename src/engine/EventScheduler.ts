@@ -20,7 +20,7 @@
 
 import type { GameEvent } from "@/types";
 import { useSessionStore } from "@/stores/sessionStore";
-import { useEconomyStore, WHEEL_COOLDOWN_MS } from "@/stores/economyStore";
+import { useEconomyStore, WHEEL_COOLDOWN_MS, INITIAL_WHEEL_DELAY_MS } from "@/stores/economyStore";
 import { useSocialStore } from "@/stores/socialStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -97,15 +97,27 @@ export class EventScheduler {
     //    reflects the user's current balance (VAL-TOKEN-018).
     economy.refreshLiveDeficitPrice();
 
-    // 4. Spinning wheel availability check -> cooldown timer.
+    // 4. Spinning wheel availability check -> cooldown timer + initial availability.
     const wheel = economy.spinningWheel;
-    if (
-      !wheel.available &&
-      wheel.lastSpin > 0 &&
-      Date.now() - wheel.lastSpin >= WHEEL_COOLDOWN_MS
-    ) {
-      economy.makeWheelAvailable();
-      this.handlers.onWheelAvailable?.();
+    const now = Date.now();
+    const sessionStart = useSessionStore.getState().sessionStart;
+    if (!wheel.available) {
+      if (
+        wheel.lastSpin > 0 &&
+        now - wheel.lastSpin >= WHEEL_COOLDOWN_MS
+      ) {
+        economy.makeWheelAvailable();
+        this.handlers.onWheelAvailable?.();
+      } else if (
+        // First appearance: wheel becomes available shortly after session start
+        // (not immediately) so it is NOT always available (VAL-WHEEL-001).
+        wheel.spinCount === 0 &&
+        wheel.lastSpin === 0 &&
+        now - sessionStart >= INITIAL_WHEEL_DELAY_MS
+      ) {
+        economy.makeWheelAvailable();
+        this.handlers.onWheelAvailable?.();
+      }
     }
 
     // 5. Phantom movement -> update positions every 5s (every 5th tick).
