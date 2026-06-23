@@ -19,6 +19,7 @@ import { FogFilterDefs, FogOverlay } from "./FogOverlay";
 import { ZoneLabel } from "./ZoneLabel";
 import { StoreMarker } from "./StoreMarker";
 import { PlayerAvatar } from "./PlayerAvatar";
+import { PhantomAvatars } from "./PhantomAvatars";
 
 /**
  * MallMap — the SVG-based 2D floor plan at the heart of `/mall`.
@@ -307,6 +308,9 @@ export function MallMap() {
             />
           ))}
         </g>
+
+        {/* Phantom friend avatars (only in revealed zones, VAL-CROSS-051) */}
+        <PhantomAvatars />
 
         {/* Fog-of-war overlay (rendered above zones/stores/labels so it
             actually obscures unexplored content) */}

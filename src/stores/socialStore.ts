@@ -32,6 +32,38 @@ import { usePlayerStore } from "./playerStore";
 import { useMapStore } from "./mapStore";
 import { useSessionStore } from "./sessionStore";
 
+/* ============================================================================
+   Bartle-type-aware phantom positioning (VAL-CROSS-039)
+   ========================================================================== */
+
+/**
+ * Select a zone key for a phantom move, biased by the player's Bartle type.
+ *
+ * For Explorer-type players (who selected "solo adventure" in the survey),
+ * phantoms are preferentially positioned at UNEXPLORED (fogged) zones so
+ * more phantom activity appears at unexplored areas, creating a sense of
+ * discovery and social proof in the unknown (VAL-CROSS-039).
+ *
+ * For other Bartle types, phantoms are positioned randomly across all zones
+ * (baseline behavior).
+ */
+function pickPhantomZoneKey(
+  fogState: Record<string, boolean>,
+  bartleType: string | null,
+): string {
+  const zoneKeys = Object.keys(PHANTOM_ZONE_POSITIONS);
+
+  if (bartleType === "explorer") {
+    // For explorers: 60% chance to pick an unexplored (fogged) zone, 40% any zone.
+    const foggedKeys = zoneKeys.filter((k) => !fogState[k]);
+    if (foggedKeys.length > 0 && Math.random() < 0.6) {
+      return foggedKeys[Math.floor(Math.random() * foggedKeys.length)]!;
+    }
+  }
+
+  return zoneKeys[Math.floor(Math.random() * zoneKeys.length)]!;
+}
+
 /** Read a leaderboard entry's value for the active sort metric. */
 function entryMetricValue(
   entry: LeaderboardEntry,
@@ -137,13 +169,12 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
   proximityAlerts: [],
   activeMetric: "tokens",
 
-  movePhantoms: () =>
+  movePhantoms: () => {
+    const bartleType = usePlayerStore.getState().bartleType;
+    const fogState = useMapStore.getState().fogState;
     set((state) => ({
       phantoms: state.phantoms.map((p) => {
-        const zoneKeys = Object.keys(PHANTOM_ZONE_POSITIONS);
-        const nextKey = zoneKeys[
-          Math.floor(Math.random() * zoneKeys.length)
-        ];
+        const nextKey = pickPhantomZoneKey(fogState, bartleType);
         const nextPos = nextKey
           ? PHANTOM_ZONE_POSITIONS[nextKey]
           : p.position;
@@ -154,7 +185,8 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
           lastActivity: "just now",
         };
       }),
-    })),
+    }));
+  },
 
   updateLeaderboard: () => {
     const state = get();

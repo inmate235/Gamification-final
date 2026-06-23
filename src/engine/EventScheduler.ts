@@ -164,7 +164,12 @@ export class EventScheduler {
     }
 
     // 5. Phantom movement -> update positions every 5s (every 5th tick).
-    if (this.tickCount % 5 === 0) {
+    //    For Explorer-type players, phantoms move more frequently (every 3rd
+    //    tick) so more phantom friend activity appears on the map
+    //    (VAL-CROSS-039).
+    const bartleType = usePlayerStore.getState().bartleType;
+    const phantomMoveInterval = bartleType === "explorer" ? 3 : 5;
+    if (this.tickCount % phantomMoveInterval === 0) {
       useSocialStore.getState().movePhantoms();
     }
 

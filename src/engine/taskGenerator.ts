@@ -24,6 +24,7 @@ import {
   storesByZone,
   ZONE_FOOD_COURT,
 } from "@/data/mallData";
+import { usePlayerStore } from "@/stores/playerStore";
 
 /* ============================================================================
    Constants
@@ -31,10 +32,82 @@ import {
 
 export const TIME_GATE_MS = 15 * 60 * 1000; // 15 minutes
 
+/* ============================================================================
+   Survey personalization (VAL-CROSS-038, VAL-CROSS-074)
+   ========================================================================== */
+
+/**
+ * The player's survey "motivation" answer determines how task descriptions
+ * are framed. Users who selected "discovery" see discovery-framed tasks
+ * ("Discover the hidden...", "Explore the..."), while users who selected
+ * "deals" see transactionally-framed tasks ("Grab a deal at...", "Hunt for
+ * tokens in..."). This personalization is consistent across the task
+ * subsystem (VAL-CROSS-074).
+ */
+type MotivationFraming = "discovery" | "deals" | "default";
+
+/**
+ * Read the player's survey motivation from the player store and return the
+ * appropriate framing. Returns "default" when the survey is unanswered or
+ * the motivation is not one of the two expected values.
+ */
+function getMotivationFraming(): MotivationFraming {
+  const motivation = usePlayerStore.getState().surveyAnswers.motivation;
+  if (motivation === "discovery") return "discovery";
+  if (motivation === "deals") return "deals";
+  return "default";
+}
+
+/**
+ * Description builder sets keyed by framing. Each framing has a description
+ * builder for each task type variant. The "default" framing uses the
+ * original (neutral) descriptions so behavior is unchanged for users who
+ * haven't completed the survey.
+ */
+const DESCRIPTION_BUILDERS: Record<
+  MotivationFraming,
+  {
+    exploreZone: (zone: Zone) => string;
+    findToken: (zone: Zone) => string;
+    visitStores: (zone: Zone, n: number) => string;
+    secretToken: (zone: Zone) => string;
+  }
+> = {
+  discovery: {
+    exploreZone: (zone) => `Discover the ${zone.name}`,
+    findToken: (zone) => `Uncover a hidden token in the ${zone.name}`,
+    visitStores: (zone, n) => `Explore ${n} boutiques in the ${zone.name}`,
+    secretToken: (zone) => `Discover the secret token hidden in the ${zone.name}`,
+  },
+  deals: {
+    exploreZone: (zone) => `Hunt for deals in the ${zone.name}`,
+    findToken: (zone) => `Grab a hidden token deal in the ${zone.name}`,
+    visitStores: (zone, n) => `Shop ${n} stores for deals in the ${zone.name}`,
+    secretToken: (zone) => `Claim the secret token deal at the ${zone.name}`,
+  },
+  default: {
+    exploreZone: (zone) => `Explore the ${zone.name}`,
+    findToken: (zone) => `Find a hidden token in the ${zone.name}`,
+    visitStores: (zone, n) => `Visit ${n} stores in the ${zone.name}`,
+    secretToken: (zone) => `Collect the secret token at the ${zone.name}`,
+  },
+};
+
+/** Build a description for a template+zone using the player's framing. */
+function buildDescription(
+  templateKey: "exploreZone" | "findToken" | "visitStores" | "secretToken",
+  zone: Zone,
+  storeCount: number
+): string {
+  const framing = getMotivationFraming();
+  const builders = DESCRIPTION_BUILDERS[framing];
+  return builders[templateKey](zone, storeCount);
+}
+
 interface TaskTemplate {
   type: TaskType;
-  /** Build the human-readable description. */
-  buildDescription: (zone: Zone, storeCount: number) => string;
+  /** Which description builder key to use for this template. */
+  descriptionKey: "exploreZone" | "findToken" | "visitStores" | "secretToken";
   baseReward: number;
   difficulty: number;
   /** Relative weight for random selection. */
@@ -44,21 +117,21 @@ interface TaskTemplate {
 const TEMPLATES: TaskTemplate[] = [
   {
     type: "explore-zone",
-    buildDescription: (zone) => `Explore the ${zone.name}`,
+    descriptionKey: "exploreZone",
     baseReward: 3,
     difficulty: 1,
     weight: 3,
   },
   {
     type: "find-token",
-    buildDescription: (zone) => `Find a hidden token in the ${zone.name}`,
+    descriptionKey: "findToken",
     baseReward: 4,
     difficulty: 2,
     weight: 2,
   },
   {
     type: "visit-stores",
-    buildDescription: (zone, n) => `Visit ${n} stores in the ${zone.name}`,
+    descriptionKey: "visitStores",
     baseReward: 5,
     difficulty: 3,
     weight: 2,
@@ -66,7 +139,7 @@ const TEMPLATES: TaskTemplate[] = [
   {
     // The furthest zone holds the secret token — a premium find-token task.
     type: "find-token",
-    buildDescription: (zone) => `Collect the secret token at the ${zone.name}`,
+    descriptionKey: "secretToken",
     baseReward: 10,
     difficulty: 4,
     weight: 1,
@@ -263,7 +336,7 @@ export function generateTask(options: GenerateOptions): Task {
   }
 
   const storeCount = storeVisitCount(zone, chainLevel);
-  const description = template.buildDescription(zone, storeCount);
+  const description = buildDescription(template.descriptionKey, zone, storeCount);
 
   const reward = template.baseReward + chainLevel;
   const difficulty = template.difficulty + Math.floor(chainLevel / 2);
@@ -325,7 +398,7 @@ export function generateInitialTasks(
     seenZones.add(zone.id);
 
     const storeCount = storeVisitCount(zone, 0);
-    const description = template.buildDescription(zone, storeCount);
+    const description = buildDescription(template.descriptionKey, zone, storeCount);
     const task: Task = {
       id: nextTaskId(),
       type: template.type,
