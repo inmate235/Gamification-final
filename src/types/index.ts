@@ -139,6 +139,36 @@ export interface FlashSale {
   tokenCost: number;
   countdownSeconds: number;
   personalized: boolean;
+  // Extended fields used by the token-economy spending path and the minimal
+  // flash-sale overlay. The full flash-sale feature (proximity triggering,
+  // synthetic timers, personalization) populates these; they remain optional
+  // so the bare economyStore skeleton stays backward compatible.
+  itemDescription?: string;
+  discountPercent?: number;
+  socialProof?: number;
+  claimed?: boolean;
+  createdAt?: number;
+}
+
+/**
+ * A token-purchasable shortcut that opens a faster route between two zones.
+ * When `unlocked` becomes true the two zones are treated as adjacent by the
+ * mapStore, and a distinct corridor line is drawn on the map.
+ *
+ * `tokenCost` is the deficit-engineered price FROZEN at the moment the
+ * shortcut became the active offer (balance + 2..3 at that time). It is the
+ * exact amount deducted on unlock. The live, always-just-out-of-reach teaser
+ * price shown on the entry button is `economyStore.liveDeficitPrice` which
+ * recalculates every scheduler tick.
+ */
+export interface Shortcut {
+  id: string;
+  name: string;
+  description: string;
+  fromZoneId: string;
+  toZoneId: string;
+  tokenCost: number; // frozen deficit price (balance + 2..3 at activation)
+  unlocked: boolean;
 }
 
 export type RewardDensityPhase = "hook" | "chase";
@@ -154,6 +184,14 @@ export interface EconomyState {
   spinningWheel: SpinningWheelState;
   rewardDensity: { phase: RewardDensityPhase; sessionMinutes: number };
   deficitMultiplier: number;
+  /** Token-purchasable shortcuts (faster routes between zones). */
+  shortcuts: Shortcut[];
+  /**
+   * The live deficit price (current balance + 2..3), recalculated every
+   * scheduler tick. Used for the persistent "always short" spend teaser so
+   * the user is never presented with a comfortably affordable next reward.
+   */
+  liveDeficitPrice: number;
 }
 
 /* ============================================================================
@@ -255,7 +293,23 @@ export type OverlayType =
   | "store-detail"
   | "tier-upgrade"
   | "exit-friction"
-  | "celebration";
+  | "celebration"
+  | "shortcut-unlock";
+
+/**
+ * Payload for the celebration / token-feedback overlay.
+ * - `earn` events render a gold +N upward burst (exploration, tasks, wheel,
+ *   secret token).
+ * - `spend` events render a distinct red -N downward dim (shortcut unlocks,
+ *   flash sale purchases) so the two are visually distinguishable.
+ */
+export type TokenFeedbackKind = "earn" | "spend";
+
+export interface CelebrationData {
+  message: string;
+  amount: number;
+  kind?: TokenFeedbackKind;
+}
 
 export interface UIState {
   activeOverlay: OverlayType;

@@ -92,8 +92,10 @@ export class EventScheduler {
       this.handlers.onRewardDensityShift?.(nextPhase);
     }
 
-    // 3. Deficit pricing recalculation each tick.
-    economy.calculateDeficitPrice();
+    // 3. Deficit pricing recalculation each tick — refresh the live teaser
+    //    price (balance + 2..3) so the persistent spend opportunity always
+    //    reflects the user's current balance (VAL-TOKEN-018).
+    economy.refreshLiveDeficitPrice();
 
     // 4. Spinning wheel availability check -> cooldown timer.
     const wheel = economy.spinningWheel;

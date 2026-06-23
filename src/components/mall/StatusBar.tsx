@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Coin, Fire, MapPin } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,17 @@ export function StatusBar() {
 
   const tierStyle = TIER_STYLES[tier];
 
+  /* --- Pulse the token count whenever it changes (real-time emphasis) --- */
+  const prevTokensRef = useRef(tokens);
+  const [isEarn, setIsEarn] = useState(true);
+  useEffect(() => {
+    if (tokens !== prevTokensRef.current) {
+      setIsEarn(tokens > prevTokensRef.current);
+      prevTokensRef.current = tokens;
+    }
+  }, [tokens]);
+  const pulseKey = tokens; // remounts the span on every change -> replay pulse
+
   return (
     <header
       className="fixed inset-x-0 top-0 z-30 px-3 pt-3 sm:px-4 sm:pt-4"
@@ -77,13 +89,27 @@ export function StatusBar() {
           )}
         >
           {/* Tokens */}
-          <StatItem
-            icon={<Coin size={16} weight="light" className="text-[#d4af37]" />}
-            value={tokens}
-            label="Tokens"
-            valueClassName="text-[#d4af37]"
+          <div
+            className="flex items-center gap-1.5"
             data-testid="status-tokens"
-          />
+            aria-label="Tokens"
+          >
+            <Coin size={16} weight="light" className="text-[#d4af37]" />
+            <motion.span
+              key={pulseKey}
+              initial={{
+                opacity: 0.5,
+                scale: 1.18,
+                color: isEarn ? "#f5e6a8" : "#fca5a5",
+              }}
+              animate={{ opacity: 1, scale: 1, color: "#d4af37" }}
+              transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+              className="font-mono text-sm font-semibold tabular-nums sm:text-base"
+              data-testid="status-tokens-value"
+            >
+              {tokens}
+            </motion.span>
+          </div>
 
           <Divider />
 

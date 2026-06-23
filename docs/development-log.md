@@ -156,3 +156,39 @@
 - `npx vitest run` — 211/211 passing across 24 test files (50 new tests: corridor helpers, MallMap SVG/fog/markers/navigation/celebration, StatusBar, TaskPanel, StoreDetail reviews/visitor-count/dismissal, Celebration auto-dismiss; mall-route-guard test updated for the new full-experience render).
 - `npm run dev` — Ready on port 3000; `curl http://localhost:3000` returns 200 with invite screen markers and compiled CSS containing gold `#d4af37`, background `#0a0a0f`, and `cubic-bezier(0.32,...)` tokens; `curl http://localhost:3000/mall` returns 200; dev log clean of errors.
 
+
+## Milestone 3: Economy & Engagement — Token Economy
+
+### Feature: token-economy
+
+**What was built:**
+
+The full token economy system: earning, spending, the deficit engine, tier multipliers, real-time status-bar feedback, and the non-negative integer invariant. The exploration earning + secret-token + first-token logic was already present from the mall-map feature; this feature added the spending paths, the deficit-engine wiring, the tier-multiplied earning helper, and the spend visual feedback.
+
+- `playerStore.awardTokens(baseReward)` (`src/stores/playerStore.ts`): the canonical earning path. Applies the current tier's earn-rate multiplier (Bronze 1x, Silver 1.5x, Gold 2x, Neodymium 3x) via `applyTierMultiplier`, rounds to a non-negative integer, and returns the exact credited amount so callers can show an accurate "+N". `addTokens` (raw, no multiplier) and `spendTokens` (rejects non-positive/non-integer, enforces non-negative) remain. `MallMap` was refactored to use `awardTokens` for exploration + secret-token rewards.
+- `economyStore` extensions (`src/stores/economyStore.ts`):
+  - `shortcuts: Shortcut[]` + `liveDeficitPrice: number` state. Three shortcuts (`src/data/shortcutData.ts`: Aurora Passage, Neon Tunnel, Silk Corridor) open faster routes between zones. The active (first locked) shortcut's `tokenCost` is FROZEN at the deficit price (balance + 2..3) when it becomes the active offer; the next shortcut is re-frozen at the new deficit price after each unlock (so the following offer is always 2-3 above the new balance).
+  - `unlockShortcut(id)`: deducts the frozen cost when affordable, marks the route unlocked, re-freezes the next offer. `claimFlashSale(saleId)`: deducts the frozen deficit `tokenCost` and closes the sale. `triggerDeficitFlashSale(storeId?)`: creates a minimal deficit-priced sale (foundation for the flash-sales feature). `refreshLiveDeficitPrice()`: recomputes the live teaser price (balance + 2..3).
+  - `getActiveShortcut()` / `getUnlockedEdges()` selectors.
+- `mapStore` adjacency (`src/stores/mapStore.ts`): `isAdjacent` now also honors unlocked shortcut edges (consulting `economyStore.getUnlockedEdges()`), and `moveToZone` uses `isAdjacent` so unlocked shortcuts enable direct travel + fog reveal.
+- `engine/tokenEconomy.ts`: central orchestration. `awardTaskReward(task)` and `awardWheelReward(baseTokens)` credit tier-multiplied tokens + earn celebrations (used by the breadcrumb-tasks and spinning-wheel features). `unlockShortcut` / `claimFlashSale` wrap the store actions + fire spend feedback. `showTokenFeedback(kind, amount, message)` drives the overlay. All sources/sinks flow through the single `playerStore.tokens` (VAL-TOKEN-019).
+- `Celebration` overlay generalized (`src/components/overlays/Celebration.tsx`): now supports `kind: 'earn' | 'spend'`. Earn = gold coin, +N, upward burst, gold particles. Spend = red minus, -N, downward fall, red particles. Visually distinct (VAL-TOKEN-017).
+- `ShortcutUnlock` overlay + `ShortcutEntryButton` (`src/components/overlays/ShortcutUnlock.tsx`): a floating amethyst entry button always shows the live deficit teaser price (the persistent "always short" spend opportunity). The glass overlay shows the active buyable shortcut at its frozen cost (Unlock enabled when affordable), a "next up" live-deficit teaser (always unaffordable), and the unlocked-routes list. Maybe Later / backdrop / Escape dismiss.
+- `FlashSale` overlay + `FlashSaleEntryButton` (`src/components/overlays/FlashSale.tsx`): a minimal flash-sale spending path (foundation for the flash-sales feature). "Deal Radar" button triggers a deficit-priced sale; the overlay shows store name, discount, item, ticking countdown (self-contained keyed `Countdown` child), social proof, frozen token cost, Grab Deal (calls `claimFlashSale`), and Maybe Later.
+- `EventScheduler` tick now calls `economy.refreshLiveDeficitPrice()` each second so the persistent teaser recalculates with the balance (VAL-TOKEN-018).
+- `StatusBar` token count now pulses (scale + color flash, keyed remount) on every change, green-gold for earn / red for spend, reinforcing real-time updates (VAL-TOKEN-002/003).
+- `types/index.ts`: added `Shortcut`, `TokenFeedbackKind`, `CelebrationData`, extended `FlashSale` with optional item/social-proof/claimed fields, extended `EconomyState` with `shortcuts` + `liveDeficitPrice`, and added `shortcut-unlock` / `flash-sale` to `OverlayType`.
+
+**Key decisions:**
+- Deficit-engine spending model: spend offers (shortcuts, flash sales) carry a tokenCost FROZEN at the deficit price (balance + 2..3) the moment the offer becomes active, so the user is always 2-3 tokens short at offer time and must earn a couple more to afford it (VAL-TOKEN-010/011). A separate live `liveDeficitPrice` (recalculated every scheduler tick) is shown persistently on the entry button and the "next up" card so there is always an unaffordable spend opportunity visible (VAL-TOKEN-011/018). After a purchase the next offer is re-frozen at the new deficit price (VAL-TOKEN-018).
+- Shortcut adjacency lives in `economyStore` (token spending) but is consulted by `mapStore.isAdjacent` so unlocked shortcuts enable direct map travel — no circular dependency (economyStore → playerStore only).
+- `awardTokens` centralizes tier-multiplied earning so task/wheel rewards (provided here as infrastructure for later features) and exploration rewards all apply the multiplier consistently (VAL-TOKEN-012..015).
+- The `FlashSale` overlay is intentionally minimal and documented as a foundation; the dedicated flash-sales feature layers proximity triggering, synthetic timers, personalization, and refractory periods on top of the canonical `claimFlashSale` spending action.
+- CDP `Target.createTarget` is blocked in this environment, so manual verification used the production build (`npm run build` compiles all routes including `/mall` with the new components, TypeScript clean), curl (`/` → 200, `/mall` → 200 guarded), and grep of compiled chunks confirming the new testids/components are bundled.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — 0 errors (1 import/no-anonymous-default-export warning fixed).
+- `npx vitest run` — 253/253 passing across 28 test files (44 new tests: playerStore.awardTokens tier multipliers, economyStore shortcuts/deficit/flash-sale spending, mapStore shortcut adjacency, engine tokenEconomy earn/spend/tier/feedback, Celebration earn-vs-spend, ShortcutUnlock overlay, FlashSale overlay; mall-route-guard icon mock updated for new Phosphor icons).
+- `npm run build` — Compiled successfully; all routes prerendered.
+- `npm run dev` — Ready on port 3000; `curl http://localhost:3000` → 200; new component testids present in client chunks.

@@ -13,7 +13,6 @@ import {
   ZONE_FOOD_COURT,
   getZoneById,
 } from "@/data/mallData";
-import { applyTierMultiplier } from "@/stores/playerStore";
 import type { Store, Zone } from "@/types";
 import { FogFilterDefs, FogOverlay } from "./FogOverlay";
 import { ZoneLabel } from "./ZoneLabel";
@@ -52,7 +51,7 @@ export function MallMap() {
   const isAdjacent = useMapStore((s) => s.isAdjacent);
 
   const addTokens = usePlayerStore((s) => s.addTokens);
-  const tier = usePlayerStore((s) => s.tier);
+  const awardTokens = usePlayerStore((s) => s.awardTokens);
 
   const showOverlay = useUIStore((s) => s.showOverlay);
   const activeOverlay = useUIStore((s) => s.activeOverlay);
@@ -85,29 +84,42 @@ export function MallMap() {
 
       // Token rewards + celebration for newly revealed zones.
       if (wasFogged) {
-        let reward = applyTierMultiplier(EXPLORE_REWARD, tier);
-        let message = `+${reward} Tokens`;
-
         if (isFoodCourtFirstReveal) {
-          // Furthest zone: large secret-token reward.
-          const secret = applyTierMultiplier(FOOD_COURT_SECRET_REWARD, tier);
-          reward += secret;
-          message = `Secret Token! +${secret}`;
+          // Furthest zone: large secret-token reward (10x value) + base
+          // exploration reward, both tier-multiplied.
+          const explore = awardTokens(EXPLORE_REWARD);
+          const secret = awardTokens(FOOD_COURT_SECRET_REWARD);
+          showOverlay("celebration", {
+            message: `Secret Token! +${secret}`,
+            amount: explore + secret,
+            kind: "earn",
+          });
         } else if (isFirstMove) {
-          // First move from entrance: automatic first token (per Day 1 2:00).
-          reward += FIRST_TOKEN_BONUS;
-          message = `+1 Token!`;
+          // First move from entrance: automatic first token (Day 1 2:00) on
+          // top of the tier-multiplied exploration reward.
+          const explore = awardTokens(EXPLORE_REWARD);
+          addTokens(FIRST_TOKEN_BONUS);
+          showOverlay("celebration", {
+            message: `+1 Token!`,
+            amount: explore + FIRST_TOKEN_BONUS,
+            kind: "earn",
+          });
           firstMoveDone = true;
+        } else {
+          const explore = awardTokens(EXPLORE_REWARD);
+          showOverlay("celebration", {
+            message: `+${explore} Tokens`,
+            amount: explore,
+            kind: "earn",
+          });
         }
-
-        addTokens(reward);
-        showOverlay("celebration", { message, amount: reward });
       } else if (isFirstMove) {
         // First move into an already-revealed zone still finds the first token.
         addTokens(FIRST_TOKEN_BONUS);
         showOverlay("celebration", {
           message: `+${FIRST_TOKEN_BONUS} Token!`,
           amount: FIRST_TOKEN_BONUS,
+          kind: "earn",
         });
         firstMoveDone = true;
       }
@@ -119,7 +131,7 @@ export function MallMap() {
       isAdjacent,
       moveToZone,
       addTokens,
-      tier,
+      awardTokens,
       showOverlay,
     ]
   );

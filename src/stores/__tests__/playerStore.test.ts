@@ -187,4 +187,42 @@ describe("playerStore", () => {
     expect(applyTierMultiplier(3, "neodymium")).toBe(9);
     expect(applyTierMultiplier(-2, "gold")).toBe(0);
   });
+
+  describe("awardTokens (tier-multiplied earning)", () => {
+    it("credits base reward at bronze 1x and returns the credited amount", () => {
+      const credited = usePlayerStore.getState().awardTokens(3);
+      expect(credited).toBe(3);
+      expect(usePlayerStore.getState().tokens).toBe(3);
+      expect(usePlayerStore.getState().tierXP).toBe(3);
+    });
+
+    it("credits silver at 1.5x (3 -> 5)", () => {
+      usePlayerStore.getState().setTier("silver");
+      expect(usePlayerStore.getState().awardTokens(3)).toBe(5);
+      expect(usePlayerStore.getState().tokens).toBe(5);
+    });
+
+    it("credits gold at 2x (3 -> 6)", () => {
+      usePlayerStore.getState().setTier("gold");
+      expect(usePlayerStore.getState().awardTokens(3)).toBe(6);
+      expect(usePlayerStore.getState().tokens).toBe(6);
+    });
+
+    it("credits neodymium at 3x (3 -> 9)", () => {
+      usePlayerStore.getState().setTier("neodymium");
+      expect(usePlayerStore.getState().awardTokens(3)).toBe(9);
+      expect(usePlayerStore.getState().tokens).toBe(9);
+    });
+
+    it("never produces a negative balance even for negative base", () => {
+      usePlayerStore.getState().awardTokens(-5);
+      expect(usePlayerStore.getState().tokens).toBe(0);
+    });
+
+    it("accumulates across multiple awards", () => {
+      usePlayerStore.getState().awardTokens(2);
+      usePlayerStore.getState().awardTokens(3);
+      expect(usePlayerStore.getState().tokens).toBe(5);
+    });
+  });
 });

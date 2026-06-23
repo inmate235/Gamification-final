@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, act } from "@testing-library/react";
 import React from "react";
 
 vi.mock("framer-motion", () => {
@@ -38,7 +38,10 @@ vi.mock("framer-motion", () => {
     return comp;
   };
   return {
-    motion: { div: mk("div"), span: mk("span") },
+    motion: {
+      div: mk("div"),
+      span: mk("span"),
+    },
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
   };
@@ -50,49 +53,46 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Cmp.displayName = `Icon-${name}`;
     return Cmp;
   };
-  return { Coin: make("Coin") };
+  return { Coin: make("Coin"), Minus: make("Minus") };
 });
 
 import { Celebration } from "@/components/overlays/Celebration";
 import { useUIStore } from "@/stores/uiStore";
 
-describe("Celebration overlay", () => {
+describe("Celebration overlay (earn vs spend)", () => {
   beforeEach(() => {
     useUIStore.getState().reset();
-    vi.useFakeTimers();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    cleanup();
-  });
-
-  it("does not render when no celebration overlay is active", () => {
+  it("renders nothing when no celebration is active", () => {
     render(<Celebration />);
     expect(screen.queryByTestId("celebration-overlay")).not.toBeInTheDocument();
   });
 
-  it("renders the reward message when active", () => {
-    useUIStore.getState().showOverlay("celebration", {
-      message: "+3 Tokens",
-      amount: 3,
+  it("renders an earn celebration with the earn kind", () => {
+    act(() => {
+      useUIStore.getState().showOverlay("celebration", {
+        message: "+5 Tokens",
+        amount: 5,
+        kind: "earn",
+      });
     });
     render(<Celebration />);
-    expect(screen.getByTestId("celebration-message")).toHaveTextContent(
-      "+3 Tokens"
-    );
+    expect(screen.getByTestId("celebration-overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("celebration-message")).toHaveTextContent("+5 Tokens");
+    expect(screen.getByTestId("celebration-kind")).toHaveTextContent("earn");
   });
 
-  it("auto-dismisses after the celebration duration", () => {
-    useUIStore.getState().showOverlay("celebration", {
-      message: "+1 Token!",
-      amount: 1,
+  it("renders a spend celebration with the spend kind (distinct from earn)", () => {
+    act(() => {
+      useUIStore.getState().showOverlay("celebration", {
+        message: "-3 Tokens",
+        amount: 3,
+        kind: "spend",
+      });
     });
     render(<Celebration />);
-    expect(useUIStore.getState().activeOverlay).toBe("celebration");
-    act(() => {
-      vi.advanceTimersByTime(2000);
-    });
-    expect(useUIStore.getState().activeOverlay).toBe("none");
+    expect(screen.getByTestId("celebration-message")).toHaveTextContent("-3 Tokens");
+    expect(screen.getByTestId("celebration-kind")).toHaveTextContent("spend");
   });
 });

@@ -43,7 +43,16 @@ export function applyTierMultiplier(baseReward: number, tier: Tier): number {
    ========================================================================== */
 
 export interface PlayerStore extends PlayerState {
+  /** Add raw tokens (no tier multiplier). Rounds + clamps to non-negative. */
   addTokens: (amount: number) => void;
+  /**
+   * Award a BASE reward, automatically applying the current tier's earn-rate
+   * multiplier (Bronze 1x, Silver 1.5x, Gold 2x, Neodymium 3x). Returns the
+   * exact integer amount credited so callers can show an accurate "+N" in the
+   * celebration feedback. This is the canonical earning path for exploration,
+   * tasks, the spinning wheel, and the secret token.
+   */
+  awardTokens: (baseReward: number) => number;
   spendTokens: (amount: number) => boolean;
   setTier: (tier: Tier) => void;
   addTierXP: (amount: number) => void;
@@ -76,7 +85,7 @@ const initialPlayerState: PlayerState = {
   trialPerks: [],
 };
 
-export const usePlayerStore = create<PlayerStore>((set) => ({
+export const usePlayerStore = create<PlayerStore>((set, get) => ({
   ...initialPlayerState,
 
   addTokens: (amount) =>
@@ -84,6 +93,15 @@ export const usePlayerStore = create<PlayerStore>((set) => ({
       tokens: Math.max(0, state.tokens + Math.round(amount)),
       tierXP: state.tierXP + Math.max(0, Math.round(amount)),
     })),
+
+  awardTokens: (baseReward) => {
+    const credited = applyTierMultiplier(baseReward, get().tier);
+    set((state) => ({
+      tokens: Math.max(0, state.tokens + credited),
+      tierXP: state.tierXP + credited,
+    }));
+    return credited;
+  },
 
   spendTokens: (amount) => {
     // Reject non-positive or non-integer amounts to prevent negative-spend

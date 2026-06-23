@@ -8,6 +8,8 @@ import { MallMap } from "./MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { StoreDetail } from "@/components/overlays/StoreDetail";
 import { Celebration } from "@/components/overlays/Celebration";
+import { ShortcutUnlock, ShortcutEntryButton } from "@/components/overlays/ShortcutUnlock";
+import { FlashSale, FlashSaleEntryButton } from "@/components/overlays/FlashSale";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -49,8 +51,14 @@ export function MallExperience() {
       {/* Bottom chrome */}
       <TaskPanel />
 
+      {/* Floating spend-opportunity entry points (always visible) */}
+      <FlashSaleEntryButton />
+      <ShortcutEntryButton />
+
       {/* Overlays */}
       <StoreDetail />
+      <ShortcutUnlock />
+      <FlashSale />
       <Celebration />
     </main>
   );
