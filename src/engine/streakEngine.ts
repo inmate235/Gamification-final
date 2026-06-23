@@ -22,7 +22,7 @@
  */
 
 import { usePlayerStore } from "@/stores/playerStore";
-import type { StreakState, Tier } from "@/types";
+import type { StreakState, StreakPenaltySnapshot, Tier } from "@/types";
 
 /* ============================================================================
    Constants
@@ -41,6 +41,12 @@ export const COMEBACK_BONUS_DURATION_MS = 30 * 60 * 1000;
  * still communicated.
  */
 export const DAY1_PENALTY_PERCENT = 0.10;
+/**
+ * The escalation caps at Day 3 (token loss -> perk loss -> tier demotion).
+ * No additional penalties are applied for misses beyond the 3rd consecutive
+ * missed day (VAL-STREAK-008).
+ */
+export const MAX_PENALTY_DAY = 3;
 
 /* ============================================================================
    Types
@@ -340,6 +346,11 @@ export function applyMissedDayPenalty(
  *
  * Returns the PenaltyResult for UI notification. This is the primary
  * entry point for the event scheduler's day-boundary miss detection.
+ *
+ * A `StreakPenaltySnapshot` is stored on the player store
+ * (`lastStreakPenalty`) carrying the ACTUAL capped token loss, so the UI
+ * notification never overstates the deduction (the Day-1 penalty is capped at
+ * the player's current balance).
  */
 export function simulateMissedDay(now: number = Date.now()): PenaltyResult {
   const player = usePlayerStore.getState();
@@ -354,6 +365,8 @@ export function simulateMissedDay(now: number = Date.now()): PenaltyResult {
   }
   // Capture the tier before any demotion so we can report previousTier.
   const tierBefore = player.tier;
+
+  let result: PenaltyResult;
 
   // On the first miss, open the 48h recovery window (VAL-STREAK-010) and
   // record the pre-break count.
@@ -380,24 +393,95 @@ export function simulateMissedDay(now: number = Date.now()): PenaltyResult {
         preBreakCount: state.streak.preBreakCount || state.streak.count,
       },
     }));
-    const result = applyMissedDayPenalty(missedDay, now);
-    // Enrich Day 3 result with the pre-demotion tier.
-    if (result.type === "tier-demotion" && result.missedDay === 3) {
-      result.previousTier = tierBefore;
-      result.message = `Day 3 missed! You've been demoted from ${tierBefore} to ${result.newTier}.`;
-    }
-    return result;
+    result = applyMissedDayPenalty(missedDay, now);
+  } else {
+    // Subsequent misses: just register and apply penalty.
+    const missedDay = usePlayerStore.getState().registerMissedDay();
+    result = applyMissedDayPenalty(missedDay, now);
   }
 
-  // Subsequent misses: just register and apply penalty.
-  const missedDay = usePlayerStore.getState().registerMissedDay();
-  const result = applyMissedDayPenalty(missedDay, now);
   // Enrich Day 3 result with the pre-demotion tier.
   if (result.type === "tier-demotion" && result.missedDay === 3) {
     result.previousTier = tierBefore;
     result.message = `Day 3 missed! You've been demoted from ${tierBefore} to ${result.newTier}.`;
   }
+
+  // Store the penalty snapshot for UI notification so the
+  // StreakPenaltyNotification component can display the ACTUAL capped token
+  // loss rather than a recomputed estimate (VAL-STREAK-005).
+  usePlayerStore.setState({ lastStreakPenalty: penaltyResultToSnapshot(result) });
+
   return result;
+}
+
+/* ============================================================================
+   Scheduler-driven missed-day detection (VAL-STREAK-005..008, VAL-STREAK-016)
+   ========================================================================== */
+
+/**
+ * Convert a PenaltyResult into a StreakPenaltySnapshot for UI storage.
+ */
+function penaltyResultToSnapshot(result: PenaltyResult): StreakPenaltySnapshot {
+  return {
+    type: result.type,
+    missedDay: result.missedDay,
+    message: result.message,
+    tokensLost: result.tokensLost,
+    perkLostName: result.perkLostName,
+    previousTier: result.previousTier,
+    newTier: result.newTier,
+  };
+}
+
+/**
+ * Detect day boundaries that have passed since `streak.lastVisit` and apply
+ * the missed-day escalation penalties for each NEW missed day
+ * (VAL-STREAK-005..008, VAL-STREAK-016). This is the primary entry point for
+ * the EventScheduler's streak check: on each tick it computes how many full
+ * days have elapsed since the last visit and calls `simulateMissedDay` once
+ * for each not-yet-penalized missed day, capped at Day 3 (the escalation
+ * ceiling).
+ *
+ * Semantics:
+ *   - A single day-pass (daysBetween === 1) is a CONSECUTIVE daily visit —
+ *     NOT a miss. Misses start at daysElapsed >= 2 (at least one full day
+ *     was skipped). The number of missed days = daysElapsed - 1.
+ *   - Already-penalized misses are tracked via `streak.missedDays`, so only
+ *     the delta (daysElapsed - 1 - missedDays) is applied per call. This
+ *     makes the function idempotent across ticks.
+ *   - Streak protection (VAL-EXIT-028) suppresses all penalties.
+ *   - No-op when `lastVisit` is 0 (first-ever session, no prior visit to
+ *     miss).
+ *
+ * Returns the array of PenaltyResult for each penalty applied this call
+ * (empty when no new misses). The caller (EventScheduler) fires
+ * `onMissedDayPenalty` for each result and `lastStreakPenalty` on the player
+ * store holds the most recent snapshot for UI display.
+ */
+export function processMissedDayPenalties(
+  now: number = Date.now()
+): PenaltyResult[] {
+  const streak = usePlayerStore.getState().streak;
+
+  // No prior visit recorded (first session) — nothing to miss.
+  if (streak.lastVisit <= 0) return [];
+  // Streak protection suppresses all missed-day penalties (VAL-EXIT-028).
+  if (streak.streakProtected) return [];
+
+  const daysElapsed = daysBetween(streak.lastVisit, now);
+  // The first day-pass is a consecutive visit, not a miss. Missed days start
+  // at daysElapsed >= 2. Cap the escalatable misses at MAX_PENALTY_DAY (3).
+  const applicableMisses = Math.min(Math.max(0, daysElapsed - 1), MAX_PENALTY_DAY);
+  const newMisses = applicableMisses - streak.missedDays;
+
+  if (newMisses <= 0) return [];
+
+  const results: PenaltyResult[] = [];
+  for (let i = 0; i < newMisses; i++) {
+    const result = simulateMissedDay(now);
+    results.push(result);
+  }
+  return results;
 }
 
 /* ============================================================================
@@ -534,6 +618,7 @@ const streakEngine = {
   RECOVERY_WINDOW_MS,
   COMEBACK_BONUS_DURATION_MS,
   DAY1_PENALTY_PERCENT,
+  MAX_PENALTY_DAY,
   daysBetween,
   computeDay1Penalty,
   getRecoveryCountdownMs,
@@ -543,6 +628,7 @@ const streakEngine = {
   checkStreakOnVisit,
   applyMissedDayPenalty,
   simulateMissedDay,
+  processMissedDayPenalties,
   checkRecoveryWindowExpiry,
   checkComebackBonusExpiry,
   getStreakExitStatus,

@@ -5,7 +5,10 @@ import { motion } from "framer-motion";
 import { getEventScheduler, resetEventSchedulerSingleton } from "@/engine/EventScheduler";
 import { showTokenFeedback } from "@/engine/tokenEconomy";
 import { checkForTierUpgrade } from "@/engine/tierEngine";
-import { checkStreakOnVisit } from "@/engine/streakEngine";
+import {
+  checkStreakOnVisit,
+  processMissedDayPenalties,
+} from "@/engine/streakEngine";
 import { StatusBar } from "./StatusBar";
 import { MallMap } from "./MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
@@ -58,6 +61,14 @@ export function MallExperience() {
     // path was bypassed (defensive — idempotent if already granted).
     grantOnboardingTrialPerks();
 
+    // Apply any pending missed-day penalties BEFORE the visit check. The
+    // streak escalation (Day 1 token loss, Day 2 perk loss, Day 3 demotion)
+    // is detected by comparing the current time with `streak.lastVisit`; it
+    // must run before `checkStreakOnVisit` updates lastVisit / resets the
+    // missed-day counter, otherwise the penalties for days missed while away
+    // would be lost (VAL-STREAK-005..008, VAL-STREAK-016).
+    processMissedDayPenalties();
+
     // Check the streak on visit: increments on a new day, recovers within the
     // 48h window, or resets if the window expired (VAL-STREAK-004, -009,
     // -013, -017).
@@ -69,6 +80,14 @@ export function MallExperience() {
         // spend (red, downward) celebration treatment so the loss is visually
         // distinct from a token gain.
         showTokenFeedback("spend", 0, `Trial expired: ${perkName}`);
+      },
+      onMissedDayPenalty: (result) => {
+        // Surface the streak-miss penalty via the token-feedback overlay so
+        // the loss is communicated alongside the StreakPenaltyNotification
+        // banner (VAL-STREAK-005..008). `result.tokensLost` carries the
+        // ACTUAL capped token loss so the notification never overstates the
+        // deduction.
+        showTokenFeedback("spend", result.tokensLost ?? 0, result.message);
       },
       onRecoveryWindowExpired: () => {
         // The 48h recovery window has expired (VAL-STREAK-017). The streak

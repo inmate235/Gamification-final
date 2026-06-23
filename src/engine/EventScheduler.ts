@@ -35,6 +35,7 @@ import {
 import {
   checkRecoveryWindowExpiry,
   checkComebackBonusExpiry,
+  processMissedDayPenalties,
 } from "@/engine/streakEngine";
 import { checkRescueBoostExpiry } from "@/engine/exitFrictionEngine";
 import {
@@ -44,6 +45,7 @@ import {
   resetPhantomEngine,
 } from "@/engine/phantomEngine";
 import type { FlashSale } from "@/types";
+import type { PenaltyResult } from "@/engine/streakEngine";
 
 const TICK_MS = 1000;
 
@@ -58,6 +60,13 @@ export interface EventSchedulerHandlers {
   onTrialPerkExpired?: (perkId: string, perkName: string) => void;
   /** Called when the player is promoted to a new tier (VAL-TIER-006). */
   onTierUpgrade?: (newTier: string, previousTier: string) => void;
+  /**
+   * Called for each missed-day penalty applied by the scheduler's day-
+   * boundary detection (VAL-STREAK-005..008). The penalty result carries the
+   * ACTUAL capped token loss so the notification never overstates the
+   * deduction.
+   */
+  onMissedDayPenalty?: (result: PenaltyResult) => void;
   /** Called when the 48h recovery window expires (VAL-STREAK-017). */
   onRecoveryWindowExpired?: () => void;
   /** Called when the 30-min comeback bonus expires (VAL-STREAK-012). */
@@ -240,7 +249,22 @@ export class EventScheduler {
     // 11. Map store stays subscribed; no per-tick map work needed here.
 
     // 12. Streak system checks (VAL-STREAK-010..017):
-    //     a) Recovery window expiry — if 48h have elapsed since the streak
+    //     a) Missed-day penalty escalation — detect when one or more day
+    //        boundaries have passed since `streak.lastVisit` and apply the
+    //        escalating penalties (Day 1 token loss, Day 2 perk loss, Day 3
+    //        tier demotion) for each NEW missed day via simulateMissedDay
+    //        (VAL-STREAK-005..008, VAL-STREAK-016). This runs every tick so
+    //        both the catch-up on return (days missed while away) and
+    //        in-session midnight crossings are detected. The function is
+    //        idempotent across ticks: it only applies the delta of
+    //        not-yet-penalized missed days.
+    const penaltyResults = processMissedDayPenalties(now);
+    if (penaltyResults.length > 0) {
+      for (const result of penaltyResults) {
+        this.handlers.onMissedDayPenalty?.(result);
+      }
+    }
+    //     b) Recovery window expiry — if 48h have elapsed since the streak
     //        broke, close the window so the next visit is a full reset
     //        (VAL-STREAK-017).
     const recoveryExpired = checkRecoveryWindowExpiry(now);

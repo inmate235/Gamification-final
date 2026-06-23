@@ -148,6 +148,7 @@ const initialPlayerState: PlayerState = {
   perks: [],
   trialPerks: [],
   rescueBoost: null,
+  lastStreakPenalty: null,
 };
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({

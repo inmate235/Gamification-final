@@ -74,6 +74,28 @@ export interface StreakState {
   streakProtected: boolean;
 }
 
+/**
+ * A snapshot of the most recent streak-miss penalty applied by the engine
+ * (VAL-STREAK-005..008). Stored on the player store so the
+ * StreakPenaltyNotification component can display the ACTUAL capped token
+ * loss rather than a recomputed estimate (the Day-1 penalty is capped at the
+ * player's current balance, so the notification must never overstate the
+ * real deduction). Null when no penalty has been applied yet.
+ */
+export interface StreakPenaltySnapshot {
+  type: "token-loss" | "perk-loss" | "tier-demotion";
+  missedDay: number;
+  message: string;
+  /** Actual tokens lost (token-loss only), capped at the current balance. */
+  tokensLost?: number;
+  /** Name of the perk lost (perk-loss only). */
+  perkLostName?: string;
+  /** Previous tier (tier-demotion only). */
+  previousTier?: Tier;
+  /** New tier after demotion (tier-demotion only). */
+  newTier?: Tier;
+}
+
 export interface PlayerState {
   tokens: number;
   tier: Tier;
@@ -89,6 +111,13 @@ export interface PlayerState {
    * bargain; active for the 5-minute stay window.
    */
   rescueBoost: RescueBoost | null;
+  /**
+   * Snapshot of the most recently applied streak-miss penalty, for UI
+   * notification (VAL-STREAK-005..008). Carries the actual capped token loss
+   * so the notification never overstates the deduction. Null when no penalty
+   * has been applied.
+   */
+  lastStreakPenalty: StreakPenaltySnapshot | null;
 }
 
 /* ============================================================================

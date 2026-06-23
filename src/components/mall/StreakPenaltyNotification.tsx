@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Warning, Coin, Crown, Sparkle } from "@phosphor-icons/react/dist/ssr";
 import { usePlayerStore } from "@/stores/playerStore";
-import {
-  computeDay1Penalty,
-} from "@/engine/streakEngine";
+import { computeDay1Penalty } from "@/engine/streakEngine";
 import type { PenaltyResult } from "@/engine/streakEngine";
 
 /**
@@ -14,9 +12,11 @@ import type { PenaltyResult } from "@/engine/streakEngine";
  * streak miss penalty is applied (VAL-STREAK-005..008).
  *
  * Watches the playerStore streak state for changes to `missedDays` and
- * `broken`. When a new miss is detected, it generates the appropriate
- * penalty notification (token loss -> perk loss -> tier demotion, in that
- * order across consecutive missed days, VAL-STREAK-008).
+ * `broken`. When a new miss is detected, it reads the `lastStreakPenalty`
+ * snapshot (written by `simulateMissedDay` / the EventScheduler's missed-day
+ * processing) which carries the ACTUAL capped token loss, so the Day-1
+ * notification never overstates the deduction when the balance is below the
+ * computed penalty.
  *
  * This component is self-contained: it subscribes to the store and shows
  * notifications automatically when the streak-break escalation advances.
@@ -38,23 +38,24 @@ const PENALTY_COLORS = {
 
 export function StreakPenaltyNotification() {
   const missedDays = usePlayerStore((s) => s.streak.missedDays);
-  const broken = usePlayerStore((s) => s.streak.broken);
+  const lastStreakPenalty = usePlayerStore((s) => s.lastStreakPenalty);
   const tier = usePlayerStore((s) => s.tier);
-  const prevMissedDaysRef = useRef(0);
+  const [prevMissedDays, setPrevMissedDays] = useState(0);
   const [penalty, setPenalty] = useState<PenaltyResult | null>(null);
 
-  // When missedDays increases, generate a penalty notification for that
-  // specific day (VAL-STREAK-005..008).
-  useEffect(() => {
-    if (missedDays > prevMissedDaysRef.current) {
-      // Reconstruct the penalty result for this missed day. The store has
-      // already applied the penalty (via registerMissedDay / demoteTier),
-      // so we generate the notification info for display only.
-      const result = buildPenaltyDisplay(missedDays, tier);
-      setPenalty(result);
+  // Adjust local state when missedDays increases (React-recommended
+  // "adjusting state when a prop/store value changes" pattern — no effect or
+  // ref needed). Prefer the engine-written `lastStreakPenalty` snapshot which
+  // carries the ACTUAL capped token loss so the Day-1 notification never
+  // overstates the deduction (VAL-STREAK-005..008).
+  if (missedDays > prevMissedDays) {
+    setPrevMissedDays(missedDays);
+    if (lastStreakPenalty) {
+      setPenalty(lastStreakPenalty as PenaltyResult);
+    } else {
+      setPenalty(buildPenaltyDisplay(missedDays, tier));
     }
-    prevMissedDaysRef.current = missedDays;
-  }, [missedDays, tier, broken]);
+  }
 
   const handleDismiss = () => setPenalty(null);
 
@@ -109,20 +110,25 @@ export function StreakPenaltyNotification() {
 }
 
 /**
- * Build a penalty display result for a given missed day. This is for UI
- * notification only — the actual penalty (token deduction, perk removal,
- * tier demotion) has already been applied by the store.
+ * Build a fallback penalty display result for a given missed day. This is
+ * used ONLY when no `lastStreakPenalty` snapshot is available (e.g. a path
+ * that bypassed `simulateMissedDay`). The Day-1 token loss is capped at the
+ * player's current balance so the notification never overstates the actual
+ * deduction (VAL-STREAK-005).
  */
 function buildPenaltyDisplay(missedDay: number, currentTier: string): PenaltyResult {
   const player = usePlayerStore.getState();
   switch (missedDay) {
     case 1: {
+      // Cap the displayed loss at the current balance so the notification
+      // never claims more tokens were lost than the player actually had.
       const penalty = computeDay1Penalty(player.tierXP);
+      const actualLost = Math.min(player.tokens, penalty);
       return {
         type: "token-loss",
         missedDay: 1,
-        message: `Streak broken! You lost ${penalty} tokens for missing Day 1.`,
-        tokensLost: penalty,
+        message: `Streak broken! You lost ${actualLost} tokens for missing Day 1.`,
+        tokensLost: actualLost,
       };
     }
     case 2: {
