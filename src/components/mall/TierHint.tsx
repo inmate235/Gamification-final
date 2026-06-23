@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp, X } from "@phosphor-icons/react/dist/ssr";
 import { usePlayerStore } from "@/stores/playerStore";
-import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
 import { getTierHint, computeTierProgressScore } from "@/engine/tierEngine";
 import { TIER_VISUALS } from "@/data/tierData";
@@ -26,15 +25,14 @@ const HINT_PROXIMITY = 8;
 export function TierHint() {
   const tier = usePlayerStore((s) => s.tier);
   const tierXP = usePlayerStore((s) => s.tierXP);
-  const explorationPercent = useMapStore((s) => s.explorationPercent);
   const showOverlay = useUIStore((s) => s.showOverlay);
   const activeOverlay = useUIStore((s) => s.activeOverlay);
   const [dismissed, setDismissed] = useState(false);
 
   const hint = useMemo(() => {
-    const score = computeTierProgressScore(tierXP, explorationPercent);
+    const score = computeTierProgressScore(tierXP);
     return getTierHint(tier, score);
-  }, [tier, tierXP, explorationPercent]);
+  }, [tier, tierXP]);
 
   // Don't show while an overlay is open or after dismissal or when at top tier
   // or when the remaining distance is larger than the proximity window.

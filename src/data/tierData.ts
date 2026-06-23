@@ -4,11 +4,11 @@
  *
  * Four tiers: Bronze, Silver, Gold, Neodymium.
  *
- * Progression is driven by a combined `tierProgressScore` derived from
- * cumulative tokens earned (playerStore.tierXP) plus exploration progress
- * (mapStore.explorationPercent). Crossing a tier threshold requires the
- * combined score to meet the threshold — so both earning AND exploring
- * contribute (VAL-TIER-005).
+ * Progression is driven by cumulative tokens earned (playerStore.tierXP).
+ * Exploration percentage is excluded from the progression score so that a
+ * fresh user with baseline exploration (~16% from the revealed entrance
+ * zone) is not auto-promoted past Bronze before earning any tokens
+ * (fix-tier-auto-promotion).
  *
  * Thresholds are non-linear (VAL-TIER-018..020):
  *   Bronze -> Silver : fast hook (smallest jump)
@@ -34,7 +34,7 @@ export const TIER_ORDER: Tier[] = ["bronze", "silver", "gold", "neodymium"];
    ========================================================================== */
 
 /**
- * Cumulative tierProgressScore required to reach each tier.
+ * Cumulative tierXP (tokens earned) required to reach each tier.
  *
  *   Bronze     : 0   (starting tier)
  *   Silver     : 12  (fast hook — reachable within the first ~18 min)

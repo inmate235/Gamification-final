@@ -26,6 +26,7 @@ import {
 } from "@/data/tierData";
 import type { IconWeight } from "@phosphor-icons/react";
 import type { Perk } from "@/types";
+import { computeTierProgressScore } from "@/engine/tierEngine";
 
 /**
  * TierPerksPanel — the membership perks overlay.
@@ -96,7 +97,10 @@ export function TierPerksPanel() {
   const currentIdx = TIER_ORDER.indexOf(tier);
   const nextTier = TIER_ORDER[currentIdx + 1] ?? null;
   const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : null;
-  const progressScore = tierXP; // exploration added at the engine level
+  // Tier progression is driven purely by tierXP (cumulative tokens earned).
+  // Exploration is excluded so a fresh user is not auto-promoted (fix-tier-
+  // auto-promotion).
+  const progressScore = computeTierProgressScore(tierXP);
   const remaining =
     nextThreshold !== null ? Math.max(0, nextThreshold - progressScore) : 0;
 

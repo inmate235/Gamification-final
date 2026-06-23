@@ -1,10 +1,12 @@
 /**
  * tierEngine - the multi-tier membership progression system.
  *
- * Tier progression is driven by a combined `tierProgressScore` derived from
- * cumulative tokens earned (playerStore.tierXP) plus exploration progress
- * (mapStore.explorationPercent). Both must grow to advance — earning alone or
- * exploring alone is not enough to cross thresholds quickly (VAL-TIER-005).
+ * Tier progression is driven by cumulative tokens earned (playerStore.tierXP).
+ * Exploration percentage is intentionally excluded from the progression score
+ * so that a fresh user — whose entrance zone is revealed by default yielding a
+ * non-zero baseline exploration (~16%) — is NOT auto-promoted past Bronze
+ * before earning any tokens. Tiers are earned purely by token accumulation
+ * (fix-tier-auto-promotion).
  *
  * Thresholds are non-linear (VAL-TIER-018..020):
  *   Bronze -> Silver : smallest jump (fast hook)
@@ -17,7 +19,6 @@
  */
 
 import { usePlayerStore } from "@/stores/playerStore";
-import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
 import {
   TIER_ORDER,
@@ -65,15 +66,13 @@ export function tierForScore(score: number): Tier {
 }
 
 /**
- * Combined progression score = cumulative earned tokens (tierXP) + exploration
- * percent. Both components contribute so advancing requires earning AND
- * exploring (VAL-TIER-005).
+ * Tier progression score = cumulative tokens earned (tierXP). Exploration
+ * percentage is deliberately excluded so tiers are earned purely by token
+ * accumulation and a fresh user with baseline exploration is not auto-
+ * promoted (fix-tier-auto-promotion).
  */
-export function computeTierProgressScore(
-  tierXP: number,
-  explorationPercent: number
-): number {
-  return tierXP + Math.max(0, Math.round(explorationPercent));
+export function computeTierProgressScore(tierXP: number): number {
+  return Math.max(0, Math.round(tierXP));
 }
 
 /* ============================================================================
@@ -151,8 +150,7 @@ export function demoteTierByOne(tier: Tier): Tier {
  */
 export function checkForTierUpgrade(): Tier | null {
   const player = usePlayerStore.getState();
-  const map = useMapStore.getState();
-  const score = computeTierProgressScore(player.tierXP, map.explorationPercent);
+  const score = computeTierProgressScore(player.tierXP);
   const earned = tierForScore(score);
 
   if (tierIndex(earned) <= tierIndex(player.tier)) return null;

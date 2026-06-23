@@ -56,10 +56,12 @@ describe("tierEngine — pure helpers", () => {
     expect(tierForScore(1000)).toBe("neodymium");
   });
 
-  it("computeTierProgressScore combines tierXP and exploration", () => {
-    expect(computeTierProgressScore(10, 5)).toBe(15);
-    expect(computeTierProgressScore(0, 0)).toBe(0);
-    expect(computeTierProgressScore(7, 2.4)).toBe(9); // exploration rounded
+  it("computeTierProgressScore uses tierXP only (no exploration)", () => {
+    expect(computeTierProgressScore(10)).toBe(10);
+    expect(computeTierProgressScore(0)).toBe(0);
+    expect(computeTierProgressScore(7)).toBe(7);
+    // Negative tierXP is clamped to 0
+    expect(computeTierProgressScore(-3)).toBe(0);
   });
 });
 
@@ -140,12 +142,8 @@ describe("tierEngine — checkForTierUpgrade orchestrator", () => {
     useUIStore.getState().reset();
   });
 
-  it("promotes when the combined score crosses the next threshold", () => {
+  it("promotes when tierXP crosses the next threshold", () => {
     usePlayerStore.getState().addTierXP(12); // silver threshold
-    // exploration starts at the entrance-only value (non-zero). Force a known
-    // exploration percent so the score deterministically crosses silver.
-    useMapStore.getState().setExplorationPercent(0);
-    // Recompute: tierXP=12 + exploration=0 = 12 -> silver
     const promoted = checkForTierUpgrade();
     expect(promoted).toBe("silver");
     expect(usePlayerStore.getState().tier).toBe("silver");
@@ -154,7 +152,6 @@ describe("tierEngine — checkForTierUpgrade orchestrator", () => {
 
   it("does not promote when the threshold is not met", () => {
     usePlayerStore.getState().addTierXP(5);
-    useMapStore.getState().setExplorationPercent(0);
     expect(checkForTierUpgrade()).toBeNull();
     expect(usePlayerStore.getState().tier).toBe("bronze");
   });
@@ -162,16 +159,27 @@ describe("tierEngine — checkForTierUpgrade orchestrator", () => {
   it("does not re-promote when already at the earned tier", () => {
     usePlayerStore.getState().setTier("silver");
     usePlayerStore.getState().addTierXP(12);
-    useMapStore.getState().setExplorationPercent(0);
     expect(checkForTierUpgrade()).toBeNull();
   });
 
   it("collapses multiple promotions to the highest eligible tier", () => {
     usePlayerStore.getState().addTierXP(48);
-    useMapStore.getState().setExplorationPercent(0);
     const promoted = checkForTierUpgrade();
     expect(promoted).toBe("gold");
     expect(usePlayerStore.getState().tier).toBe("gold");
+  });
+
+  it("fresh user with baseline exploration is NOT auto-promoted (fix-tier-auto-promotion)", () => {
+    // After reset, tierXP is 0 and the entrance zone is revealed by default
+    // yielding a non-zero explorationPercent (~16%). The tier progression
+    // score must be based on tierXP only so the fresh user stays Bronze.
+    const explorationPercent = useMapStore.getState().explorationPercent;
+    expect(explorationPercent).toBeGreaterThan(0); // baseline exploration exists
+    expect(usePlayerStore.getState().tierXP).toBe(0);
+    const promoted = checkForTierUpgrade();
+    expect(promoted).toBeNull();
+    expect(usePlayerStore.getState().tier).toBe("bronze");
+    expect(useUIStore.getState().activeOverlay).toBe("none");
   });
 });
 
