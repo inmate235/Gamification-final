@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { getEventScheduler, resetEventSchedulerSingleton } from "@/engine/EventScheduler";
 import { showTokenFeedback } from "@/engine/tokenEconomy";
 import { checkForTierUpgrade } from "@/engine/tierEngine";
+import { checkStreakOnVisit } from "@/engine/streakEngine";
 import { StatusBar } from "./StatusBar";
 import { MallMap } from "./MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
@@ -15,9 +16,16 @@ import { FlashSale, FlashSaleEntryButton } from "@/components/overlays/FlashSale
 import { SpinningWheel, SpinningWheelEntryButton } from "@/components/overlays/SpinningWheel";
 import { TierUpgrade } from "@/components/overlays/TierUpgrade";
 import { TierPerksPanel } from "@/components/overlays/TierPerksPanel";
+import { ExitFriction } from "@/components/overlays/ExitFriction";
+import { LeaveMallButton } from "./LeaveMallButton";
+import { GoodbyeScreen } from "./GoodbyeScreen";
 import { TierHint } from "./TierHint";
 import { TierDemotionThreat } from "./TierDemotionThreat";
+import { StreakAnxietyMessage } from "./StreakAnxietyMessage";
+import { StreakRecoveryBanner } from "./StreakRecoveryBanner";
+import { StreakPenaltyNotification } from "./StreakPenaltyNotification";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useSessionStore } from "@/stores/sessionStore";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -27,12 +35,17 @@ import { usePlayerStore } from "@/stores/playerStore";
  * EventScheduler game loop is started on mount and stopped on unmount so the
  * session clock, deficit pricing, and phantom movement run only while the
  * player is in the mall.
+ *
+ * The streak system is checked on mount (VAL-STREAK-004, VAL-STREAK-009):
+ * the visit check compares the current time with the last visit to determine
+ * whether to increment, recover, or reset the streak.
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
 export function MallExperience() {
   const grantOnboardingTrialPerks = usePlayerStore((s) => s.grantOnboardingTrialPerks);
+  const exited = useSessionStore((s) => s.exited);
 
   /* --- Start / stop the game loop on mount / unmount --- */
   useEffect(() => {
@@ -40,12 +53,30 @@ export function MallExperience() {
     // path was bypassed (defensive — idempotent if already granted).
     grantOnboardingTrialPerks();
 
+    // Check the streak on visit: increments on a new day, recovers within the
+    // 48h window, or resets if the window expired (VAL-STREAK-004, -009,
+    // -013, -017).
+    checkStreakOnVisit();
+
     const scheduler = getEventScheduler({
       onTrialPerkExpired: (_perkId, perkName) => {
         // Notify the user that a trial perk was lost (VAL-TIER-015). Uses the
         // spend (red, downward) celebration treatment so the loss is visually
         // distinct from a token gain.
         showTokenFeedback("spend", 0, `Trial expired: ${perkName}`);
+      },
+      onRecoveryWindowExpired: () => {
+        // The 48h recovery window has expired (VAL-STREAK-017). The streak
+        // is now fully broken — a full reset applies on the next visit.
+        showTokenFeedback("spend", 0, "Recovery window expired. Streak fully broken.");
+      },
+      onComebackBonusExpired: () => {
+        // The 30-min 2x comeback bonus has ended (VAL-STREAK-012).
+        showTokenFeedback("spend", 0, "2x comeback bonus ended.");
+      },
+      onRescueBoostExpired: () => {
+        // The 5-min 2x rescue-bargain boost has ended (VAL-EXIT-016).
+        showTokenFeedback("spend", 0, "2x rescue boost ended.");
       },
     });
     scheduler.start();
@@ -60,13 +91,27 @@ export function MallExperience() {
     };
   }, [grantOnboardingTrialPerks]);
 
+  // After the user successfully leaves the mall (final "Leave anyway" on
+  // Layer 3), render the goodbye screen in place of the mall experience
+  // (VAL-EXIT-017, VAL-EXIT-032). The exit-friction state has already been
+  // reset on leave.
+  if (exited) {
+    return <GoodbyeScreen />;
+  }
+
   return (
     <main className="relative z-10 flex min-h-[100dvh] flex-col">
       {/* Top chrome */}
       <StatusBar />
 
+      {/* Streak recovery window banner (VAL-STREAK-010, -011) */}
+      <StreakRecoveryBanner />
+
       {/* Tier demotion threat banner (shown when streak breaks) */}
       <TierDemotionThreat />
+
+      {/* Streak penalty notification (VAL-STREAK-005..008) */}
+      <StreakPenaltyNotification />
 
       {/* Map area — padded to clear the fixed status bar + bottom panel */}
       <motion.div
@@ -86,8 +131,14 @@ export function MallExperience() {
       <ShortcutEntryButton />
       <SpinningWheelEntryButton />
 
+      {/* Leave Mall control — triggers the exit friction flow (VAL-EXIT-001) */}
+      <LeaveMallButton />
+
       {/* Tier aspiration hint (appears near next tier) */}
       <TierHint />
+
+      {/* Streak anxiety messaging (VAL-STREAK-014) */}
+      <StreakAnxietyMessage />
 
       {/* Overlays */}
       <StoreDetail />
@@ -96,6 +147,7 @@ export function MallExperience() {
       <SpinningWheel />
       <TierUpgrade />
       <TierPerksPanel />
+      <ExitFriction />
       <Celebration />
     </main>
   );

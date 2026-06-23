@@ -73,6 +73,43 @@ export interface PlayerStore extends PlayerState {
    * count.
    */
   registerMissedDay: () => number;
+  /**
+   * Set the streak recovery window start time and mark it active
+   * (VAL-STREAK-010).
+   */
+  setRecoveryWindowStart: (timestamp: number) => void;
+  /** Close the recovery window (VAL-STREAK-017). */
+  closeRecoveryWindow: () => void;
+  /**
+   * Restore the streak partially during recovery: lose 2 days instead of a
+   * full reset (VAL-STREAK-013). Clears the broken/recovery flags and resets
+   * missedDays.
+   */
+  restoreStreakPartial: () => void;
+  /**
+   * Activate the comeback bonus: 2x tokens for 30 minutes
+   * (VAL-STREAK-012). Sets comebackBonus.active = true with an expiry
+   * timestamp.
+   */
+  activateComebackBonus: (expiresAt: number) => void;
+  /** Clear the comeback bonus when it expires (VAL-STREAK-012). */
+  clearComebackBonus: () => void;
+  /**
+   * Activate streak protection for this session (VAL-EXIT-015, VAL-EXIT-028).
+   * While protected, `breakStreak` is a no-op so the streak will not be
+   * marked broken even if the user leaves without a next-day visit.
+   */
+  activateStreakProtection: () => void;
+  /** Clear streak protection (e.g. on streak increment / new day). */
+  clearStreakProtection: () => void;
+  /**
+   * Activate the rescue-bargain 2x token boost for the given duration
+   * (VAL-EXIT-016, VAL-EXIT-027). Sets rescueBoost.active = true with an
+   * expiry timestamp.
+   */
+  activateRescueBoost: (expiresAt: number) => void;
+  /** Clear the rescue boost when it expires. */
+  clearRescueBoost: () => void;
   addPerk: (perk: Perk) => void;
   removePerk: (perkId: string) => void;
   /** Remove a trial perk by id (used on expiry with notification). */
@@ -95,6 +132,10 @@ const initialStreak: StreakState = {
   broken: false,
   recoveryWindow: false,
   missedDays: 0,
+  recoveryWindowStart: 0,
+  preBreakCount: 0,
+  comebackBonus: null,
+  streakProtected: false,
 };
 
 const initialPlayerState: PlayerState = {
@@ -106,6 +147,7 @@ const initialPlayerState: PlayerState = {
   surveyAnswers: {},
   perks: [],
   trialPerks: [],
+  rescueBoost: null,
 };
 
 export const usePlayerStore = create<PlayerStore>((set, get) => ({
@@ -118,7 +160,19 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     })),
 
   awardTokens: (baseReward) => {
-    const credited = applyTierMultiplier(baseReward, get().tier);
+    const tierCredited = applyTierMultiplier(baseReward, get().tier);
+    // Comeback bonus: 2x tokens on top of the tier multiplier while active
+    // (VAL-STREAK-012). The rescue-bargain 2x boost (VAL-EXIT-016) is also 2x;
+    // the two never stack multiplicatively — we take the max active boost.
+    const comeback = get().streak.comebackBonus;
+    const comebackActive =
+      comeback && comeback.active && comeback.expiresAt > Date.now();
+    const rescue = get().rescueBoost;
+    const rescueActive =
+      rescue && rescue.active && rescue.expiresAt > Date.now();
+    const boostMultiplier =
+      comebackActive || rescueActive ? 2 : 1;
+    const credited = Math.max(0, Math.round(tierCredited * boostMultiplier));
     set((state) => ({
       tokens: Math.max(0, state.tokens + credited),
       tierXP: state.tierXP + credited,
@@ -162,20 +216,43 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         broken: false,
         recoveryWindow: false,
         missedDays: 0,
+        recoveryWindowStart: 0,
+        preBreakCount: 0,
+        comebackBonus: null,
+        streakProtected: false,
       },
     })),
 
   breakStreak: () =>
-    set((state) => ({
-      streak: { ...state.streak, broken: true },
-    })),
+    set((state) => {
+      // Streak protection (VAL-EXIT-028): accepting the Layer 3 rescue bargain
+      // protects the streak for the session, so a break attempt is a no-op.
+      if (state.streak.streakProtected) return state;
+      return {
+        streak: {
+          ...state.streak,
+          broken: true,
+          preBreakCount: state.streak.count,
+        },
+      };
+    }),
 
   activateRecovery: () =>
     set((state) => ({
-      streak: { ...state.streak, recoveryWindow: true, broken: false },
+      streak: {
+        ...state.streak,
+        recoveryWindow: true,
+        broken: false,
+        recoveryWindowStart: Date.now(),
+      },
     })),
 
   registerMissedDay: () => {
+    // Streak protection (VAL-EXIT-028): a protected streak does not accrue
+    // missed days or break.
+    if (get().streak.streakProtected) {
+      return get().streak.missedDays;
+    }
     const missedDays = get().streak.missedDays + 1;
     set((state) => ({
       streak: {
@@ -190,6 +267,69 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     }
     return missedDays;
   },
+
+  setRecoveryWindowStart: (timestamp) =>
+    set((state) => ({
+      streak: { ...state.streak, recoveryWindow: true, recoveryWindowStart: timestamp },
+    })),
+
+  closeRecoveryWindow: () =>
+    set((state) => ({
+      streak: { ...state.streak, recoveryWindow: false, recoveryWindowStart: 0 },
+    })),
+
+  restoreStreakPartial: () =>
+    set((state) => {
+      // Partial restoration: lose 2 days instead of resetting to Day 1
+      // (VAL-STREAK-013). If the pre-break count was <= 2, floor at Day 1.
+      const restored = Math.max(1, state.streak.preBreakCount - 2);
+      return {
+        streak: {
+          count: restored,
+          lastVisit: Date.now(),
+          broken: false,
+          recoveryWindow: false,
+          missedDays: 0,
+          recoveryWindowStart: 0,
+          preBreakCount: 0,
+          comebackBonus: state.streak.comebackBonus,
+          streakProtected: state.streak.streakProtected,
+        },
+      };
+    }),
+
+  activateComebackBonus: (expiresAt) =>
+    set((state) => ({
+      streak: {
+        ...state.streak,
+        comebackBonus: { active: true, expiresAt },
+      },
+    })),
+
+  clearComebackBonus: () =>
+    set((state) => ({
+      streak: {
+        ...state.streak,
+        comebackBonus: null,
+      },
+    })),
+
+  activateStreakProtection: () =>
+    set((state) => ({
+      streak: { ...state.streak, streakProtected: true },
+    })),
+
+  clearStreakProtection: () =>
+    set((state) => ({
+      streak: { ...state.streak, streakProtected: false },
+    })),
+
+  activateRescueBoost: (expiresAt) =>
+    set({
+      rescueBoost: { active: true, expiresAt },
+    }),
+
+  clearRescueBoost: () => set({ rescueBoost: null }),
 
   addPerk: (perk) =>
     set((state) => {

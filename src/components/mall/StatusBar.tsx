@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Coin, Fire, MapPin } from "@phosphor-icons/react/dist/ssr";
+import { Coin, Fire, MapPin, Lightning } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -60,10 +60,17 @@ export function StatusBar() {
   const tokens = usePlayerStore((s) => s.tokens);
   const tier = usePlayerStore((s) => s.tier);
   const streakCount = usePlayerStore((s) => s.streak.count);
+  const streakBroken = usePlayerStore((s) => s.streak.broken);
+  const comebackBonus = usePlayerStore((s) => s.streak.comebackBonus);
   const explorationPercent = useMapStore((s) => s.explorationPercent);
   const showOverlay = useUIStore((s) => s.showOverlay);
 
   const tierStyle = TIER_STYLES[tier];
+  // Comeback bonus is active when the store says so. The EventScheduler
+  // clears the bonus when it expires, so we only need to check the flag
+  // (no Date.now() during render to avoid impure calls).
+  const comebackActive =
+    comebackBonus !== null && comebackBonus.active;
 
   /* --- Pulse the token count whenever it changes (real-time emphasis) --- */
   const prevTokensRef = useRef(tokens);
@@ -140,13 +147,37 @@ export function StatusBar() {
           <Divider />
 
           {/* Streak */}
-          <StatItem
-            icon={<Fire size={16} weight="light" className="text-[#9d7fdb]" />}
-            value={streakCount}
-            label="Day Streak"
-            valueClassName="text-[#9d7fdb]"
+          <div
+            className="flex items-center gap-1.5"
             data-testid="status-streak"
-          />
+            aria-label="Day Streak"
+          >
+            <Fire
+              size={16}
+              weight="light"
+              className={cn("text-[#9d7fdb]", streakBroken && "opacity-50")}
+            />
+            <span
+              className={cn(
+                "font-mono text-sm font-semibold tabular-nums sm:text-base",
+                "text-[#9d7fdb]"
+              )}
+            >
+              {streakCount}
+            </span>
+            {comebackActive && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                className="flex items-center gap-0.5 rounded-full bg-[#d4af37]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#d4af37]"
+                data-testid="status-comeback-bonus"
+              >
+                <Lightning size={8} weight="fill" />
+                2x
+              </motion.span>
+            )}
+          </div>
 
           {/* Exploration progress — fills remaining width */}
           <div
@@ -183,38 +214,6 @@ export function StatusBar() {
 /* ============================================================================
    Sub-components
    ========================================================================== */
-
-function StatItem({
-  icon,
-  value,
-  label,
-  valueClassName,
-  "data-testid": testId,
-}: {
-  icon: React.ReactNode;
-  value: number;
-  label: string;
-  valueClassName?: string;
-  "data-testid"?: string;
-}) {
-  return (
-    <div
-      className="flex items-center gap-1.5"
-      data-testid={testId}
-      aria-label={label}
-    >
-      {icon}
-      <span
-        className={cn(
-          "font-mono text-sm font-semibold tabular-nums sm:text-base",
-          valueClassName
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
 
 function Divider() {
   return <span className="h-5 w-px shrink-0 bg-white/10" />;

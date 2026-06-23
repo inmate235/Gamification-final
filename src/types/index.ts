@@ -19,6 +19,25 @@ export interface Perk {
   source?: string; // phantom name for gifted perks
 }
 
+export interface ComebackBonus {
+  /** True while the 2x token multiplier is active (VAL-STREAK-012). */
+  active: boolean;
+  /** Epoch ms when the 30-minute comeback bonus expires. */
+  expiresAt: number;
+}
+
+/**
+ * Rescue bargain 2x token boost granted by accepting the Layer 3 exit-friction
+ * rescue bargain (VAL-EXIT-016, VAL-EXIT-027). Active for the 5-minute stay
+ * window promised by the bargain. Independent of the streak comeback bonus so
+ * the two do not stack multiplicatively (awardTokens takes the max).
+ */
+export interface RescueBoost {
+  active: boolean;
+  /** Epoch ms when the 5-minute 2x rescue boost expires. */
+  expiresAt: number;
+}
+
 export interface StreakState {
   count: number;
   lastVisit: number; // epoch ms
@@ -30,6 +49,29 @@ export interface StreakState {
    * level (VAL-TIER-021, VAL-TIER-022).
    */
   missedDays: number;
+  /**
+   * Epoch ms when the 48-hour recovery window started (VAL-STREAK-010,
+   * VAL-STREAK-011, VAL-STREAK-017). 0 when no recovery window is active.
+   */
+  recoveryWindowStart: number;
+  /**
+   * The streak count at the moment the streak broke, used for partial
+   * restoration during recovery (VAL-STREAK-013: lose 2 days instead of all).
+   * 0 when no break has occurred.
+   */
+  preBreakCount: number;
+  /**
+   * Comeback bonus state — 2x tokens for 30 min when the user returns within
+   * the recovery window (VAL-STREAK-012). Null when no comeback bonus has
+   * been granted.
+   */
+  comebackBonus: ComebackBonus | null;
+  /**
+   * Streak protection flag set by accepting the Layer 3 rescue bargain
+   * (VAL-EXIT-015, VAL-EXIT-028). While true, the streak will not be marked
+   * broken for that session even if the user leaves without a next-day visit.
+   */
+  streakProtected: boolean;
 }
 
 export interface PlayerState {
@@ -41,6 +83,12 @@ export interface PlayerState {
   surveyAnswers: Record<string, string>;
   perks: Perk[];
   trialPerks: Perk[];
+  /**
+   * Rescue bargain 2x token boost (VAL-EXIT-016, VAL-EXIT-027). Null when no
+   * rescue boost is active. Awarded by accepting the Layer 3 exit-friction
+   * bargain; active for the 5-minute stay window.
+   */
+  rescueBoost: RescueBoost | null;
 }
 
 /* ============================================================================
@@ -297,6 +345,13 @@ export interface SessionState {
   exitAttempts: number;
   exitFrictionLayer: ExitFrictionLayer;
   eventQueue: GameEvent[];
+  /**
+   * True after the user successfully leaves the mall (final "Leave anyway" on
+   * Layer 3). While true the MallExperience renders a goodbye / "come back
+   * soon" screen instead of the mall, and a "Return to Mall" control resets
+   * it (VAL-EXIT-017, VAL-EXIT-032).
+   */
+  exited: boolean;
 }
 
 /* ============================================================================
@@ -356,6 +411,79 @@ export interface CelebrationData {
 export interface TierUpgradeData {
   newTier: Tier;
   previousTier: Tier;
+}
+
+/* ============================================================================
+   Exit Friction
+   ========================================================================== */
+
+/**
+ * Sunk-cost summary shown in the Layer 2 guilt-escalation screen
+ * (VAL-EXIT-010, VAL-EXIT-023..025). Every value is drawn from a live store
+ * so the rendered text always matches `overlayData` (VAL-EXIT-031).
+ */
+export interface ExitFrictionSunkCost {
+  /** Cumulative tokens earned this session (playerStore.tierXP). */
+  cumulativeTokensEarned: number;
+  /** Total minutes spent in the mall (sessionStore.sessionMinutes). */
+  timeSpentMinutes: number;
+  /** Exploration progress percentage (mapStore.explorationPercent). */
+  explorationPercent: number;
+  /** Number of perks unlocked (earned + trial). */
+  perksUnlocked: number;
+  /** Number of tasks completed (taskStore.completedTasks.length). */
+  tasksCompleted: number;
+  /** Current leaderboard rank (socialStore). 0 when unranked. */
+  leaderboardRank: number;
+}
+
+/**
+ * A flash-sale miss item shown in Layer 1 (VAL-EXIT-005).
+ */
+export interface ExitFrictionMissedSale {
+  storeName: string;
+  discount: string;
+  countdownSeconds: number;
+}
+
+/**
+ * The rescue bargain offer details shown in Layer 3 (VAL-EXIT-013..016).
+ */
+export interface ExitFrictionBargain {
+  /** Minutes the user is asked to stay (5). */
+  stayMinutes: number;
+  /** Whether a bonus spinning-wheel spin is offered. */
+  bonusWheel: boolean;
+  /** Whether streak protection is offered. */
+  streakProtection: boolean;
+  /** Token multiplier offered (2x). */
+  tokenBoost: number;
+}
+
+/**
+ * Payload stored in `uiStore.overlayData` while the exit-friction overlay is
+ * active (VAL-EXIT-030, VAL-EXIT-031). The component re-derives these values
+ * from the live stores on every render and syncs them back into overlayData
+ * so the data and the rendered text can never diverge.
+ */
+export interface ExitFrictionData {
+  layer: 1 | 2 | 3;
+  /** Active flash sales the user would miss (Layer 1, VAL-EXIT-005). */
+  missedSales: ExitFrictionMissedSale[];
+  /** Current exploration percent (mapStore). */
+  explorationPercent: number;
+  /** Remaining unexplored percent (100 - explorationPercent). */
+  unexploredPercent: number;
+  /** Tokens short of the nearest shortcut/reward (deficit, VAL-EXIT-007). */
+  tokensAwayFromShortcut: number;
+  /** Current streak day count (playerStore.streak.count, VAL-EXIT-009). */
+  streakCount: number;
+  /** Sunk-cost summary (Layer 2, VAL-EXIT-010). */
+  sunkCost: ExitFrictionSunkCost;
+  /** Names of phantom friends still "inside" the mall (VAL-EXIT-011). */
+  friendsInside: string[];
+  /** Rescue bargain offer (Layer 3, VAL-EXIT-013). */
+  bargain: ExitFrictionBargain;
 }
 
 export interface UIState {

@@ -25,6 +25,15 @@ export interface SessionStore extends SessionState {
   tick: () => void;
   registerExitAttempt: () => number;
   resetExitAttempts: () => void;
+  /**
+   * Mark the user as having left the mall (final "Leave anyway" on Layer 3).
+   * Resets the exit-attempt counter and friction layer so a future session
+   * starts fresh (VAL-EXIT-032), and sets `exited` so the MallExperience
+   * renders the goodbye screen.
+   */
+  leaveMall: () => void;
+  /** Clear the exited flag so the mall renders again (Return to Mall). */
+  returnToMall: () => void;
   scheduleEvent: (
     type: EventType,
     delayMs: number,
@@ -41,6 +50,7 @@ const initialSessionState: SessionState = {
   exitAttempts: 0,
   exitFrictionLayer: 0,
   eventQueue: [],
+  exited: false,
 };
 
 export const useSessionStore = create<SessionStore>((set, get) => ({
@@ -54,6 +64,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       exitAttempts: 0,
       exitFrictionLayer: 0,
       eventQueue: [],
+      exited: false,
     });
   },
 
@@ -78,6 +89,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   resetExitAttempts: () =>
     set({ exitAttempts: 0, exitFrictionLayer: 0 }),
+
+  leaveMall: () =>
+    // Leaving resets the exit-friction state so a future session starts fresh
+    // (VAL-EXIT-032) and marks the session as exited so the goodbye screen
+    // renders (VAL-EXIT-017).
+    set({ exitAttempts: 0, exitFrictionLayer: 0, exited: true }),
+
+  returnToMall: () => set({ exited: false }),
 
   scheduleEvent: (type, delayMs, payload) => {
     const event: GameEvent = {

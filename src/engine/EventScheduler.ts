@@ -32,6 +32,11 @@ import {
   PROXIMITY_CHECK_EVERY_N_TICKS,
   resetFlashSaleEngine,
 } from "@/engine/flashSaleEngine";
+import {
+  checkRecoveryWindowExpiry,
+  checkComebackBonusExpiry,
+} from "@/engine/streakEngine";
+import { checkRescueBoostExpiry } from "@/engine/exitFrictionEngine";
 import type { FlashSale } from "@/types";
 
 const TICK_MS = 1000;
@@ -47,6 +52,12 @@ export interface EventSchedulerHandlers {
   onTrialPerkExpired?: (perkId: string, perkName: string) => void;
   /** Called when the player is promoted to a new tier (VAL-TIER-006). */
   onTierUpgrade?: (newTier: string, previousTier: string) => void;
+  /** Called when the 48h recovery window expires (VAL-STREAK-017). */
+  onRecoveryWindowExpired?: () => void;
+  /** Called when the 30-min comeback bonus expires (VAL-STREAK-012). */
+  onComebackBonusExpired?: () => void;
+  /** Called when the 5-min rescue-bargain 2x boost expires (VAL-EXIT-016). */
+  onRescueBoostExpired?: () => void;
   /** Called for each due scheduled event. */
   onProcessEvent?: (event: GameEvent) => void;
 }
@@ -195,7 +206,28 @@ export class EventScheduler {
 
     // 11. Map store stays subscribed; no per-tick map work needed here.
 
-    // 12. Process scheduled event queue.
+    // 12. Streak system checks (VAL-STREAK-010..017):
+    //     a) Recovery window expiry — if 48h have elapsed since the streak
+    //        broke, close the window so the next visit is a full reset
+    //        (VAL-STREAK-017).
+    const recoveryExpired = checkRecoveryWindowExpiry(now);
+    if (recoveryExpired) {
+      this.handlers.onRecoveryWindowExpired?.();
+    }
+    //     b) Comeback bonus expiry — if the 30-min 2x window has elapsed,
+    //        clear it (VAL-STREAK-012).
+    const comebackExpired = checkComebackBonusExpiry(now);
+    if (comebackExpired) {
+      this.handlers.onComebackBonusExpired?.();
+    }
+    //     c) Rescue boost expiry — if the 5-min 2x rescue-bargain window has
+    //        elapsed, clear it (VAL-EXIT-016).
+    const rescueExpired = checkRescueBoostExpiry(now);
+    if (rescueExpired) {
+      this.handlers.onRescueBoostExpired?.();
+    }
+
+    // 13. Process scheduled event queue.
     const sessionStore = useSessionStore.getState();
     const due = sessionStore.processEvents();
     if (due.length > 0) {

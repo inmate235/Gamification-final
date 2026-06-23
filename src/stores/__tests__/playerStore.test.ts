@@ -97,12 +97,107 @@ describe("playerStore", () => {
     expect(usePlayerStore.getState().streak.broken).toBe(true);
   });
 
+  it("breakStreak records the pre-break count (VAL-STREAK-013)", () => {
+    usePlayerStore.setState((state) => ({
+      streak: { ...state.streak, count: 7 },
+    }));
+    usePlayerStore.getState().breakStreak();
+    expect(usePlayerStore.getState().streak.preBreakCount).toBe(7);
+  });
+
   it("activateRecovery sets the recovery window and clears broken", () => {
     usePlayerStore.getState().breakStreak();
     usePlayerStore.getState().activateRecovery();
     const s = usePlayerStore.getState();
     expect(s.streak.recoveryWindow).toBe(true);
     expect(s.streak.broken).toBe(false);
+    expect(s.streak.recoveryWindowStart).toBeGreaterThan(0);
+  });
+
+  it("setRecoveryWindowStart sets the timestamp and activates the window", () => {
+    const ts = Date.now();
+    usePlayerStore.getState().setRecoveryWindowStart(ts);
+    expect(usePlayerStore.getState().streak.recoveryWindow).toBe(true);
+    expect(usePlayerStore.getState().streak.recoveryWindowStart).toBe(ts);
+  });
+
+  it("closeRecoveryWindow clears the window and timestamp", () => {
+    usePlayerStore.getState().setRecoveryWindowStart(Date.now());
+    usePlayerStore.getState().closeRecoveryWindow();
+    expect(usePlayerStore.getState().streak.recoveryWindow).toBe(false);
+    expect(usePlayerStore.getState().streak.recoveryWindowStart).toBe(0);
+  });
+
+  it("restoreStreakPartial restores count minus 2 (VAL-STREAK-013)", () => {
+    usePlayerStore.setState((state) => ({
+      streak: { ...state.streak, preBreakCount: 10 },
+    }));
+    usePlayerStore.getState().restoreStreakPartial();
+    const s = usePlayerStore.getState();
+    expect(s.streak.count).toBe(8); // 10 - 2 = 8
+    expect(s.streak.broken).toBe(false);
+    expect(s.streak.recoveryWindow).toBe(false);
+    expect(s.streak.missedDays).toBe(0);
+    expect(s.streak.preBreakCount).toBe(0);
+  });
+
+  it("restoreStreakPartial floors at Day 1 when pre-break count <= 2", () => {
+    usePlayerStore.setState((state) => ({
+      streak: { ...state.streak, preBreakCount: 1 },
+    }));
+    usePlayerStore.getState().restoreStreakPartial();
+    expect(usePlayerStore.getState().streak.count).toBe(1);
+  });
+
+  it("activateComebackBonus sets active bonus with expiry (VAL-STREAK-012)", () => {
+    const expiresAt = Date.now() + 30 * 60 * 1000;
+    usePlayerStore.getState().activateComebackBonus(expiresAt);
+    const bonus = usePlayerStore.getState().streak.comebackBonus;
+    expect(bonus).not.toBeNull();
+    expect(bonus!.active).toBe(true);
+    expect(bonus!.expiresAt).toBe(expiresAt);
+  });
+
+  it("clearComebackBonus removes the bonus", () => {
+    usePlayerStore.getState().activateComebackBonus(Date.now() + 60000);
+    usePlayerStore.getState().clearComebackBonus();
+    expect(usePlayerStore.getState().streak.comebackBonus).toBeNull();
+  });
+
+  it("awardTokens applies 2x comeback bonus on top of tier multiplier (VAL-STREAK-012)", () => {
+    usePlayerStore.getState().setTier("silver"); // 1.5x
+    usePlayerStore.getState().activateComebackBonus(Date.now() + 60000);
+    // Base 4, silver 1.5x = 6, comeback 2x = 12
+    const credited = usePlayerStore.getState().awardTokens(4);
+    expect(credited).toBe(12);
+  });
+
+  it("awardTokens does not apply comeback 2x when not active (VAL-STREAK-018)", () => {
+    usePlayerStore.getState().setTier("bronze"); // 1x
+    const credited = usePlayerStore.getState().awardTokens(5);
+    expect(credited).toBe(5);
+  });
+
+  it("registerMissedDay demotes tier at Day 3 (VAL-STREAK-007)", () => {
+    usePlayerStore.getState().setTier("gold");
+    usePlayerStore.getState().registerMissedDay();
+    usePlayerStore.getState().registerMissedDay();
+    usePlayerStore.getState().registerMissedDay();
+    expect(usePlayerStore.getState().tier).toBe("silver");
+    expect(usePlayerStore.getState().streak.missedDays).toBe(3);
+  });
+
+  it("streak count is always a positive integer (VAL-STREAK-020)", () => {
+    const count = usePlayerStore.getState().streak.count;
+    expect(Number.isInteger(count)).toBe(true);
+    expect(count).toBeGreaterThan(0);
+  });
+
+  it("initial streak has recoveryWindowStart=0 and comebackBonus=null", () => {
+    const s = usePlayerStore.getState().streak;
+    expect(s.recoveryWindowStart).toBe(0);
+    expect(s.comebackBonus).toBeNull();
+    expect(s.preBreakCount).toBe(0);
   });
 
   it("addPerk appends a new earned perk to perks and ignores duplicates by id", () => {

@@ -50,7 +50,12 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Cmp.displayName = `Icon-${name}`;
     return Cmp;
   };
-  return { Coin: make("Coin"), Fire: make("Fire"), MapPin: make("MapPin") };
+  return {
+    Coin: make("Coin"),
+    Fire: make("Fire"),
+    MapPin: make("MapPin"),
+    Lightning: make("Lightning"),
+  };
 });
 
 import { StatusBar } from "@/components/mall/StatusBar";

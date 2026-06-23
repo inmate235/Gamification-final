@@ -302,3 +302,64 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 399/399 passing (43 new tier tests: 31 tierEngine/playerStore + 4 TierUpgrade + 8 TierPerksPanel; updated mall-route-guard icon mock for the new overlays).
 - `npm run dev` — Ready on port 3000, no compile errors; `/`, `/survey`, `/mall` all return 200.
+
+## Milestone 4: Retention — Streak System
+
+### Feature: streak-system
+
+**What was built:**
+- Extended `StreakState` type with `recoveryWindowStart`, `preBreakCount`, and `comebackBonus` (active flag + expiry timestamp) fields for the 48h recovery window and 30-min 2x comeback bonus.
+- Created `src/engine/streakEngine.ts` with:
+  - Day-boundary detection (`daysBetween`, `checkStreakOnVisit`): same-day, consecutive-day increment, recovery-window return (partial restoration), and full reset.
+  - Escalating penalty system (`simulateMissedDay`, `applyMissedDayPenalty`): Day 1 = token penalty (10% of cumulative earnings), Day 2 = perk loss, Day 3 = tier demotion, in that exact order.
+  - Recovery window management: 48h window opens on streak break, countdown formatting, expiry detection.
+  - Comeback bonus: 2x token multiplier for 30 min on recovery return, active/expiry checks.
+  - Partial streak restoration: lose 2 days instead of full reset when returning within the 48h window.
+  - Streak anxiety messaging (`getStreakAnxietyMessage`): contextual messages referencing streak count and consequences.
+  - Exit friction integration helper (`getStreakExitStatus`): provides current streak state for Layer 2 guilt escalation display.
+- Extended `playerStore` with: `setRecoveryWindowStart`, `closeRecoveryWindow`, `restoreStreakPartial`, `activateComebackBonus`, `clearComebackBonus` actions. `awardTokens` now applies the 2x comeback multiplier on top of the tier multiplier. `breakStreak` records `preBreakCount` for partial restoration. `incrementStreak` clears all break/recovery/comeback flags.
+- Integrated streak checks into `EventScheduler`: per-tick recovery window expiry (VAL-STREAK-017) and comeback bonus expiry (VAL-STREAK-012) with handler callbacks.
+- Created UI components:
+  - `StreakAnxietyMessage.tsx`: dismissible amethyst banner showing "Visit tomorrow to keep your streak!" messaging (VAL-STREAK-014), reappears on streak state changes.
+  - `StreakRecoveryBanner.tsx`: fixed banner with live 48h countdown timer and 2x comeback bonus indicator (VAL-STREAK-010, -011, -012).
+  - `StreakPenaltyNotification.tsx`: self-contained alert that watches `missedDays` changes and shows escalating penalty notifications (token loss, perk loss, tier demotion) in order (VAL-STREAK-005..008).
+- Updated `StatusBar.tsx`: streak counter now shows broken state (dimmed flame) and a gold "2x" comeback bonus badge when active (VAL-STREAK-001, -002, -015).
+- Updated `MallExperience.tsx`: calls `checkStreakOnVisit` on mount, wires recovery/comeback expiry handlers, renders all three streak components.
+
+**Key decisions:**
+- The comeback bonus 2x multiplier is applied in `awardTokens` (the canonical earning path) so all token sources (exploration, tasks, wheel, secret token) benefit, not just one. It stacks on top of the tier multiplier (e.g., Gold 2x + comeback 2x = 4x).
+- `simulateMissedDay` captures the pre-demotion tier before calling `registerMissedDay` (which handles the actual demotion), avoiding double-demotion. `applyMissedDayPenalty` for Day 3 only reports the demotion rather than re-applying it.
+- Penalty notifications are self-contained (watch the store for `missedDays` changes) rather than prop-driven, so they work automatically when validators or the scheduler trigger misses without manual wiring.
+- Streak anxiety message uses a key-based dismissal system (tracking `count-broken` key) to avoid `setState` in effects per lint rules, reappearing when the streak state changes.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 461/461 passing (50 new streakEngine tests + 13 new playerStore streak tests; updated StatusBar and mall-route-guard icon mocks for new icons).
+- `npm run dev` — Ready on port 3000, no compile errors; all routes return 200.
+
+## Milestone 4: Retention — Exit Friction
+
+### Feature: exit-friction
+
+**What was built:**
+- 3-layer exit friction system (VAL-EXIT-001..032) implementing the escalating leave-mall dark pattern: friction, not blocking.
+  - **Layer 1 (Soft Nudge):** dismissible glass overlay showing what the user will miss — active flash sales (store name + countdown), unexplored percentage, and tokens-away-from-shortcut deficit (VAL-EXIT-004..007).
+  - **Layer 2 (Guilt Escalation):** streak status ("Your N-day streak will break"), sunk-cost summary (cumulative tokens earned, time spent, exploration %, perks unlocked, tasks completed, leaderboard rank), and friends still inside ("Sarah and N others are still exploring") (VAL-EXIT-009..011, VAL-EXIT-023..025).
+  - **Layer 3 (Rescue Bargain):** "Stay 5 more minutes for bonus spinning wheel + streak protection + 2x token boost" offer enumerating all three components (VAL-EXIT-013..016).
+- Each layer has a **Stay** (resets exit counter, returns to mall) and **Leave anyway** (advances layer, or on Layer 3 actually exits) option (VAL-EXIT-017..019).
+- `LeaveMallButton` floating control that initiates the exit flow (VAL-EXIT-001). Hidden while overlays are active or after exit.
+- `GoodbyeScreen` post-exit state rendered when `sessionStore.exited` is true, with a "Return to Mall" control (VAL-EXIT-017, VAL-EXIT-032).
+
+**State & engine:**
+- `engine/exitFrictionEngine.ts`: `initiateExit` (increments counter, opens overlay at the matching layer), `stayInMall` (resets counter), `leaveAnyway` (advances/finals), `acceptRescueBargain` (activates bonuses), `buildExitFrictionData` (assembles overlay payload from live stores so overlayData matches rendered text, VAL-EXIT-031), `checkRescueBoostExpiry`.
+- `sessionStore`: added `exited` flag + `leaveMall` / `returnToMall` actions; `registerExitAttempt` already capped the counter at 3 (VAL-EXIT-020, VAL-EXIT-021).
+- `playerStore`: added `streak.streakProtected` (VAL-EXIT-028 — `breakStreak`/`registerMissedDay`/`simulateMissedDay` are no-ops while protected) and `rescueBoost` (2x token boost for the 5-min stay window, VAL-EXIT-016). `awardTokens` applies the max active boost (comeback OR rescue, no 4x stacking).
+- `EventScheduler`: added a `checkRescueBoostExpiry` tick + `onRescueBoostExpired` handler so the 5-min boost clears automatically.
+
+**Key decisions:**
+- The rescue bargain's 2x boost is a separate `rescueBoost` field from the streak comeback bonus; `awardTokens` takes the max so they never stack multiplicatively to 4x.
+- Streak protection guards every break path (`breakStreak`, `registerMissedDay`, `simulateMissedDay`) so the streak cannot break for the session after the bargain is accepted.
+- "Leaving" is modeled as an `exited` flag rendering a goodbye screen (no route change), keeping the flow within `/mall` and fully testable; the exit-friction state resets on leave (VAL-EXIT-032).
+
+**Verification:** 33 new tests (engine + component) covering layer progression, counter cap/reset, bargain activation, streak protection, 2x boost, and goodbye-state reset. Full suite: 494 passing. `tsc --noEmit` clean, `eslint` clean. Dev server compiles `/mall` (200, no errors).
