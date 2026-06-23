@@ -17,6 +17,11 @@ import { SpinningWheel, SpinningWheelEntryButton } from "@/components/overlays/S
 import { TierUpgrade } from "@/components/overlays/TierUpgrade";
 import { TierPerksPanel } from "@/components/overlays/TierPerksPanel";
 import { ExitFriction } from "@/components/overlays/ExitFriction";
+import {
+  Leaderboard,
+  LeaderboardEntryButton,
+  ProximityAlertBanner,
+} from "@/components/social/Leaderboard";
 import { LeaveMallButton } from "./LeaveMallButton";
 import { GoodbyeScreen } from "./GoodbyeScreen";
 import { TierHint } from "./TierHint";
@@ -131,6 +136,10 @@ export function MallExperience() {
       <ShortcutEntryButton />
       <SpinningWheelEntryButton />
 
+      {/* Leaderboard entry point + proximity alert banner (VAL-LEADER-001, -011) */}
+      <LeaderboardEntryButton />
+      <ProximityAlertBanner />
+
       {/* Leave Mall control — triggers the exit friction flow (VAL-EXIT-001) */}
       <LeaveMallButton />
 
@@ -148,6 +157,7 @@ export function MallExperience() {
       <TierUpgrade />
       <TierPerksPanel />
       <ExitFriction />
+      <Leaderboard />
       <Celebration />
     </main>
   );

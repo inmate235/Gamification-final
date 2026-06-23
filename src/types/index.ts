@@ -282,6 +282,12 @@ export interface EconomyState {
    Social
    ========================================================================== */
 
+/**
+ * The ranking metric the leaderboard is currently sorted by. Users can switch
+ * between these to compare on multiple axes (VAL-LEADER-019).
+ */
+export type LeaderboardMetric = "tokens" | "time" | "exploration";
+
 export interface PhantomUser {
   id: string;
   name: string;
@@ -291,6 +297,17 @@ export interface PhantomUser {
   position: { x: number; y: number; zoneId: string };
   currentAction: string;
   lastActivity: string;
+  /**
+   * Fabricated time-in-mall in synthetic minutes. Used by the leaderboard's
+   * time metric (VAL-LEADER-004). Evolves slowly over time so phantom scores
+   * are not frozen (VAL-LEADER-016).
+   */
+  timeInMall: number;
+  /**
+   * Fabricated exploration percentage. Used by the leaderboard's exploration
+   * metric (VAL-LEADER-006).
+   */
+  explorationPercent: number;
 }
 
 export interface LeaderboardEntry {
@@ -300,6 +317,10 @@ export interface LeaderboardEntry {
   tier: Tier;
   tokenCount: number;
   isPlayer: boolean;
+  /** Time-in-mall metric in synthetic minutes (VAL-LEADER-004). */
+  timeInMall: number;
+  /** Exploration percentage metric (VAL-LEADER-006). */
+  explorationPercent: number;
 }
 
 export interface ProximityAlert {
@@ -307,12 +328,18 @@ export interface ProximityAlert {
   message: string;
   targetName: string;
   tokenGap: number;
+  /** The rank position the user is chasing (e.g. 5 for "#5"). */
+  rank: number;
+  /** The metric the alert was generated for. */
+  metric: LeaderboardMetric;
 }
 
 export interface SocialState {
   phantoms: PhantomUser[];
   leaderboard: LeaderboardEntry[];
   proximityAlerts: ProximityAlert[];
+  /** Currently selected leaderboard sort metric (VAL-LEADER-019). */
+  activeMetric: LeaderboardMetric;
 }
 
 /* ============================================================================
@@ -386,7 +413,8 @@ export type OverlayType =
   | "tier-perks"
   | "exit-friction"
   | "celebration"
-  | "shortcut-unlock";
+  | "shortcut-unlock"
+  | "leaderboard";
 
 /**
  * Payload for the celebration / token-feedback overlay.

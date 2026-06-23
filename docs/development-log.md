@@ -363,3 +363,28 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - "Leaving" is modeled as an `exited` flag rendering a goodbye screen (no route change), keeping the flow within `/mall` and fully testable; the exit-friction state resets on leave (VAL-EXIT-032).
 
 **Verification:** 33 new tests (engine + component) covering layer progression, counter cap/reset, bargain activation, streak protection, 2x boost, and goodbye-state reset. Full suite: 494 passing. `tsc --noEmit` clean, `eslint` clean. Dev server compiles `/mall` (200, no errors).
+
+## Milestone 4: Retention — Leaderboard
+
+### Feature: leaderboard
+
+**What was built:**
+- Leaderboard dark pattern (Area 10) with phantom users, proximity alerts, and goalpost-shifting.
+- `src/engine/phantomEngine.ts`: pure-function engine implementing the "just barely ahead" mechanic. `ensurePhantomJustAbove` keeps the phantom ranked immediately above the player within a 3-token/3-unit gap (pulling far-ahead leaders closer, VAL-LEADER-010). When the player reaches #1, `fabricatePhantom` generates a brand-new phantom just ahead so the user can never permanently settle at the top (VAL-LEADER-014, -017, -025). `checkProximityAndAlert` fires an alert only when the gap is within the 3-unit threshold, naming the phantom, exact gap, and rank at stake (VAL-LEADER-011..013, -020). `tickPhantomScores` drifts phantom scores slowly so they are not frozen (VAL-LEADER-016).
+- `src/data/phantomData.ts`: added `timeInMall` and `explorationPercent` to every phantom seed (VAL-LEADER-004, -006), plus a 30-name pool and `fabricatePhantom()` for dynamically generated competitors.
+- `src/stores/socialStore.ts`: rewrote with multi-metric sortable leaderboard (`activeMetric: "tokens" | "time" | "exploration"`, `setActiveMetric`, VAL-LEADER-019). `updateLeaderboard` now sorts by the active metric and reads the player's LIVE values from player/session/map stores (VAL-LEADER-004..007, -015, -024). Added `addPhantom`/`adjustPhantom` actions for the engine. Contiguous 1-indexed ranks (VAL-LEADER-021). `triggerProximityAlert` now takes rank + metric + gap label.
+- `src/components/social/Leaderboard.tsx`: floating teal entry button (VAL-LEADER-001), glass overlay using the uiStore system (VAL-LEADER-023), ranked list with the user's row highlighted and persistent across updates (VAL-LEADER-003, -018), three metric sort tabs (VAL-LEADER-019), all three metrics shown per row simultaneously (VAL-LEADER-007), bounded to 12 entries centered on the player's neighborhood (VAL-LEADER-022), and a `ProximityAlertBanner` rendered persistently on the mall view.
+- Wired the `EventScheduler` to refresh the leaderboard, run goalpost-shifting + overtake detection, fire proximity alerts (every 10th tick), and evolve phantom scores (every 15th tick).
+- Added `"leaderboard"` to the `OverlayType` union and registered `Leaderboard`/`LeaderboardEntryButton`/`ProximityAlertBanner` in `MallExperience`.
+
+**Key decisions:**
+- The proximity alert stores a per-phantom+metric marker in the engine to avoid duplicate alerts firing every tick for the same close window; markers clear when the gap grows large again or when a new leader appears (overtake).
+- The player's leaderboard values are read live from the stores inside `updateLeaderboard` (not snapshotted) so the board updates in real-time as tokens/exploration/session-minutes change (VAL-LEADER-015).
+- New phantoms are weighted toward gold/silver tiers so the fabricated competitor feels aspirational rather than trivial.
+- To avoid a circular import, the small `entryMetricValue` helper was inlined in `socialStore` rather than imported from `phantomEngine` (the engine imports the store).
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 515/515 passing (30 new leaderboard tests: socialStore multi-metric ranking, contiguous ranks, live player values, goalpost shifting, new-phantom-on-overtake, proximity alert gating, rank-up-on-overtake; Leaderboard component entry button, overlay system, ranked list, user highlight, three metrics, metric tabs, bounded entries, proximity banner).
+- `npm run dev` — compiles with no errors; `curl http://localhost:3000/mall` returns 200; the compiled client chunk contains `leaderboard-entry-button`, `leaderboard-overlay`, `proximity-alert-banner`, and `Mall Rankings` markers, confirming the component is wired into the mall experience.
