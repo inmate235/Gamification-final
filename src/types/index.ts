@@ -101,8 +101,13 @@ export interface MapState {
   playerPosition: PlayerPosition;
   fogState: FogState;
   explorationPercent: number;
-  /** Store ids the player has opened (visited) this session. */
-  visitedStores: string[];
+  /**
+   * Map of storeId -> epoch-ms timestamp of the most recent visit this
+   * session. A visit-stores task only counts a store whose `visitedAt` is
+   * >= the task's `assignedAt`, so historical visits from before the task
+   * was assigned cannot retroactively complete it.
+   */
+  visitedStores: Record<string, number>;
 }
 
 /* ============================================================================
@@ -122,6 +127,13 @@ export interface Task {
   gateUntil?: number; // epoch ms when gate elapses
   difficulty: number;
   chainLevel: number;
+  /**
+   * Epoch ms when the task was assigned (created). Used by visit-stores
+   * completion so that only store visits occurring AT OR AFTER this moment
+   * count toward fulfilling the task — historical visits from before the
+   * task existed must not retroactively complete it.
+   */
+  assignedAt: number;
 }
 
 export interface TaskState {

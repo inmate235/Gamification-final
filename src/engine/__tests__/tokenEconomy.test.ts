@@ -21,6 +21,7 @@ function makeTask(reward: number): Task {
     timeGated: false,
     difficulty: 1,
     chainLevel: 0,
+    assignedAt: Date.now(),
   };
 }
 

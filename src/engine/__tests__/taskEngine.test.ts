@@ -26,6 +26,7 @@ function injectTask(task: Partial<Task> & { type: Task["type"] }): Task {
     timeGated: false,
     difficulty: 1,
     chainLevel: 0,
+    assignedAt: Date.now(),
     targetZone: undefined,
     ...task,
   };
@@ -106,7 +107,9 @@ describe("engine/taskEngine", () => {
       // Visit first store -> not yet complete.
       let results = onStoreVisited(targets[0]!);
       expect(results).toHaveLength(0);
-      expect(useMapStore.getState().visitedStores).toContain(targets[0]);
+      expect(useMapStore.getState().visitedStores[targets[0]!]).toBeTypeOf(
+        "number"
+      );
       // Visit second store -> complete.
       results = onStoreVisited(targets[1]!);
       expect(results).toHaveLength(1);
@@ -119,6 +122,37 @@ describe("engine/taskEngine", () => {
         targetStores: [STORE_TECHNOVA, STORE_CHROME],
       });
       expect(onStoreVisited(STORE_PRISM)).toHaveLength(0);
+    });
+
+    it("historical store visits before assignment do NOT complete the task", () => {
+      const eastStores = storesByZone[ZONE_EAST_WING].map((s) => s.id);
+      const targets = eastStores.slice(0, 2);
+
+      // Player visited target[0] BEFORE the task was assigned.
+      const historicalTime = Date.now() - 10000;
+      useMapStore.setState({
+        visitedStores: { [targets[0]!]: historicalTime },
+      });
+
+      // Assign the visit-stores task NOW (assignedAt = now).
+      injectTask({
+        type: "visit-stores",
+        targetStores: targets,
+        reward: 7,
+        assignedAt: Date.now(),
+      });
+
+      // Visit the second target after assignment. The first target was only
+      // ever visited before assignment, so the task must NOT complete yet.
+      const results = onStoreVisited(targets[1]!);
+      expect(results).toHaveLength(0);
+      expect(usePlayerStore.getState().tokens).toBe(0);
+
+      // Re-visit the first target after assignment -> now it counts, task
+      // completes.
+      const results2 = onStoreVisited(targets[0]!);
+      expect(results2).toHaveLength(1);
+      expect(usePlayerStore.getState().tokens).toBe(7);
     });
   });
 

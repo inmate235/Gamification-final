@@ -99,37 +99,62 @@ export function __resetTaskIdCounter(): void {
    Helpers
    ========================================================================== */
 
-/** Weighted random template selection. */
-function pickTemplate(rng: Rng): TaskTemplate {
-  const total = TEMPLATES.reduce((sum, t) => sum + t.weight, 0);
+/** Weighted random template selection from a (possibly filtered) list. */
+function pickTemplate(list: TaskTemplate[], rng: Rng): TaskTemplate {
+  if (list.length === 0) return TEMPLATES[0]!;
+  const total = list.reduce((sum, t) => sum + t.weight, 0);
   let r = rng() * total;
-  for (const t of TEMPLATES) {
+  for (const t of list) {
     r -= t.weight;
     if (r <= 0) return t;
   }
-  return TEMPLATES[0]!;
+  return list[0]!;
+}
+
+/**
+ * The subset of templates that are currently solvable. find-token tasks are
+ * only solvable while at least one zone is still fogged (completion fires on
+ * a zone reveal / token pickup), and the secret-token variant additionally
+ * requires the Food Court to be fogged. When every zone is revealed, all
+ * find-token templates are excluded so we fall back to explore-zone /
+ * visit-stores tasks instead.
+ */
+function eligibleTemplates(revealedZoneIds: Set<string>): TaskTemplate[] {
+  const anyFogged = zones.some((z) => !revealedZoneIds.has(z.id));
+  const foodCourtFogged = !revealedZoneIds.has(ZONE_FOOD_COURT);
+  return TEMPLATES.filter((t) => {
+    if (t.type !== "find-token") return true;
+    if (t.baseReward >= 10) return foodCourtFogged;
+    return anyFogged;
+  });
 }
 
 /**
  * Pick a target zone for a task.
  *
- * - For the secret-token template we always target the Food Court.
- * - For find-token we prefer an UNREVEALED zone (the token is found on first
- *   reveal), falling back to any zone.
- * - For explore-zone / visit-stores we pick any zone (visit-stores excludes
- *   Central Plaza which has no stores).
+ * - For the secret-token template we always target the Food Court, but ONLY
+ *   while it is still fogged (a revealed Food Court can never produce a new
+ *   zone-reveal / token-pickup event, so a find-token task there would be
+ *   impossible). Returns null if the Food Court is already revealed.
+ * - For find-token we ONLY target zones that are still fogged, because
+ *   find-token completion fires on the first fog reveal / token pickup in
+ *   the target zone. If all zones are revealed there is no valid target and
+ *   we return null (the caller then skips the find-token template entirely).
+ * - For explore-zone / visit-stores we pick any eligible zone
+ *   (visit-stores excludes Central Plaza which has no stores).
+ *
+ * Returning null signals "this template is unsolvable right now — try a
+ * different template."
  */
 function pickZone(
   template: TaskTemplate,
   revealedZoneIds: Set<string>,
   rng: Rng
-): Zone {
-  // Secret-token template -> Food Court.
-  if (
-    template.type === "find-token" &&
-    template.baseReward >= 10
-  ) {
-    return zones.find((z) => z.id === ZONE_FOOD_COURT) ?? zones[0]!;
+): Zone | null {
+  // Secret-token template -> Food Court, but only while it is still fogged.
+  if (template.type === "find-token" && template.baseReward >= 10) {
+    if (revealedZoneIds.has(ZONE_FOOD_COURT)) return null;
+    return zones.find((z) => z.id === ZONE_FOOD_COURT) ?? null;
   }
 
   if (template.type === "visit-stores") {
@@ -139,9 +164,11 @@ function pickZone(
   }
 
   if (template.type === "find-token") {
-    const unrevealed = zones.filter((z) => !revealedZoneIds.has(z.id));
-    const pool = unrevealed.length > 0 ? unrevealed : zones;
-    return pool[Math.floor(rng() * pool.length)]!;
+    // Only fogged zones are valid targets — completion requires a reveal
+    // event in the target zone, which can only happen while it is fogged.
+    const fogged = zones.filter((z) => !revealedZoneIds.has(z.id));
+    if (fogged.length === 0) return null; // all revealed -> skip find-token
+    return fogged[Math.floor(rng() * fogged.length)]!;
   }
 
   // explore-zone: any zone.
@@ -199,20 +226,41 @@ export function generateTask(options: GenerateOptions): Task {
     rng = Math.random,
   } = options;
 
-  // Try a few times to avoid an exact duplicate of the just-completed task.
-  let template: TaskTemplate;
-  let zone: Zone;
+  const eligible = eligibleTemplates(revealedZoneIds);
+
+  // Try a few times to pick a solvable template+zone that does not exactly
+  // duplicate the just-completed task (VAL-TASK-019). A null zone means the
+  // picked find-token template has no valid (fogged) target — retry.
+  let template = pickTemplate(eligible, rng);
+  let zone = pickZone(template, revealedZoneIds, rng);
   let attempts = 0;
-  do {
-    template = pickTemplate(rng);
+  while (
+    attempts < 16 &&
+    (zone === null ||
+      (avoid &&
+        avoid.type === template.type &&
+        avoid.targetZone === zone.id))
+  ) {
+    template = pickTemplate(eligible, rng);
     zone = pickZone(template, revealedZoneIds, rng);
     attempts += 1;
-  } while (
-    attempts < 8 &&
-    avoid &&
-    avoid.type === template.type &&
-    avoid.targetZone === zone.id
-  );
+  }
+
+  // Fallback: if every attempt produced an unsolvable find-token (e.g. all
+  // zones revealed and rng kept landing on find-token before filtering),
+  // force a non-find-token template, which is always solvable.
+  if (zone === null) {
+    const nonFindToken = TEMPLATES.filter((t) => t.type !== "find-token");
+    for (let i = 0; i < nonFindToken.length && zone === null; i++) {
+      template = nonFindToken[Math.floor(rng() * nonFindToken.length)]!;
+      zone = pickZone(template, revealedZoneIds, rng);
+    }
+  }
+  if (zone === null) {
+    // Absolute last resort — explore the entrance zone.
+    template = TEMPLATES.find((t) => t.type === "explore-zone") ?? TEMPLATES[0]!;
+    zone = zones[0]!;
+  }
 
   const storeCount = storeVisitCount(zone, chainLevel);
   const description = template.buildDescription(zone, storeCount);
@@ -234,6 +282,7 @@ export function generateTask(options: GenerateOptions): Task {
     gateUntil: timeGated ? now + TIME_GATE_MS : undefined,
     difficulty,
     chainLevel,
+    assignedAt: now,
   };
 
   if (template.type === "visit-stores") {
@@ -252,6 +301,7 @@ export function generateInitialTasks(
   revealedZoneIds: Set<string> = new Set<string>(),
   rng: Rng = Math.random
 ): Task[] {
+  const now = Date.now();
   const seeded: Task[] = [];
   const seenTypes = new Set<TaskType>();
   const seenZones = new Set<string>();
@@ -260,16 +310,18 @@ export function generateInitialTasks(
     if (seenTypes.has(template.type)) continue;
     if (seeded.length >= 3) break;
 
-    // Pick a zone for this template that we have not yet used.
-    let zone: Zone | undefined;
+    // Pick a zone for this template that we have not yet used. find-token
+    // templates return null when no fogged target exists — skip those.
+    let zone: Zone | null = null;
     for (let i = 0; i < 6; i++) {
       const candidate = pickZone(template, revealedZoneIds, rng);
-      if (!seenZones.has(candidate.id)) {
+      if (candidate && !seenZones.has(candidate.id)) {
         zone = candidate;
         break;
       }
     }
     if (!zone) zone = pickZone(template, revealedZoneIds, rng);
+    if (!zone) continue; // no solvable target for this template — skip it
     seenZones.add(zone.id);
 
     const storeCount = storeVisitCount(zone, 0);
@@ -283,6 +335,7 @@ export function generateInitialTasks(
       timeGated: false, // initial tasks never gated
       difficulty: template.difficulty,
       chainLevel: 0,
+      assignedAt: now,
     };
     if (template.type === "visit-stores") {
       task.targetStores = pickStoreIds(zone, storeCount, rng);

@@ -87,6 +87,7 @@ function makeTask(overrides: Partial<Task>): Task {
     timeGated: false,
     difficulty: 1,
     chainLevel: 0,
+    assignedAt: Date.now(),
     targetZone: ZONE_EAST_WING,
     ...overrides,
   };

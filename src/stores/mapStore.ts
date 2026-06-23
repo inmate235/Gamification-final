@@ -96,7 +96,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
   playerPosition: { ...initialPlayerPosition },
   fogState: { ...initialFogState },
   explorationPercent: initialExploration,
-  visitedStores: [],
+  visitedStores: {},
 
   moveToZone: (zoneId) => {
     const state = get();
@@ -162,11 +162,12 @@ export const useMapStore = create<MapStore>((set, get) => ({
   },
 
   visitStore: (storeId) =>
-    set((state) =>
-      state.visitedStores.includes(storeId)
-        ? state
-        : { visitedStores: [...state.visitedStores, storeId] }
-    ),
+    // Record the most recent visit time. visit-stores completion only counts
+    // visits at or after a task's assignedAt, so a re-visit after assignment
+    // updates the timestamp and counts while historical visits do not.
+    set((state) => ({
+      visitedStores: { ...state.visitedStores, [storeId]: Date.now() },
+    })),
 
   reset: () =>
     set({
@@ -175,7 +176,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
       playerPosition: { ...initialPlayerPosition },
       fogState: { ...initialFogState },
       explorationPercent: initialExploration,
-      visitedStores: [],
+      visitedStores: {},
     }),
 }));
 

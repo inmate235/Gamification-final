@@ -165,4 +165,75 @@ describe("engine/taskGenerator", () => {
       expect(matches).toBe(false);
     }
   });
+
+  describe("find-token targets only fogged zones", () => {
+    const allZoneIds = zones.map((z) => z.id);
+
+    it("find-token tasks only target zones that are still fogged", () => {
+      // Reveal every zone except the West Wing and Food Court.
+      const revealed = new Set(
+        allZoneIds.filter((id) => id !== "zone-west-wing" && id !== "zone-food-court")
+      );
+      const rng: Rng = Math.random;
+      for (let i = 0; i < 200; i++) {
+        const t = generateTask({ chainLevel: 0, revealedZoneIds: revealed, rng });
+        if (t.type === "find-token") {
+          expect(revealed.has(t.targetZone!)).toBe(false);
+        }
+      }
+    });
+
+    it("never generates a find-token task when all zones are revealed", () => {
+      const allRevealed = new Set(allZoneIds);
+      const rng: Rng = Math.random;
+      const seen = new Set<string>();
+      for (let i = 0; i < 200; i++) {
+        const t = generateTask({
+          chainLevel: 0,
+          revealedZoneIds: allRevealed,
+          rng,
+        });
+        seen.add(t.type);
+        // Even if a target zone is set, it must be valid (a real zone).
+        expect(allZoneIds).toContain(t.targetZone);
+      }
+      expect(seen.has("find-token")).toBe(false);
+      // Still produces solvable task types.
+      expect(seen.has("explore-zone") || seen.has("visit-stores")).toBe(true);
+    });
+
+    it("does not generate the secret-token find-token once Food Court is revealed", () => {
+      // Reveal everything EXCEPT the West Wing, so a normal find-token is
+      // still solvable, but the Food Court is revealed -> secret-token
+      // (reward >= 10) find-token must never appear.
+      const revealed = new Set(
+        allZoneIds.filter((id) => id !== "zone-west-wing")
+      );
+      const rng: Rng = Math.random;
+      for (let i = 0; i < 300; i++) {
+        const t = generateTask({ chainLevel: 0, revealedZoneIds: revealed, rng });
+        if (t.type === "find-token") {
+          expect(t.reward).toBeLessThan(10);
+          expect(t.targetZone).toBe("zone-west-wing");
+        }
+      }
+    });
+
+    it("initial tasks never include an unsolvable find-token when all zones are revealed", () => {
+      const allRevealed = new Set(allZoneIds);
+      const seeded = generateInitialTasks(allRevealed, Math.random);
+      expect(seeded.length).toBeGreaterThanOrEqual(1);
+      for (const t of seeded) {
+        expect(t.type).not.toBe("find-token");
+      }
+    });
+
+    it("every generated task carries an assignedAt timestamp", () => {
+      const before = Date.now();
+      const t = generateTask({ chainLevel: 0, rng: makeRng([0.1, 0.2]) });
+      expect(t.assignedAt).toBeTypeOf("number");
+      expect(t.assignedAt).toBeGreaterThanOrEqual(before);
+      expect(t.assignedAt).toBeLessThanOrEqual(Date.now() + 5);
+    });
+  });
 });

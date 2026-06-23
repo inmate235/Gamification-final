@@ -86,18 +86,24 @@ export function onZoneRevealed(zoneId: string): TaskCompletionResult[] {
  * visited. Returns the completed tasks (if any).
  */
 export function onStoreVisited(storeId: string): TaskCompletionResult[] {
-  // Record the visit.
+  // Record the visit (timestamped).
   useMapStore.getState().visitStore(storeId);
 
-  const visited = new Set(useMapStore.getState().visitedStores);
+  const visited = useMapStore.getState().visitedStores; // storeId -> visitedAt
   const tasks = useTaskStore.getState().activeTasks;
   const results: TaskCompletionResult[] = [];
   for (const task of tasks) {
     if (task.type !== "visit-stores") continue;
     const targets = task.targetStores ?? [];
     if (targets.length === 0) continue;
-    const allVisited = targets.every((id) => visited.has(id));
-    if (allVisited) {
+    // Only count visits that occurred AT OR AFTER the task was assigned, so
+    // historical store visits from before the task existed cannot
+    // retroactively complete it.
+    const assignedAt = task.assignedAt ?? 0;
+    const allVisitedAfter = targets.every(
+      (id) => (visited[id] ?? 0) >= assignedAt
+    );
+    if (allVisitedAfter) {
       const r = completeAndReward(task);
       if (r) results.push(r);
     }
