@@ -273,3 +273,32 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx tsc --noEmit` — clean (exit 0).
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 356/356 passing (7 new background timer expiry tests in flashSaleEngine, 1 EventScheduler background expiry test, updated FlashSale grab test for delayed celebration, plus all prior suites).
+
+
+### Feature: tier-membership
+
+**What was built:**
+- Multi-tier membership system (Bronze, Silver, Gold, Neodymium) with the full retention dark-pattern loop.
+- `src/data/tierData.ts` — tier order, non-linear thresholds (bronze 0 / silver 12 / gold 48 / neodymium 408; Silver->Gold delta = 3x Bronze->Silver, Gold->Neodymium delta = 10x Silver->Gold), tier visuals (color + glow per design-system.md), perk config (flash sale frequency 1/2/3/Infinity, token multiplier 1x/1.5x/2x/3x, map visibility, deal radar, Neodymium exclusives), and `buildTrialPerks()` for the endowment-effect trial perks.
+- `src/engine/tierEngine.ts` — pure helpers (`tierForScore`, `computeTierProgressScore`, `nextTierOf`, `previousTierOf`, `getTierHint`, `demoteTierByOne`, `flashSaleFrequencyForTier`) plus `checkForTierUpgrade()` orchestrator that reads playerStore.tierXP + mapStore.explorationPercent, promotes the player, and opens the tier-upgrade overlay. Combined score = cumulative earned tokens + exploration percent so advancing requires both earning AND exploring.
+- playerStore additions: `demoteTier`, `registerMissedDay` (Day-3 demotion), `removeTrialPerk`, `expireTrialPerks` now returns expired perks, `grantOnboardingTrialPerks` (idempotent), and `streak.missedDays` on StreakState.
+- EventScheduler: per-tick `checkForTierUpgrade()` (immediate UI updates) + `onTrialPerkExpired` / `onTierUpgrade` handler hooks.
+- flashSaleEngine: per-tier hourly flash sale frequency cap (`triggersInLastHour` gated by `flashSaleFrequencyForTier`).
+- `TierUpgrade` overlay — full-screen, tier-colored radial wash, 24-particle explosion in the tier color, spring-scaled tier badge, staggered text reveal (eyebrow -> badge -> "You are now {Tier}!" -> tagline -> perks -> CTA).
+- `TierPerksPanel` overlay — opened by tapping the status-bar tier badge; renders the four-tier ladder with distinct colored badges, current-tier perks (flash sale freq / token multiplier / map visibility / deal radar), Neodymium exclusive perks (only at neodymium), trial perks with live countdown + warning styling under `TRIAL_PERK_WARNING_MS`, earned perks, and an aspiration hint to the next tier.
+- `TierHint` banner — dismissible floating aspiration message ("N more to Silver! Silver members earn 1.5x tokens") shown when within 8 score points of the next tier.
+- `TierDemotionThreat` banner — alert shown when `streak.broken` is true, referencing the current tier and the tier it drops to on Day 3.
+- StatusBar tier badge converted to a button that opens the perks panel; indicator dot keeps the tier color.
+- SurveyScreen grants trial perks on onboarding completion; MallExperience grants them defensively (idempotent) and wires the trial-expiry handler to a red "Trial expired: ..." celebration.
+
+**Key decisions:**
+- Tier progression uses a combined `tierProgressScore = tierXP + explorationPercent` so the validation "based on cumulative tokens AND exploration" is satisfied without a separate recompute pass; tierXP already accumulates credited (tier-multiplied) tokens.
+- Thresholds chosen so Silver->Gold is exactly 3x and Gold->Neodymium exactly 10x the prior delta, satisfying VAL-TIER-019/020 precisely.
+- Trial perks last 3 minutes with a 1-minute warning window so the endowment effect and its loss are observable within a single session.
+- agent-browser CDP `Target.createTarget` is blocked in this environment (per AGENTS.md), so manual verification used curl-based route checks plus the 399 unit/component tests.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 399/399 passing (43 new tier tests: 31 tierEngine/playerStore + 4 TierUpgrade + 8 TierPerksPanel; updated mall-route-guard icon mock for the new overlays).
+- `npm run dev` — Ready on port 3000, no compile errors; `/`, `/survey`, `/mall` all return 200.

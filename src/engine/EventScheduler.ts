@@ -25,6 +25,7 @@ import { useSocialStore } from "@/stores/socialStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
+import { checkForTierUpgrade } from "@/engine/tierEngine";
 import {
   triggerProximityFlashSale,
   tickFlashSaleTimers,
@@ -42,6 +43,10 @@ export interface EventSchedulerHandlers {
   onWheelAvailable?: () => void;
   /** Called when a proximity flash sale is triggered (sale pushed to store). */
   onFlashSaleTriggered?: (sale: FlashSale) => void;
+  /** Called when a trial perk expires and is removed from the perks list. */
+  onTrialPerkExpired?: (perkId: string, perkName: string) => void;
+  /** Called when the player is promoted to a new tier (VAL-TIER-006). */
+  onTierUpgrade?: (newTier: string, previousTier: string) => void;
   /** Called for each due scheduled event. */
   onProcessEvent?: (event: GameEvent) => void;
 }
@@ -171,12 +176,26 @@ export class EventScheduler {
       useSocialStore.getState().updateLeaderboard();
     }
 
-    // 9. Trial perk expiry check -> remove expired perks.
-    usePlayerStore.getState().expireTrialPerks();
+    // 9. Trial perk expiry check -> remove expired perks and notify.
+    const expiredPerks = usePlayerStore.getState().expireTrialPerks();
+    if (expiredPerks.length > 0) {
+      for (const perk of expiredPerks) {
+        this.handlers.onTrialPerkExpired?.(perk.id, perk.name);
+      }
+    }
 
-    // 10. Map store stays subscribed; no per-tick map work needed here.
+    // 10. Tier progression check -> promote + celebrate when a threshold is
+    //     crossed (VAL-TIER-005, VAL-TIER-006, VAL-TIER-023). Runs every tick
+    //     so upgrades surface within ~1s of the earning/exploration event.
+    const previousTier = usePlayerStore.getState().tier;
+    const promoted = checkForTierUpgrade();
+    if (promoted && promoted !== previousTier) {
+      this.handlers.onTierUpgrade?.(promoted, previousTier);
+    }
 
-    // 11. Process scheduled event queue.
+    // 11. Map store stays subscribed; no per-tick map work needed here.
+
+    // 12. Process scheduled event queue.
     const sessionStore = useSessionStore.getState();
     const due = sessionStore.processEvents();
     if (due.length > 0) {

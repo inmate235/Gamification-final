@@ -34,6 +34,7 @@ import {
   storesByZone,
   getZoneById,
 } from "@/data/mallData";
+import { flashSaleFrequencyForTier } from "@/engine/tierEngine";
 import type { FlashSale, Store, StoreCategory } from "@/types";
 
 /* ============================================================================
@@ -62,6 +63,26 @@ const MAX_PROBABILITY = 0.22;
 
 /** Default synthetic countdown length (displayed seconds). */
 const DEFAULT_COUNTDOWN_SECONDS = 90;
+
+/* ============================================================================
+   Per-tier flash sale frequency cap (VAL-TIER-010)
+   ========================================================================== */
+
+const HOUR_MS = 60 * 60 * 1000;
+/** Epoch-ms timestamps of proximity-triggered sales this session. */
+let triggerTimestamps: number[] = [];
+
+/** Returns the count of triggers within the last hour of `now`. */
+function triggersInLastHour(now: number): number {
+  const cutoff = now - HOUR_MS;
+  triggerTimestamps = triggerTimestamps.filter((t) => t >= cutoff);
+  return triggerTimestamps.length;
+}
+
+/** Record a new trigger timestamp. */
+function recordTrigger(now: number): void {
+  triggerTimestamps.push(now);
+}
 
 /* ============================================================================
    Refractory registry (session-only, module-level)
@@ -93,6 +114,7 @@ export function markRefractory(
 /** Clear all refractory entries (used on reset / between tests). */
 export function clearRefractory(): void {
   refractoryMap = {};
+  triggerTimestamps = [];
 }
 
 /* ============================================================================
@@ -293,6 +315,13 @@ function pickRandom<T>(arr: T[]): T {
  * and reusable.
  */
 export function triggerProximityFlashSale(now: number = Date.now()): FlashSale | null {
+  // Per-tier flash sale frequency cap (VAL-TIER-010). Neodymium is uncapped.
+  const tier = usePlayerStore.getState().tier;
+  const cap = flashSaleFrequencyForTier(tier);
+  if (Number.isFinite(cap) && triggersInLastHour(now) >= cap) {
+    return null;
+  }
+
   const sessionMinutes = useSessionStore.getState().sessionMinutes;
   const roll = Math.random();
   if (roll > saleProbabilityForSession(sessionMinutes)) {
@@ -312,7 +341,9 @@ export function triggerProximityFlashSale(now: number = Date.now()): FlashSale |
   );
   if (!store) return null;
 
-  return buildAndPushSale(store, preferred);
+  const sale = buildAndPushSale(store, preferred);
+  recordTrigger(now);
+  return sale;
 }
 
 /**

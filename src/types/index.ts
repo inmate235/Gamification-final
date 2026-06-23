@@ -24,6 +24,12 @@ export interface StreakState {
   lastVisit: number; // epoch ms
   broken: boolean;
   recoveryWindow: boolean;
+  /**
+   * Number of consecutive days missed since the streak broke. Used by the
+   * tier-demotion escalation: at Day 3 the player's tier is demoted by one
+   * level (VAL-TIER-021, VAL-TIER-022).
+   */
+  missedDays: number;
 }
 
 export interface PlayerState {
@@ -322,6 +328,7 @@ export type OverlayType =
   | "flash-sale"
   | "store-detail"
   | "tier-upgrade"
+  | "tier-perks"
   | "exit-friction"
   | "celebration"
   | "shortcut-unlock";
@@ -339,6 +346,16 @@ export interface CelebrationData {
   message: string;
   amount: number;
   kind?: TokenFeedbackKind;
+}
+
+/**
+ * Payload for the tier-upgrade celebration overlay (VAL-TIER-006..008).
+ * `newTier` is the tier the player was promoted to; `previousTier` is the
+ * tier they came from (used for the staggered text reveal).
+ */
+export interface TierUpgradeData {
+  newTier: Tier;
+  previousTier: Tier;
 }
 
 export interface UIState {

@@ -16,6 +16,8 @@ import type {
   StreakState,
   Tier,
 } from "@/types";
+import { buildTrialPerks } from "@/data/tierData";
+import { demoteTierByOne } from "@/engine/tierEngine";
 
 /* ============================================================================
    Tier multiplier map (token earn rate by tier)
@@ -55,13 +57,33 @@ export interface PlayerStore extends PlayerState {
   awardTokens: (baseReward: number) => number;
   spendTokens: (amount: number) => boolean;
   setTier: (tier: Tier) => void;
+  /**
+   * Demote the player by one tier level (VAL-TIER-022, VAL-TIER-024). No-op
+   * when already Bronze. Returns the new tier.
+   */
+  demoteTier: () => Tier;
   addTierXP: (amount: number) => void;
   incrementStreak: () => void;
   breakStreak: () => void;
   activateRecovery: () => void;
+  /**
+   * Register a missed day (streak break escalation). Increments `missedDays`,
+   * marks the streak broken, and demotes the tier once the streak-break
+   * reaches Day 3 (VAL-TIER-021, VAL-TIER-022). Returns the new missedDays
+   * count.
+   */
+  registerMissedDay: () => number;
   addPerk: (perk: Perk) => void;
   removePerk: (perkId: string) => void;
-  expireTrialPerks: (now?: number) => void;
+  /** Remove a trial perk by id (used on expiry with notification). */
+  removeTrialPerk: (perkId: string) => void;
+  expireTrialPerks: (now?: number) => Perk[];
+  /**
+   * Grant the onboarding trial perks (endowment effect). Idempotent — if
+   * trial perks are already present, this is a no-op so rapid double-calls
+   * during onboarding don't duplicate them (VAL-TIER-013, VAL-TIER-014).
+   */
+  grantOnboardingTrialPerks: (now?: number) => void;
   setBartleType: (type: BartleType) => void;
   setSurveyAnswers: (answers: Record<string, string>) => void;
   reset: () => void;
@@ -72,6 +94,7 @@ const initialStreak: StreakState = {
   lastVisit: 0, // set on startSession
   broken: false,
   recoveryWindow: false,
+  missedDays: 0,
 };
 
 const initialPlayerState: PlayerState = {
@@ -118,6 +141,16 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   setTier: (tier) => set({ tier }),
 
+  demoteTier: () => {
+    let next: Tier = get().tier;
+    set((state) => {
+      next = demoteTierByOne(state.tier);
+      if (next === state.tier) return state;
+      return { tier: next };
+    });
+    return next;
+  },
+
   addTierXP: (amount) =>
     set((state) => ({ tierXP: Math.max(0, state.tierXP + amount) })),
 
@@ -128,6 +161,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         lastVisit: Date.now(),
         broken: false,
         recoveryWindow: false,
+        missedDays: 0,
       },
     })),
 
@@ -140,6 +174,22 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set((state) => ({
       streak: { ...state.streak, recoveryWindow: true, broken: false },
     })),
+
+  registerMissedDay: () => {
+    const missedDays = get().streak.missedDays + 1;
+    set((state) => ({
+      streak: {
+        ...state.streak,
+        broken: true,
+        missedDays,
+      },
+    }));
+    // Day 3 of missed days -> demote the tier by one level (VAL-TIER-022).
+    if (missedDays >= 3) {
+      get().demoteTier();
+    }
+    return missedDays;
+  },
 
   addPerk: (perk) =>
     set((state) => {
@@ -158,13 +208,30 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       perks: state.perks.filter((p) => p.id !== perkId),
     })),
 
-  expireTrialPerks: (now = Date.now()) =>
+  removeTrialPerk: (perkId) =>
+    set((state) => ({
+      trialPerks: state.trialPerks.filter((p) => p.id !== perkId),
+    })),
+
+  expireTrialPerks: (now = Date.now()) => {
+    const expired: Perk[] = [];
     set((state) => ({
       trialPerks: state.trialPerks.filter((p) => {
         if (p.expiresAt === undefined) return true; // permanent
-        return p.expiresAt > now;
+        if (p.expiresAt > now) return true;
+        expired.push(p);
+        return false;
       }),
-    })),
+    }));
+    return expired;
+  },
+
+  grantOnboardingTrialPerks: (now = Date.now()) => {
+    // Idempotent: never duplicate trial perks on repeated calls.
+    if (get().trialPerks.length > 0) return;
+    const perks = buildTrialPerks(now);
+    set({ trialPerks: perks });
+  },
 
   setBartleType: (type) => set({ bartleType: type }),
 

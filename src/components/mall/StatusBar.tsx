@@ -6,6 +6,7 @@ import { Coin, Fire, MapPin } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
+import { useUIStore } from "@/stores/uiStore";
 import type { Tier } from "@/types";
 
 /**
@@ -60,6 +61,7 @@ export function StatusBar() {
   const tier = usePlayerStore((s) => s.tier);
   const streakCount = usePlayerStore((s) => s.streak.count);
   const explorationPercent = useMapStore((s) => s.explorationPercent);
+  const showOverlay = useUIStore((s) => s.showOverlay);
 
   const tierStyle = TIER_STYLES[tier];
 
@@ -113,9 +115,11 @@ export function StatusBar() {
 
           <Divider />
 
-          {/* Tier badge */}
-          <div
-            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:text-xs"
+          {/* Tier badge — tap to open the perks panel (VAL-TIER-003, -004, -009) */}
+          <button
+            type="button"
+            onClick={() => showOverlay("tier-perks")}
+            className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] sm:text-xs"
             style={{
               color: tierStyle.color,
               boxShadow: tierStyle.glow,
@@ -123,13 +127,15 @@ export function StatusBar() {
               background: `${tierStyle.color}14`,
             }}
             data-testid="status-tier"
+            aria-label={`Tier: ${tierStyle.label}. View perks.`}
           >
             <span
               className="h-1.5 w-1.5 rounded-full"
               style={{ background: tierStyle.color }}
+              data-testid="status-tier-indicator"
             />
             {tierStyle.label}
-          </div>
+          </button>
 
           <Divider />
 

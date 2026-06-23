@@ -74,6 +74,7 @@ export function SurveyScreen() {
 
   const setSurveyAnswers = usePlayerStore((s) => s.setSurveyAnswers);
   const setBartleType = usePlayerStore((s) => s.setBartleType);
+  const grantOnboardingTrialPerks = usePlayerStore((s) => s.grantOnboardingTrialPerks);
   const advanceToMall = useOnboardingStore((s) => s.advanceToMall);
 
   const totalQuestions = SURVEY_QUESTIONS.length;
@@ -110,6 +111,11 @@ export function SurveyScreen() {
           setSurveyAnswers(newAnswers);
           if (bartleType) setBartleType(bartleType);
 
+          // Grant endowment-effect trial perks at the end of onboarding so the
+          // user starts /mall with higher-tier perks that will later expire
+          // (VAL-TIER-013, VAL-TIER-014). Idempotent on repeated calls.
+          grantOnboardingTrialPerks();
+
           // Mark onboarding complete so the /mall route guard allows entry.
           advanceToMall();
 
@@ -132,6 +138,7 @@ export function SurveyScreen() {
       router,
       setBartleType,
       setSurveyAnswers,
+      grantOnboardingTrialPerks,
       advanceToMall,
     ]
   );
