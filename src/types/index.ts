@@ -170,6 +170,14 @@ export interface FlashSale {
    * (VAL-SALE-006). Defaults to 1000 when unset.
    */
   syntheticTickMs?: number;
+  /**
+   * The countdown value the sale started with. Stored separately from
+   * `countdownSeconds` (which is decremented over time) so the EventScheduler
+   * can compute the remaining time from `createdAt` and `syntheticTickMs`
+   * even for sales whose overlay was never opened. When unset, it defaults to
+   * `countdownSeconds` at creation time.
+   */
+  initialCountdownSeconds?: number;
 }
 
 /**

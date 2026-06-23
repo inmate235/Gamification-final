@@ -371,12 +371,79 @@ export function dismissFlashSale(saleId: string): void {
 
 /**
  * Expire a flash sale when its synthetic countdown reaches zero. Removes the
- * sale and closes the overlay WITHOUT deducting tokens (VAL-SALE-020). No
- * refractory is applied on natural expiry (only dismissal/claim refractories).
+ * sale and closes the overlay (ONLY if this sale was the one being shown)
+ * WITHOUT deducting tokens (VAL-SALE-020). No refractory is applied on
+ * natural expiry (only dismissal/claim refractories).
+ *
+ * The overlay-guard ensures that expiring a *hidden* pending sale (one whose
+ * overlay was never opened) does not dismiss a different sale's overlay.
  */
 export function expireFlashSale(saleId: string): void {
   useEconomyStore.getState().removeFlashSale(saleId);
-  useUIStore.getState().hideOverlay();
+  const ui = useUIStore.getState();
+  if (ui.activeOverlay === "flash-sale") {
+    const shown = ui.overlayData as FlashSale | null;
+    if (shown?.id === saleId) {
+      ui.hideOverlay();
+    }
+  }
+}
+
+/* ============================================================================
+   Public: background timer tick (ALL active sales)
+   ========================================================================== */
+
+/**
+ * Decrement the countdown for ALL active flash sales based on elapsed
+ * wall-clock time and each sale's synthetic tick rate, and expire any sale
+ * whose timer reaches zero — **regardless of overlay state**.
+ *
+ * This fixes the blocking scrutiny issue where hidden pending sales (whose
+ * overlay was never opened) never aged out because the countdown was driven
+ * solely by the overlay's React component (only mounted when visible). The
+ * EventScheduler calls this every tick so even sales the user never sees
+ * expire on schedule.
+ *
+ * The remaining seconds are recomputed deterministically from
+ * `initialCountdownSeconds`, `createdAt`, and `syntheticTickMs`:
+ *
+ *   remaining = max(0, initial - floor((now - createdAt) / syntheticTickMs))
+ *
+ * This is resilient to skipped/duplicate ticks and matches the synthetic
+ * (slower-than-real) timer rate. Returns the IDs of sales that expired this
+ * tick.
+ */
+export function tickFlashSaleTimers(now: number = Date.now()): string[] {
+  const sales = useEconomyStore.getState().flashSales;
+  if (sales.length === 0) return [];
+
+  const updates: Array<{ id: string; remaining: number }> = [];
+  const expiredIds: string[] = [];
+
+  for (const sale of sales) {
+    if (sale.claimed) continue;
+    const createdAt = sale.createdAt ?? now;
+    const tickMs = sale.syntheticTickMs ?? 1000;
+    const initial = sale.initialCountdownSeconds ?? sale.countdownSeconds;
+    const elapsedTicks = Math.floor((now - createdAt) / tickMs);
+    const remaining = Math.max(0, initial - elapsedTicks);
+
+    if (remaining <= 0) {
+      expiredIds.push(sale.id);
+    } else if (remaining !== sale.countdownSeconds) {
+      updates.push({ id: sale.id, remaining });
+    }
+  }
+
+  if (updates.length > 0) {
+    useEconomyStore.getState().updateFlashSaleCountdowns(updates);
+  }
+
+  for (const id of expiredIds) {
+    expireFlashSale(id);
+  }
+
+  return expiredIds;
 }
 
 /* ============================================================================
@@ -412,6 +479,7 @@ const flashSaleEngine = {
   buildAndPushSale,
   dismissFlashSale,
   expireFlashSale,
+  tickFlashSaleTimers,
   resetFlashSaleEngine,
   activeFlashSales,
 };

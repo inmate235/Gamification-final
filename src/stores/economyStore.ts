@@ -53,6 +53,15 @@ export interface EconomyStore extends EconomyState {
   triggerFlashSale: (sale: Omit<FlashSale, "id">) => FlashSale;
   removeFlashSale: (saleId: string) => void;
   /**
+   * Batch-update the remaining `countdownSeconds` for multiple active flash
+   * sales. Used by the EventScheduler's background timer tick so that ALL
+   * active sales age out regardless of overlay state, not just the visible
+   * one.
+   */
+  updateFlashSaleCountdowns: (
+    updates: Array<{ id: string; remaining: number }>
+  ) => void;
+  /**
    * Trigger a minimal, deficit-priced flash sale for a given (or random)
    * store. The tokenCost is FROZEN at the current deficit price (balance +
    * 2..3) so the deal becomes affordable once the user earns a couple more
@@ -126,7 +135,15 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
   liveDeficitPrice: calculateDeficitPrice(0),
 
   triggerFlashSale: (sale) => {
-    const newSale: FlashSale = { ...sale, id: nextFlashSaleId() };
+    const newSale: FlashSale = {
+      ...sale,
+      id: nextFlashSaleId(),
+      // Freeze the starting countdown so the EventScheduler can recompute the
+      // remaining time from createdAt + syntheticTickMs for background ticking
+      // (sales that age out even when their overlay is never opened).
+      initialCountdownSeconds:
+        sale.initialCountdownSeconds ?? sale.countdownSeconds,
+    };
     set((state) => ({
       flashSales: [...state.flashSales, newSale],
     }));
@@ -182,6 +199,16 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
     set((state) => ({
       flashSales: state.flashSales.filter((s) => s.id !== saleId),
     })),
+
+  updateFlashSaleCountdowns: (updates) => {
+    if (updates.length === 0) return;
+    const map = new Map(updates.map((u) => [u.id, u.remaining]));
+    set((state) => ({
+      flashSales: state.flashSales.map((s) =>
+        map.has(s.id) ? { ...s, countdownSeconds: map.get(s.id)! } : s
+      ),
+    }));
+  },
 
   makeWheelAvailable: () =>
     set((state) => ({

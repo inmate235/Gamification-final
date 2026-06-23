@@ -250,3 +250,26 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 337/337 passing (19 new flashSaleEngine tests, 9 FlashSale overlay tests, 12 EventScheduler tests, plus all prior suites).
 - `npm run dev` — Ready on port 3000; `curl /` and `curl /mall` return 200; dev log clean of errors/warnings.
+
+### Feature: fix-flash-sale-timer
+
+**What was built:**
+- Fixed blocking scrutiny issue: hidden pending flash sales now age out in background. Previously the countdown was driven solely by the overlay's React `Countdown` component (only mounted when the sale overlay was open), so sales that triggered while another overlay was open never expired.
+  - Added `tickFlashSaleTimers()` to `flashSaleEngine.ts`: computes remaining seconds for ALL active sales from `createdAt` + `syntheticTickMs` + `initialCountdownSeconds`, updates `countdownSeconds` in the store, and expires sales at zero — regardless of overlay state.
+  - Added `initialCountdownSeconds` field to the `FlashSale` type, frozen at creation in `economyStore.triggerFlashSale`.
+  - Added `updateFlashSaleCountdowns` batch action to `economyStore` for efficient store updates.
+  - Wired `tickFlashSaleTimers()` into `EventScheduler.tick()` as step 6 (before the proximity trigger).
+  - Fixed `expireFlashSale()` to only hide the overlay when the expired sale is the one currently shown (previously it always hid the overlay, which would dismiss a different sale's overlay when a hidden sale expired).
+  - Simplified the `Countdown` component in `FlashSale.tsx` to a pure display reading the live store value (no local interval); the scheduler is now the single source of truth for countdown progression.
+- Fixed non-blocking issue: inline "Deal Claimed!" state was preempted by the immediate celebration overlay switch. The celebration is now delayed ~1s so the claimed confirmation is visible before transitioning.
+  - Added `showFeedback` option to `tokenEconomy.claimFlashSale()` (defaults to true for backward compat).
+  - `FlashSale.tsx` `onGrab` now calls `claimFlashSale(id, { showFeedback: false })`, shows the claimed state, then after 1000ms calls `showTokenFeedback("spend", ...)` to transition to the celebration overlay.
+
+**Key decisions:**
+- The background timer uses deterministic elapsed-time computation (`floor((now - createdAt) / syntheticTickMs)`) rather than per-tick decrementing, making it resilient to skipped/duplicate ticks and matching the synthetic timer rate.
+- The `Countdown` component was simplified to a pure display + expiry safety net (the scheduler handles all ticking), eliminating the dual-timer inconsistency between the overlay's local state and the store.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 356/356 passing (7 new background timer expiry tests in flashSaleEngine, 1 EventScheduler background expiry test, updated FlashSale grab test for delayed celebration, plus all prior suites).

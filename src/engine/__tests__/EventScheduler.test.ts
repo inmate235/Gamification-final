@@ -11,7 +11,8 @@ import { useSocialStore } from "@/stores/socialStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useMapStore } from "@/stores/mapStore";
-import { resetFlashSaleEngine } from "@/engine/flashSaleEngine";
+import { resetFlashSaleEngine, buildAndPushSale, SYNTHETIC_TICK_MS } from "@/engine/flashSaleEngine";
+import { getStoreById } from "@/data/mallData";
 
 describe("EventScheduler", () => {
   let scheduler: EventScheduler;
@@ -190,5 +191,34 @@ describe("EventScheduler", () => {
     const a = getEventScheduler();
     const b = getEventScheduler();
     expect(a).toBe(b);
+  });
+
+  it("tick() expires background flash sales whose timer reaches zero even without overlay", () => {
+    const store = getStoreById("store-bloom")!;
+    // Build a sale whose countdown is very short so it expires within the
+    // mocked time window. We use buildAndPushSale then manually patch the
+    // countdown + createdAt so it's already past expiry.
+    const sale = buildAndPushSale(store, null);
+    // Set countdown to 1 and createdAt far enough in the past that one
+    // synthetic tick has elapsed.
+    const past = Date.now() - (SYNTHETIC_TICK_MS + 500);
+    useEconomyStore.setState({
+      flashSales: [
+        {
+          ...sale,
+          countdownSeconds: 1,
+          initialCountdownSeconds: 1,
+          createdAt: past,
+        },
+      ],
+    });
+    // Overlay is NOT open — this is the blocking scenario.
+    expect(useUIStore.getState().activeOverlay).toBe("none");
+
+    useSessionStore.getState().startSession();
+    scheduler.tick();
+
+    // Sale should have expired in the background.
+    expect(useEconomyStore.getState().flashSales).toHaveLength(0);
   });
 });

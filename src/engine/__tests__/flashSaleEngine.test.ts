@@ -8,6 +8,7 @@ import {
   buildAndPushSale,
   dismissFlashSale,
   expireFlashSale,
+  tickFlashSaleTimers,
   markRefractory,
   isRefractory,
   clearRefractory,
@@ -228,5 +229,101 @@ describe("flashSaleEngine", () => {
     expect(Object.keys(getRefractoryMap()).length).toBeGreaterThan(0);
     clearRefractory();
     expect(Object.keys(getRefractoryMap()).length).toBe(0);
+  });
+
+  /* --- Background timer expiry (tickFlashSaleTimers) --- */
+
+  it("tickFlashSaleTimers decrements countdown for all active sales", () => {
+    const storeA = getStoreById("store-bloom")!;
+    const storeB = getStoreById("store-technova")!;
+    const saleA = buildAndPushSale(storeA, null);
+    const saleB = buildAndPushSale(storeB, null);
+    const initialA = saleA.countdownSeconds;
+    const initialB = saleB.countdownSeconds;
+
+    // Advance by one synthetic tick (1400ms). Both sales should decrement.
+    const now = (saleA.createdAt ?? Date.now()) + SYNTHETIC_TICK_MS + 1;
+    tickFlashSaleTimers(now);
+
+    const updated = useEconomyStore.getState().flashSales;
+    const a = updated.find((s) => s.id === saleA.id)!;
+    const b = updated.find((s) => s.id === saleB.id)!;
+    expect(a.countdownSeconds).toBe(initialA - 1);
+    expect(b.countdownSeconds).toBe(initialB - 1);
+  });
+
+  it("tickFlashSaleTimers expires a sale when its timer reaches zero even if overlay is not open", () => {
+    const store = getStoreById("store-bloom")!;
+    const sale = buildAndPushSale(store, null);
+    const createdAt = sale.createdAt ?? Date.now();
+    // The sale was never shown (overlay stays "none") — this is the core
+    // blocking issue: hidden pending sales must age out in background.
+    expect(useUIStore.getState().activeOverlay).toBe("none");
+
+    // Advance past the full countdown duration.
+    const now = createdAt + sale.countdownSeconds * SYNTHETIC_TICK_MS + 1;
+    tickFlashSaleTimers(now);
+
+    expect(useEconomyStore.getState().flashSales).toHaveLength(0);
+    // No charge on natural expiry.
+    expect(getRefractoryMap()[store.id]).toBeUndefined();
+  });
+
+  it("tickFlashSaleTimers expires multiple sales independently", () => {
+    const storeA = getStoreById("store-bloom")!;
+    const storeB = getStoreById("store-technova")!;
+    const saleA = buildAndPushSale(storeA, null);
+    const saleB = buildAndPushSale(storeB, null);
+
+    // Give saleB a much longer countdown so only saleA expires at this point.
+    useEconomyStore.setState({
+      flashSales: useEconomyStore.getState().flashSales.map((s) =>
+        s.id === saleB.id
+          ? { ...s, countdownSeconds: 9999, initialCountdownSeconds: 9999 }
+          : s
+      ),
+    });
+
+    // Expire only saleA (advance past its duration but not saleB's).
+    const now = (saleA.createdAt ?? Date.now()) + saleA.countdownSeconds * SYNTHETIC_TICK_MS + 1;
+    tickFlashSaleTimers(now);
+
+    const remaining = useEconomyStore.getState().flashSales;
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]!.id).toBe(saleB.id);
+  });
+
+  it("expireFlashSale does not hide the overlay when expiring a non-shown sale", () => {
+    const storeA = getStoreById("store-bloom")!;
+    const storeB = getStoreById("store-technova")!;
+    const saleA = buildAndPushSale(storeA, null);
+    const saleB = buildAndPushSale(storeB, null);
+
+    // Show saleB in the overlay.
+    useUIStore.getState().showOverlay("flash-sale", saleB);
+    expect(useUIStore.getState().activeOverlay).toBe("flash-sale");
+
+    // Expire saleA (which is NOT shown). The overlay for saleB must remain.
+    expireFlashSale(saleA.id);
+
+    expect(useEconomyStore.getState().flashSales).toHaveLength(1);
+    expect(useEconomyStore.getState().flashSales[0]!.id).toBe(saleB.id);
+    expect(useUIStore.getState().activeOverlay).toBe("flash-sale");
+  });
+
+  it("expireFlashSale hides the overlay when expiring the shown sale", () => {
+    const store = getStoreById("store-bloom")!;
+    const sale = buildAndPushSale(store, null);
+    useUIStore.getState().showOverlay("flash-sale", sale);
+
+    expireFlashSale(sale.id);
+
+    expect(useEconomyStore.getState().flashSales).toHaveLength(0);
+    expect(useUIStore.getState().activeOverlay).toBe("none");
+  });
+
+  it("tickFlashSaleTimers is a no-op when there are no active sales", () => {
+    expect(tickFlashSaleTimers()).toEqual([]);
+    expect(useEconomyStore.getState().flashSales).toHaveLength(0);
   });
 });

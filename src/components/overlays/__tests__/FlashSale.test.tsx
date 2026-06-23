@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 
@@ -99,6 +99,10 @@ describe("FlashSale overlay (spending + proximity path)", () => {
     resetFlashSaleEngine();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("entry button is hidden when there are no pending sales", () => {
     render(<FlashSaleEntryButton />);
     expect(
@@ -150,7 +154,8 @@ describe("FlashSale overlay (spending + proximity path)", () => {
     ).toBe(true);
   });
 
-  it("grabbing the deal when affordable deducts tokens and shows claimed state", () => {
+  it("grabbing the deal when affordable deducts tokens and shows claimed state before celebration", () => {
+    vi.useFakeTimers();
     const store = getStoreById("store-bloom")!;
     const sale = pushSaleForStore(store);
     usePlayerStore.getState().addTokens(sale.tokenCost);
@@ -163,7 +168,14 @@ describe("FlashSale overlay (spending + proximity path)", () => {
     expect(usePlayerStore.getState().tokens).toBe(0);
     // Sale removed from the store.
     expect(useEconomyStore.getState().flashSales).toHaveLength(0);
-    // Spend celebration fired (claimed confirmation -> celebration overlay).
+    // Inline "Deal Claimed!" state is visible immediately after grab.
+    expect(screen.getByTestId("flash-sale-claimed")).toBeInTheDocument();
+    // Overlay is still flash-sale (celebration delayed ~1s).
+    expect(useUIStore.getState().activeOverlay).toBe("flash-sale");
+    // After the delay, the celebration overlay takes over.
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(useUIStore.getState().activeOverlay).toBe("celebration");
   });
 

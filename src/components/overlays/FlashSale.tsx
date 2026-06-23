@@ -14,7 +14,7 @@ import {
 import { useUIStore } from "@/stores/uiStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { usePlayerStore } from "@/stores/playerStore";
-import { claimFlashSale } from "@/engine/tokenEconomy";
+import { claimFlashSale, showTokenFeedback } from "@/engine/tokenEconomy";
 import {
   dismissFlashSale,
   expireFlashSale,
@@ -115,9 +115,15 @@ export function FlashSale() {
   const flashSales = useEconomyStore((s) => s.flashSales);
   const tokens = usePlayerStore((s) => s.tokens);
 
-  // The sale to display: prefer the overlay payload, else the first active.
-  const sale =
-    (overlayData as FlashSaleType | null) ?? flashSales[0] ?? null;
+  // The sale to display: prefer the live store object (looked up by the
+  // overlay payload's id) so the countdown reflects background ticking by the
+  // EventScheduler. Fall back to the first active sale, then to the overlay
+  // snapshot (e.g. after the sale is claimed/removed but the claimed state is
+  // still shown briefly).
+  const liveSale = overlayData
+    ? flashSales.find((s) => s.id === overlayData.id) ?? null
+    : flashSales[0] ?? null;
+  const sale = liveSale ?? overlayData;
 
   const isOpen = activeOverlay === "flash-sale" && sale !== null;
 
@@ -154,21 +160,25 @@ export function FlashSale() {
     expireFlashSale(current);
   }, [sale?.id]);
 
-  // Grab Deal: deduct tokens, show claimed state, then the spend celebration.
+  // Grab Deal: deduct tokens, show claimed state for ~1s, then the spend
+  // celebration overlay. The celebration is delayed so the inline "Deal
+  // Claimed!" confirmation is visible before the overlay switches.
   const onGrab = useCallback(() => {
     const current = sale?.id;
     if (!current) return;
-    const ok = claimFlashSale(current);
+    const cost = sale.tokenCost;
+    // Claim without immediate feedback — we'll show the celebration after the
+    // claimed state has been visible for ~1s.
+    const ok = claimFlashSale(current, { showFeedback: false });
     if (ok) {
-      // Show an inline claimed confirmation for a beat before the celebration
-      // overlay replaces this one.
       setClaimed(true);
       if (claimedTimerRef.current) clearTimeout(claimedTimerRef.current);
       claimedTimerRef.current = setTimeout(() => {
+        showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
         setClaimed(false);
-      }, 1200);
+      }, 1000);
     }
-  }, [sale?.id]);
+  }, [sale]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -288,10 +298,8 @@ export function FlashSale() {
                     </div>
                     <Countdown
                       key={sale.id}
-                      seconds={sale.countdownSeconds}
-                      tickMs={sale.syntheticTickMs ?? 1000}
+                      remaining={sale.countdownSeconds}
                       onExpire={onExpire}
-                      paused={claimed}
                     />
                   </div>
                   <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
@@ -382,40 +390,28 @@ export function FlashSale() {
    ========================================================================== */
 
 /**
- * Self-contained ticking countdown. Keyed by sale.id in the parent so each new
- * sale remounts it with a fresh `seconds` initializer. The tick interval is
- * `tickMs`, which is intentionally slower than a real second for the synthetic
- * timer (VAL-SALE-006). `paused` freezes the countdown (e.g. while the claimed
- * state is shown).
+ * Countdown display. The remaining seconds are driven by the EventScheduler's
+ * background timer tick (which updates `sale.countdownSeconds` in the economy
+ * store for ALL active sales), so this component is a pure display + expiry
+ * safety net. It no longer runs its own interval — the scheduler is the single
+ * source of truth for countdown progression, ensuring hidden pending sales
+ * age out even when the overlay is closed.
  */
 function Countdown({
-  seconds,
-  tickMs,
+  remaining,
   onExpire,
-  paused = false,
 }: {
-  seconds: number;
-  tickMs: number;
+  remaining: number;
   onExpire: () => void;
-  paused?: boolean;
 }) {
-  const [remaining, setRemaining] = useState(seconds);
   const expiredRef = useRef(false);
 
   useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => {
-      setRemaining((r) => Math.max(0, r - 1));
-    }, tickMs);
-    return () => clearInterval(t);
-  }, [tickMs, paused]);
-
-  useEffect(() => {
-    if (remaining <= 0 && !expiredRef.current && !paused) {
+    if (remaining <= 0 && !expiredRef.current) {
       expiredRef.current = true;
       onExpire();
     }
-  }, [remaining, onExpire, paused]);
+  }, [remaining, onExpire]);
 
   return (
     <p

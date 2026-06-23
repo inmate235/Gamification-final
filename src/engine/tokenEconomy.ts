@@ -91,8 +91,17 @@ export function unlockShortcut(shortcutId: string): boolean {
  * Claim (purchase) a flash sale: deducts its frozen deficit tokenCost when
  * affordable and closes the sale. Shows a spend feedback on success
  * (VAL-TOKEN-009, VAL-TOKEN-003).
+ *
+ * When `showFeedback` is false the spend celebration overlay is NOT shown
+ * immediately — the caller is responsible for surfacing the feedback (e.g.
+ * the FlashSale overlay delays it ~1s so the inline "Deal Claimed!" state is
+ * visible before the celebration takes over). Defaults to true for backward
+ * compatibility with other call sites.
  */
-export function claimFlashSale(saleId: string): boolean {
+export function claimFlashSale(
+  saleId: string,
+  opts: { showFeedback?: boolean } = {}
+): boolean {
   const sale = useEconomyStore.getState().flashSales.find((s) => s.id === saleId);
   const cost = sale?.tokenCost ?? 0;
   const ok = useEconomyStore.getState().claimFlashSale(saleId);
@@ -102,7 +111,9 @@ export function claimFlashSale(saleId: string): boolean {
     if (sale) {
       markRefractory(sale.storeId);
     }
-    showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
+    if (opts.showFeedback !== false) {
+      showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
+    }
   }
   return ok;
 }
