@@ -405,3 +405,27 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx tsc --noEmit` — clean (exit 0).
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 527/527 passing. New tests: socialStore initial leaderboard includes the player row before any `updateLeaderboard()` call; EventScheduler refreshes the leaderboard at least every 2nd tick (player balance reflected within 2 ticks) and does NOT wait until the 10th tick.
+
+## Milestone 5: Integration — Cross-Area Integration
+
+### Feature: cross-area-integration
+
+**What was built:**
+- Integration feature verifying and fixing cross-feature flows spanning all 10 systems (VAL-CROSS-001..075). Added a comprehensive `src/__tests__/cross-area-integration.test.ts` suite (61 tests) covering all 10 cross-area flows plus cross-cutting invariants: onboarding -> mall entry, token economy loop (explore -> earn -> task -> earn -> deficit -> re-explore), tier progression with celebration overlay, exit attempt full cycle (3 layers + rescue bargain + streak protection), engagement loop compounding (tasks + flash sale + wheel + progress coexisting), spinning wheel -> token deficit chain, survey personalization (food/tech/fashion category routing + discovery/deals task framing), streak -> exit friction interaction, first-5-minutes Day 1 script, navigation reachability (all overlays accessible without page reload, single-overlay enforcement, store composability), deficit recalculation on every balance change, event-scheduler single-tick orchestration, reward density phase transition, overlay data payload matching, and exit-friction sunk-cost aggregation across all loops.
+- `src/engine/taskGenerator.ts`: survey-motivation-aware task description framing. Task descriptions now read `playerStore.surveyAnswers.motivation` and use discovery-framed ("Discover the...", "Uncover a hidden token...") or deals-framed ("Hunt for deals in...", "Grab a hidden token deal...") language, with a neutral default for incomplete surveys (VAL-CROSS-038, VAL-CROSS-074). Refactored `TaskTemplate` from a `buildDescription` closure to a `descriptionKey` indirection so the framing is resolved at generation time.
+- `src/stores/socialStore.ts`: Bartle-type-aware phantom positioning. For Explorer-type players (selected "solo adventure"), `movePhantoms` biases 60% of phantom moves toward fogged (unexplored) zones via `pickPhantomZoneKey`, increasing phantom activity at unexplored areas (VAL-CROSS-039). Other Bartle types keep uniform-random baseline behavior.
+- `src/engine/EventScheduler.ts`: phantom movement cadence is now Bartle-aware (every 3rd tick for Explorers vs every 5th tick otherwise) so Explorer players see more frequent phantom friend activity (VAL-CROSS-039).
+- `src/components/mall/PhantomAvatars.tsx`: new component rendering social phantom friend avatars on the mall map as amethyst dots with a pulsing ring and name label, visually distinct from the player's gold avatar and store markers. Phantoms in fogged zones are hidden (fog-of-war consistent). Wired into `MallMap.tsx` so phantom friends appear in revealed zones (VAL-CROSS-051, VAL-MAP-036).
+
+**Key decisions:**
+- Personalization reads live from the Zustand stores at generation/move time rather than being snapshotted at onboarding, so changes propagate immediately and consistently across subsystems (VAL-CROSS-041, VAL-CROSS-074).
+- Phantom avatars render only in revealed zones to stay consistent with fog-of-war; Explorer-biased positioning places phantoms at unexplored zones, but they remain hidden under fog until the user arrives, creating a "someone is exploring ahead" sense on reveal.
+- The integration test suite drives stores/engines directly (with fake timers) to deterministically exercise cross-feature state transitions without flaky real-timer dependencies.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx vitest run src/__tests__/cross-area-integration.test.ts` — 61/61 passing.
+- `npx vitest run src/stores src/engine` — 348/348 passing (no regressions in touched stores/engines).
+- `npx vitest run src/components/mall src/components/overlays/__tests__` — 83/83 passing (MallMap incl. PhantomAvatars, StatusBar, all overlays).
+- `curl http://localhost:3000` (/), `/survey`, `/mall` — all return 200 with expected content (invite screen "Chosen"/"Invite"/"ENTER"; survey "Style"; mall title "MurkyCorps Mall", route guard redirects un-onboarded direct visits back to invite per VAL-ONBOARD-013).
+- Note: the pre-existing `src/app/__tests__/*-route-guard.test.tsx` jsdom/Next.js tests hang in this environment (not introduced by this feature; the route guards themselves work correctly under curl).
