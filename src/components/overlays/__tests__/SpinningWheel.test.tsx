@@ -172,6 +172,82 @@ describe("SpinningWheel overlay", () => {
     expect(useUIStore.getState().activeOverlay).toBe("none");
   });
 
+  /* --- Mid-spin close prevention (fix-spinning-wheel-midspin) --- */
+
+  it("close button is disabled during spin animation", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+    });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+    fireEvent.click(screen.getByTestId("wheel-spin-button"));
+    const closeBtn = screen.getByTestId("wheel-close-button") as HTMLButtonElement;
+    expect(closeBtn.disabled).toBe(true);
+  });
+
+  it("clicking close button during spin does not dismiss the overlay", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+    });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+    fireEvent.click(screen.getByTestId("wheel-spin-button"));
+    fireEvent.click(screen.getByTestId("wheel-close-button"));
+    expect(useUIStore.getState().activeOverlay).toBe("spinning-wheel");
+  });
+
+  it("clicking backdrop during spin does not dismiss the overlay", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+    });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+    fireEvent.click(screen.getByTestId("wheel-spin-button"));
+    fireEvent.click(screen.getByTestId("wheel-backdrop"));
+    expect(useUIStore.getState().activeOverlay).toBe("spinning-wheel");
+  });
+
+  it("cooldown is consumed but reward is preserved when attempting to close mid-spin", () => {
+    // The spin consumes the cooldown immediately; preventing close mid-spin
+    // guarantees the animation completes and the reward is applied.
+    useEconomyStore.setState({
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+    });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+    fireEvent.click(screen.getByTestId("wheel-spin-button"));
+    // Cooldown consumed.
+    expect(useEconomyStore.getState().spinningWheel.available).toBe(false);
+    expect(useEconomyStore.getState().spinningWheel.spinCount).toBe(1);
+    // Overlay remains open (close prevented).
+    expect(useUIStore.getState().activeOverlay).toBe("spinning-wheel");
+    // Still spinning — reward not yet shown.
+    expect(screen.getByTestId("wheel-spinning-label")).toBeDefined();
+  });
+
+  it("close button is enabled and overlay can be dismissed before spinning (idle)", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+    });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+    const closeBtn = screen.getByTestId("wheel-close-button") as HTMLButtonElement;
+    expect(closeBtn.disabled).toBe(false);
+    fireEvent.click(closeBtn);
+    expect(useUIStore.getState().activeOverlay).toBe("none");
+  });
+
+  it("no animation uses linear easing (design-system rule)", async () => {
+    // Read the component source and assert no `ease: "linear"` remains.
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.join(process.cwd(), "src/components/overlays/SpinningWheel.tsx"),
+      "utf-8"
+    );
+    expect(src).not.toContain('ease: "linear"');
+  });
+
   /* --- Spin interaction --- */
 
   it("spin button starts the spin and enters cooldown (VAL-WHEEL-003, VAL-WHEEL-012)", () => {

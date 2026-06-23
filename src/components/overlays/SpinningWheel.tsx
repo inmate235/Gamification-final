@@ -118,7 +118,7 @@ export function SpinningWheelEntryButton() {
     >
       <motion.div
         animate={{ rotate: [0, 360] }}
-        transition={{ duration: 8, ease: "linear", repeat: Infinity }}
+        transition={{ duration: 8, ease: PREMIUM_EASE, repeat: Infinity }}
       >
         <CircleNotch size={16} weight="light" className="text-[#d4af37]" />
       </motion.div>
@@ -201,10 +201,15 @@ function SpinningWheelContent() {
     }
   }, [phase, result]);
 
-  /* --- Close handler --- */
+  /* --- Close handler ---
+     Prevent closing the overlay mid-spin (option (a) preferred fix). The
+     reward is applied on animation completion, so closing mid-spin would
+     consume the cooldown without granting the reward. The close button is
+     disabled and backdrop clicks are ignored while `phase === "spinning"`. */
   const handleClose = useCallback(() => {
+    if (phase === "spinning") return;
     hideOverlay();
-  }, [hideOverlay]);
+  }, [hideOverlay, phase]);
 
   /* --- Pre-compute wedge paths --- */
   const wedges = useMemo(
@@ -238,6 +243,7 @@ function SpinningWheelContent() {
       <div
         className="absolute inset-0 backdrop-blur-2xl bg-black/60"
         onClick={handleClose}
+        data-testid="wheel-backdrop"
       />
 
       {/* Double-bezel glass card */}
@@ -253,8 +259,13 @@ function SpinningWheelContent() {
           {/* Close button */}
           <button
             onClick={handleClose}
+            disabled={phase === "spinning"}
             aria-label="Close spinning wheel"
-            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 text-[#a1a1aa] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] hover:text-white"
+            aria-disabled={phase === "spinning"}
+            className={cn(
+              "absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 text-[#a1a1aa] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] hover:text-white",
+              phase === "spinning" && "cursor-not-allowed opacity-40 hover:text-[#a1a1aa]"
+            )}
             data-testid="wheel-close-button"
           >
             <X size={16} weight="light" />
