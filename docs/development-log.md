@@ -388,3 +388,20 @@ The full token economy system: earning, spending, the deficit engine, tier multi
 - `npx eslint .` — clean (exit 0).
 - `npx vitest run` — 515/515 passing (30 new leaderboard tests: socialStore multi-metric ranking, contiguous ranks, live player values, goalpost shifting, new-phantom-on-overtake, proximity alert gating, rank-up-on-overtake; Leaderboard component entry button, overlay system, ranked list, user highlight, three metrics, metric tabs, bounded entries, proximity banner).
 - `npm run dev` — compiles with no errors; `curl http://localhost:3000/mall` returns 200; the compiled client chunk contains `leaderboard-entry-button`, `leaderboard-overlay`, `proximity-alert-banner`, and `Mall Rankings` markers, confirming the component is wired into the mall experience.
+
+### Feature: fix-leaderboard-realtime
+
+**What was built:**
+- Fixed the blocking scrutiny issue where the leaderboard only refreshed every 10th scheduler tick (~10s lag), violating the real-time requirement.
+- `src/engine/EventScheduler.ts`: changed the leaderboard + proximity-check block from `tickCount % 10 === 0` to `tickCount % 2 === 0` so the board refreshes at least every 2nd tick (~2s max lag), reflecting the player's live tokens/time/exploration in near real-time. `tickPhantomScores` (subtle drift) remains every 15th tick.
+- `src/stores/socialStore.ts`: the initial `leaderboard` state (and `reset()`) now include the real player row built from the live player/session/map store values via the new `buildInitialLeaderboardWithPlayer()`/`buildPlayerEntry()` helpers, so the player is present on the board from the very first render, before the first `updateLeaderboard()` call. `updateLeaderboard()` was refactored to reuse `buildPlayerEntry()`.
+- `src/components/mall/MallExperience.tsx`: calls `useSocialStore.getState().updateLeaderboard()` on mount to guarantee the board is populated and ranks reflect any onboarding trial perks / tier changes immediately, before the first scheduler tick.
+
+**Key decisions:**
+- Kept the cadence at every 2nd tick (rather than every tick) to balance real-time responsiveness against per-tick work (sorting + goalpost shifting + proximity checks run on each refresh). 2s max lag comfortably satisfies the real-time requirement.
+- The initial-state player row reads the live stores at store-creation time. This is safe because `socialStore` imports `playerStore`/`mapStore`/`sessionStore`, so those modules are evaluated first; there is no circular import.
+
+**Verification:**
+- `npx tsc --noEmit` — clean (exit 0).
+- `npx eslint .` — clean (exit 0).
+- `npx vitest run` — 527/527 passing. New tests: socialStore initial leaderboard includes the player row before any `updateLeaderboard()` call; EventScheduler refreshes the leaderboard at least every 2nd tick (player balance reflected within 2 ticks) and does NOT wait until the 10th tick.

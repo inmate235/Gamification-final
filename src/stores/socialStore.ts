@@ -57,6 +57,48 @@ function nextAlertId(): string {
   return `proximity-alert-${alertCounter}`;
 }
 
+/**
+ * Build a `LeaderboardEntry` for the real player using their LIVE store
+ * values. Used both at store-initialization time (so the player row is
+ * present in the leaderboard from the very first render, before the first
+ * `updateLeaderboard()` call) and inside `updateLeaderboard()`.
+ */
+function buildPlayerEntry(): LeaderboardEntry {
+  return {
+    rank: 0,
+    name: "You",
+    avatarSeed: "player-avatar",
+    tier: usePlayerStore.getState().tier,
+    tokenCount: usePlayerStore.getState().tokens,
+    isPlayer: true,
+    timeInMall: useSessionStore.getState().sessionMinutes,
+    explorationPercent: useMapStore.getState().explorationPercent,
+  };
+}
+
+/**
+ * Compose the initial leaderboard: the static phantom entries plus the real
+ * player row, sorted by the active metric and assigned contiguous 1-indexed
+ * ranks. This guarantees the player is visible on the leaderboard from the
+ * start (VAL-LEADER-004) without waiting for the first scheduler-driven
+ * `updateLeaderboard()`.
+ */
+function buildInitialLeaderboardWithPlayer(): LeaderboardEntry[] {
+  const metric: LeaderboardMetric = "tokens";
+  const playerEntry = buildPlayerEntry();
+  const phantomEntries: LeaderboardEntry[] = initialLeaderboard.map((e) => ({
+    ...e,
+    rank: 0,
+  }));
+  const combined = [playerEntry, ...phantomEntries].sort(
+    (a, b) => entryMetricValue(b, metric) - entryMetricValue(a, metric),
+  );
+  combined.forEach((entry, idx) => {
+    entry.rank = idx + 1;
+  });
+  return combined;
+}
+
 export interface SocialStore extends SocialState {
   movePhantoms: () => void;
   updateLeaderboard: () => void;
@@ -91,7 +133,7 @@ export interface SocialStore extends SocialState {
 
 export const useSocialStore = create<SocialStore>((set, get) => ({
   phantoms: initialPhantoms.map((p) => ({ ...p })),
-  leaderboard: initialLeaderboard.map((e) => ({ ...e })),
+  leaderboard: buildInitialLeaderboardWithPlayer(),
   proximityAlerts: [],
   activeMetric: "tokens",
 
@@ -115,25 +157,12 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
     })),
 
   updateLeaderboard: () => {
-    const playerTokens = usePlayerStore.getState().tokens;
-    const playerTime = useSessionStore.getState().sessionMinutes;
-    const playerExploration = useMapStore.getState().explorationPercent;
-    const playerTier = usePlayerStore.getState().tier;
     const state = get();
     const metric = state.activeMetric;
 
     // Build a combined list including the player with their LIVE values
     // (VAL-LEADER-004..006, VAL-LEADER-015, VAL-LEADER-024).
-    const playerEntry: LeaderboardEntry = {
-      rank: 0,
-      name: "You",
-      avatarSeed: "player-avatar",
-      tier: playerTier,
-      tokenCount: playerTokens,
-      isPlayer: true,
-      timeInMall: playerTime,
-      explorationPercent: playerExploration,
-    };
+    const playerEntry = buildPlayerEntry();
 
     const phantomEntries: LeaderboardEntry[] = state.phantoms.map((p) => ({
       rank: 0,
@@ -206,7 +235,7 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
   reset: () =>
     set({
       phantoms: initialPhantoms.map((p) => ({ ...p })),
-      leaderboard: initialLeaderboard.map((e) => ({ ...e })),
+      leaderboard: buildInitialLeaderboardWithPlayer(),
       proximityAlerts: [],
       activeMetric: "tokens",
     }),

@@ -165,6 +165,45 @@ describe("EventScheduler", () => {
     moveSpy.mockRestore();
   });
 
+  it("tick() refreshes the leaderboard at least every 2nd tick (real-time cadence)", () => {
+    useSessionStore.getState().startSession();
+
+    // The initial leaderboard (built at store creation) reflects tokens=0.
+    const playerRowInitial = useSocialStore
+      .getState()
+      .leaderboard.find((e) => e.isPlayer);
+    expect(playerRowInitial?.tokenCount).toBe(0);
+
+    // Earn tokens AFTER the initial state so the leaderboard is stale until
+    // the scheduler refreshes it.
+    usePlayerStore.getState().addTokens(15);
+
+    // One tick is NOT guaranteed to refresh (cadence is every 2nd tick), so
+    // we tick twice and assert the leaderboard now reflects the live value.
+    scheduler.tick();
+    scheduler.tick();
+
+    const playerRow = useSocialStore
+      .getState()
+      .leaderboard.find((e) => e.isPlayer);
+    expect(playerRow).toBeDefined();
+    expect(playerRow?.tokenCount).toBe(15);
+  });
+
+  it("tick() does NOT wait until the 10th tick to refresh the leaderboard", () => {
+    useSessionStore.getState().startSession();
+    usePlayerStore.getState().addTokens(8);
+
+    // Tick only 3 times (well before the old 10th-tick cadence). The
+    // leaderboard must already reflect the new balance.
+    for (let i = 0; i < 3; i++) scheduler.tick();
+
+    const playerRow = useSocialStore
+      .getState()
+      .leaderboard.find((e) => e.isPlayer);
+    expect(playerRow?.tokenCount).toBe(8);
+  });
+
   it("tick() expires trial perks", () => {
     usePlayerStore.getState().addPerk({
       id: "expired-trial",

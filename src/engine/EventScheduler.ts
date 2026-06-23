@@ -197,11 +197,14 @@ export class EventScheduler {
       }
     }
 
-    // 8. Leaderboard + proximity check (VAL-LEADER-010..016). Every 10th
+    // 8. Leaderboard + proximity check (VAL-LEADER-010..016). Every 2nd
     //    tick: refresh the leaderboard from live player values, run the
     //    goalpost-shifting / new-phantom-on-overtake logic, and fire a
     //    proximity alert when the user is genuinely close to overtaking.
-    if (this.tickCount % 10 === 0) {
+    //    Runs at least every 2nd tick (not every 10th) so the leaderboard
+    //    reflects the player's live score in near real-time (~2s lag max)
+    //    instead of ~10s.
+    if (this.tickCount % 2 === 0) {
       useSocialStore.getState().updateLeaderboard();
       const overtaken = detectOvertakeAndShift();
       if (overtaken) {

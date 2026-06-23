@@ -34,6 +34,7 @@ import { StreakRecoveryBanner } from "./StreakRecoveryBanner";
 import { StreakPenaltyNotification } from "./StreakPenaltyNotification";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useSessionStore } from "@/stores/sessionStore";
+import { useSocialStore } from "@/stores/socialStore";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -109,6 +110,13 @@ export function MallExperience() {
     // crossed during onboarding before the loop started) and again right
     // away so the celebration surfaces promptly (VAL-TIER-023).
     checkForTierUpgrade();
+
+    // Populate the leaderboard immediately on mount with the player's live
+    // values so it is never stale on first render (the initial store state
+    // already includes the player row, but this guarantees the ranks reflect
+    // any onboarding trial perks / tier changes before the first scheduler
+    // tick fires).
+    useSocialStore.getState().updateLeaderboard();
 
     return () => {
       resetEventSchedulerSingleton();

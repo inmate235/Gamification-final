@@ -29,6 +29,22 @@ describe("socialStore", () => {
     expect(s.activeMetric).toBe("tokens");
   });
 
+  it("includes the player row in the initial leaderboard state (before any updateLeaderboard call)", () => {
+    // Reset to a clean slate so we observe the true initial state.
+    useSocialStore.getState().reset();
+    const board = useSocialStore.getState().leaderboard;
+    const player = board.find((e) => e.isPlayer);
+    expect(player).toBeDefined();
+    expect(player?.name).toBe("You");
+    // Player row reflects live store values at init time.
+    expect(player?.tokenCount).toBe(usePlayerStore.getState().tokens);
+    // Ranks are contiguous 1..N.
+    const ranks = board.map((e) => e.rank).sort((a, b) => a - b);
+    for (let i = 0; i < ranks.length; i++) {
+      expect(ranks[i]).toBe(i + 1);
+    }
+  });
+
   it("all phantoms are fabricated (none are the player)", () => {
     for (const p of useSocialStore.getState().phantoms) {
       expect(p.name).not.toBe("You");
