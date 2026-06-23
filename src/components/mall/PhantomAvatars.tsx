@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useSocialStore } from "@/stores/socialStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -35,6 +36,16 @@ interface PhantomAvatarProps {
 function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   const { x, y } = phantom.position;
 
+  // Deterministic staggered delay derived from the phantom id so the pulsing
+  // rings are desynchronized without calling Math.random during render.
+  const pulseDelay = useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < phantom.id.length; i += 1) {
+      hash = (hash * 31 + phantom.id.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash) % 1500 / 1000;
+  }, [phantom.id]);
+
   return (
     <motion.g
       key={phantom.id}
@@ -56,7 +67,7 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
           duration: 3,
           ease: PREMIUM_EASE,
           repeat: Infinity,
-          delay: Math.random() * 1.5,
+          delay: pulseDelay,
         }}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
       />
