@@ -167,7 +167,6 @@ function ExitFrictionContent({ layer, data }: ContentProps) {
 
             {/* Layer indicator */}
             <div className="mb-5 flex items-center gap-2">
-              <LayerPill layer={layer} />
               <span className="text-[10px] uppercase tracking-[0.2em] text-[#71717a]">
                 {layer === 3 ? "Final offer" : `Attempt ${layer} of 3`}
               </span>
@@ -183,27 +182,6 @@ function ExitFrictionContent({ layer, data }: ContentProps) {
         </div>
       </motion.div>
     </motion.div>
-  );
-}
-
-/* ============================================================================
-   Layer pill
-   ========================================================================== */
-
-function LayerPill({ layer }: { layer: 1 | 2 | 3 }) {
-  const color = layer === 3 ? "#9d7fdb" : layer === 2 ? "#ef4444" : "#d4af37";
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ring-1"
-      style={{
-        color,
-        borderColor: `${color}55`,
-        background: `${color}14`,
-      }}
-    >
-      <SignOut size={11} weight="light" style={{ color }} />
-      Layer {layer}
-    </span>
   );
 }
 

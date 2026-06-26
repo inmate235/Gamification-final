@@ -43,13 +43,12 @@ export function ShortcutEntryButton() {
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.7, ease: PREMIUM_EASE }}
       onClick={open}
       aria-label={`Unlock shortcuts from ${liveDeficitPrice} tokens`}
-      className="fixed bottom-28 right-3 z-30 flex items-center gap-2 rounded-full bg-[#12121a]/90 px-4 py-2.5 ring-1 ring-[#9d7fdb]/30 backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] sm:bottom-32 sm:right-4"
-      style={{ boxShadow: "0 0 20px rgba(157,127,219,0.25)" }}
+      className="flex items-center gap-2 rounded-full bg-[#12121a]/80 px-4 py-2.5 ring-1 ring-[#9d7fdb]/30 backdrop-blur-md transition-all duration-700 hover:bg-[#12121a] active:scale-[0.97]"
       data-testid="shortcut-entry-button"
     >
       <Lightning size={16} weight="light" className="text-[#9d7fdb]" />

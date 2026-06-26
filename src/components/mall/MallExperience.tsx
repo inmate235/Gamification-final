@@ -158,13 +158,15 @@ export function MallExperience() {
       {/* Bottom chrome */}
       <TaskPanel />
 
-      {/* Floating spend-opportunity entry points (always visible) */}
-      <FlashSaleEntryButton />
-      <ShortcutEntryButton />
-      <SpinningWheelEntryButton />
-
-      {/* Leaderboard entry point + proximity alert banner (VAL-LEADER-001, -011) */}
-      <LeaderboardEntryButton />
+      {/* Action Dock (Consolidated entry points) */}
+      <div className="fixed bottom-24 right-4 z-30 flex flex-col items-end gap-3 sm:bottom-28">
+        <LeaderboardEntryButton />
+        <SpinningWheelEntryButton />
+        <ShortcutEntryButton />
+        <FlashSaleEntryButton />
+      </div>
+      
+      {/* Proximity alert banner (VAL-LEADER-011) */}
       <ProximityAlertBanner />
 
       {/* Leave Mall control — triggers the exit friction flow (VAL-EXIT-001) */}

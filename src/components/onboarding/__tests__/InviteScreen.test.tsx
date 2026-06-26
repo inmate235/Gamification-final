@@ -127,14 +127,14 @@ describe("InviteScreen", () => {
       expect(screen.getByText(/Tap to continue/i)).toBeInTheDocument();
     });
 
-    // After the welcome animation timer (3200ms), navigate to /survey
+    // After the welcome animation timer (7200ms), navigate to /survey
     await waitFor(
       () => {
         expect(pushMock).toHaveBeenCalledWith("/survey");
       },
-      { timeout: 5000 }
+      { timeout: 9000 }
     );
-  });
+  }, 12000);
 
   it("handles rapid double-submission idempotently (no duplicate navigation)", async () => {
     const user = userEvent.setup();
@@ -151,12 +151,12 @@ describe("InviteScreen", () => {
       () => {
         expect(pushMock).toHaveBeenCalledWith("/survey");
       },
-      { timeout: 5000 }
+      { timeout: 9000 }
     );
 
     // Should only navigate once
     expect(pushMock).toHaveBeenCalledTimes(1);
-  });
+  }, 12000);
 
   it("input accepts alphanumeric and dash characters", async () => {
     const user = userEvent.setup();
@@ -189,9 +189,9 @@ describe("InviteScreen", () => {
       () => {
         expect(pushMock).toHaveBeenCalledWith("/survey");
       },
-      { timeout: 5000 }
+      { timeout: 9000 }
     );
-  });
+  }, 12000);
 
   it("advances the onboarding step to 'survey' on valid code submission", async () => {
     const user = userEvent.setup();

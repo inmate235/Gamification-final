@@ -35,20 +35,16 @@ export function LeaveMallButton() {
   return (
     <AnimatePresence>
       <motion.button
-        initial={{ opacity: 0, y: 24, scale: 0.85 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 24, scale: 0.85 }}
+        initial={{ opacity: 0, x: -24, scale: 0.85 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        exit={{ opacity: 0, x: -24, scale: 0.85 }}
         transition={{ duration: 0.7, ease: PREMIUM_EASE }}
         onClick={onLeave}
         aria-label="Leave the mall"
-        className="fixed bottom-28 left-1/2 z-30 -translate-x-1/2 flex items-center gap-2 rounded-full bg-[#12121a]/90 px-4 py-2.5 ring-1 ring-white/10 backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] sm:bottom-32"
-        style={{ boxShadow: "0 0 18px rgba(239,68,68,0.18)" }}
+        className="fixed top-24 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-[#12121a]/60 ring-1 ring-white/5 backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#12121a]/80 active:scale-[0.97] sm:top-28 sm:left-4"
         data-testid="leave-mall-button"
       >
-        <SignOut size={15} weight="light" className="text-[#a1a1aa]" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a1a1aa]">
-          Leave&nbsp;Mall
-        </span>
+        <SignOut size={16} weight="light" className="text-[#71717a] ml-0.5" />
       </motion.button>
     </AnimatePresence>
   );

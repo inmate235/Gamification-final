@@ -94,78 +94,100 @@ export function TaskPanel() {
   const hasGated = activeTasks.some((t) => t.timeGated && t.gateUntil);
 
   return (
-    <footer
-      className="fixed inset-x-0 bottom-0 z-30 px-3 pb-3 sm:px-4 sm:pb-4"
-      aria-label="Task panel"
-      data-testid="task-panel"
-    >
-      <div className="bezel-card !rounded-[1.25rem] !p-1 sm:!rounded-[1.5rem]">
-        <div className="bezel-card-inner !rounded-[calc(1.25rem-0.375rem)] !p-0 sm:!rounded-[calc(1.5rem-0.375rem)]">
-          {/* Toggle handle */}
-          <button
-            onClick={handleToggle}
-            aria-expanded={expanded}
-            aria-controls="task-panel-content"
-            aria-label={expanded ? "Collapse task panel" : "Expand task panel"}
-            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.99]"
-            data-testid="task-panel-toggle"
+    <>
+      {/* Floating Entry Orb */}
+      <AnimatePresence>
+        {!expanded && (
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.85 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.85 }}
+            transition={{ duration: 0.7, ease: PREMIUM_EASE }}
+            className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2"
           >
-            <span className="flex items-center gap-2.5">
-              <ListChecks size={16} weight="light" className="text-[#9d7fdb]" />
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#a1a1aa]">
+            <button
+              onClick={handleToggle}
+              aria-expanded={expanded}
+              aria-controls="task-panel-content"
+              aria-label="Open Quests"
+              className="group flex items-center gap-3 rounded-full bg-[#12121a]/80 px-5 py-3 ring-1 ring-[#9d7fdb]/40 backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#12121a] hover:ring-[#9d7fdb]/60 active:scale-[0.97]"
+              style={{ boxShadow: "0 0 24px rgba(157,127,219,0.2)" }}
+              data-testid="task-panel-toggle"
+            >
+              <ListChecks size={18} weight="light" className="text-[#9d7fdb] transition-transform duration-500 group-hover:scale-110" />
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5f5f7]">
                 Quests
               </span>
-              <span
-                className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-[#d4af37] ring-1 ring-white/10"
-                data-testid="task-panel-count"
-              >
-                {taskCount}
-              </span>
-            </span>
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.5, ease: PREMIUM_EASE }}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10"
-            >
-              <CaretDown size={14} weight="light" className="text-[#a1a1aa]" />
-            </motion.span>
-          </button>
+              {taskCount > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#9d7fdb] px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(157,127,219,0.5)]">
+                  {taskCount}
+                </span>
+              )}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* Expandable content */}
-          <AnimatePresence initial={false}>
-            {expanded && (
-              <motion.div
-                id="task-panel-content"
-                key="task-content"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.5, ease: PREMIUM_EASE }}
-                className="overflow-hidden"
-                data-testid="task-panel-content"
-              >
-                <div className="flex max-h-[260px] flex-col gap-2 overflow-y-auto px-3 pb-3 pt-1 sm:px-4">
+      {/* Full-Screen Focus Overlay */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            id="task-panel-content"
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(16px)" }}
+            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            transition={{ duration: 0.5, ease: PREMIUM_EASE }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 px-4"
+            data-testid="task-panel-content"
+          >
+            {/* Click-away backdrop */}
+            <div className="absolute inset-0" onClick={handleToggle} />
+
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              transition={{ duration: 0.5, ease: PREMIUM_EASE }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#12121a]/90 p-1 ring-1 ring-white/10 shadow-[0_0_40px_rgba(157,127,219,0.15)]"
+            >
+              <div className="rounded-[calc(1.5rem-4px)] bg-[#1a1a24]/90 p-5">
+                <div className="mb-6 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#9d7fdb]/10 ring-1 ring-[#9d7fdb]/30">
+                      <ListChecks size={20} weight="light" className="text-[#9d7fdb]" />
+                    </div>
+                    <h2 className="text-lg font-semibold uppercase tracking-widest text-white">
+                      Active Quests
+                    </h2>
+                  </div>
+                  <button
+                    onClick={handleToggle}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-colors hover:bg-white/10"
+                    aria-label="Close quests"
+                  >
+                    <CaretDown size={16} weight="light" className="text-[#a1a1aa]" />
+                  </button>
+                </div>
+
+                <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
                   <AnimatePresence initial={false}>
                     {activeTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        now={now}
-                      />
+                      <TaskCard key={task.id} task={task} now={now} />
                     ))}
                   </AnimatePresence>
+                  
                   {hasGated && (
-                    <p className="px-1 pt-0.5 text-center text-[10px] uppercase tracking-[0.15em] text-[#71717a]">
+                    <p className="mt-2 text-center text-[10px] uppercase tracking-[0.15em] text-[#71717a]">
                       Timed quests unlock after the countdown
                     </p>
                   )}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-    </footer>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

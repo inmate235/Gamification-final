@@ -95,7 +95,7 @@ export function InviteScreen() {
     if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
     welcomeTimerRef.current = setTimeout(() => {
       router.push("/survey");
-    }, 3200);
+    }, 7200);
   }, [code, submitting, validateCode, router, advanceToSurvey]);
 
   /* --- Input change handler --- */

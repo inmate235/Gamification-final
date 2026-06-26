@@ -17,6 +17,7 @@ import {
   type RewardOutcome,
 } from "@/engine/nearMissAlgorithm";
 import { cn } from "@/lib/utils";
+import { BrainRotCelebration } from "./BrainRotCelebration";
 
 /**
  * SpinningWheel — the variable-reward spinning wheel overlay with near-miss
@@ -106,14 +107,13 @@ export function SpinningWheelEntryButton() {
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 24, scale: 0.85 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 24, scale: 0.85 }}
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.85 }}
       transition={{ duration: 0.7, ease: PREMIUM_EASE }}
       onClick={onOpen}
       aria-label="Spin the wheel for a reward"
-      className="fixed bottom-28 right-3 z-30 flex items-center gap-2 rounded-full bg-[#12121a]/90 px-4 py-2.5 ring-1 ring-[#d4af37]/40 backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] sm:bottom-32 sm:right-4"
-      style={{ boxShadow: "0 0 24px rgba(212,175,55,0.28)" }}
+      className="relative flex items-center gap-2 rounded-full bg-[#12121a]/80 px-4 py-2.5 ring-1 ring-[#d4af37]/40 backdrop-blur-md transition-all duration-700 hover:bg-[#12121a] active:scale-[0.97]"
       data-testid="wheel-entry-button"
     >
       <motion.div
@@ -123,10 +123,10 @@ export function SpinningWheelEntryButton() {
         <CircleNotch size={16} weight="light" className="text-[#d4af37]" />
       </motion.div>
       <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d4af37]">
-        Spin&nbsp;Available
+        Spin
       </span>
       <motion.span
-        className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#d4af37]"
+        className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#d4af37]"
         animate={{ opacity: [1, 0.3, 1], scale: [1, 1.3, 1] }}
         transition={{ duration: 1.5, ease: PREMIUM_EASE, repeat: Infinity }}
       />
@@ -462,6 +462,8 @@ function SpinningWheelContent() {
             )}
           </div>
         </div>
+        
+        {phase === "result" && result && <BrainRotCelebration result={result} />}
       </motion.div>
     </motion.div>
   );

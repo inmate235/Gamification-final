@@ -49,10 +49,15 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   return (
     <motion.g
       key={phantom.id}
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0, scale: 0.5, x: phantom.position.x, y: phantom.position.y }}
+      animate={{ opacity: 1, scale: 1, x: phantom.position.x, y: phantom.position.y }}
       exit={{ opacity: 0, scale: 0.5 }}
-      transition={{ duration: 0.5, ease: PREMIUM_EASE }}
+      transition={{
+        opacity: { duration: 0.5, ease: PREMIUM_EASE },
+        scale: { duration: 0.5, ease: PREMIUM_EASE },
+        x: { duration: 8, ease: "linear" },
+        y: { duration: 8, ease: "linear" }
+      }}
       style={{ transformBox: "fill-box", transformOrigin: "center" }}
       data-testid={`phantom-avatar-${phantom.id}`}
       aria-label={`${phantom.name}: ${phantom.currentAction}`}
@@ -86,8 +91,8 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
 
       {/* Activity label — name + action, shown as SVG text */}
       <text
-        x={x}
-        y={y - 16}
+        x={0}
+        y={-16}
         textAnchor="middle"
         className="fill-[#c4b0e8] text-[9px] font-medium"
         style={{ pointerEvents: "none", userSelect: "none" }}
