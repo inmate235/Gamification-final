@@ -49,8 +49,8 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   return (
     <motion.g
       key={phantom.id}
-      initial={{ opacity: 0, scale: 0.5, x: phantom.position.x, y: phantom.position.y }}
-      animate={{ opacity: 1, scale: 1, x: phantom.position.x, y: phantom.position.y }}
+      initial={{ opacity: 0, scale: 0.5, x, y }}
+      animate={{ opacity: 1, scale: 1, x, y }}
       exit={{ opacity: 0, scale: 0.5 }}
       transition={{
         opacity: { duration: 0.5, ease: PREMIUM_EASE },

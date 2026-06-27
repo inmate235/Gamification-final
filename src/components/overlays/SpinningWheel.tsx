@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CircleNotch, Sparkle, MapTrifold, Storefront, Coins } from "@phosphor-icons/react/dist/ssr";
+import { X, Sparkle, MapTrifold, Storefront, Coins } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -131,11 +131,11 @@ export function SpinningWheelEntryButton() {
       <motion.div
         className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg]"
         animate={{ x: ["-150%", "250%"] }}
-        transition={{ duration: 2, ease: "linear", repeat: Infinity, repeatDelay: 0.5 }}
+        transition={{ duration: 2, ease: "easeInOut", repeat: Infinity, repeatDelay: 0.5 }}
       />
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ duration: 1.2, ease: "linear", repeat: Infinity }}
+        transition={{ duration: 1.2, ease: "easeInOut", repeat: Infinity }}
         className="relative z-10 shrink-0"
       >
         <div style={{

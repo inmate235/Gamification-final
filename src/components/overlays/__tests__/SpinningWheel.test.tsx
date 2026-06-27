@@ -95,7 +95,7 @@ describe("SpinningWheel overlay", () => {
 
   it("entry button is hidden when wheel is not available", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: false, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: false, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     render(<SpinningWheelEntryButton />);
     expect(screen.queryByTestId("wheel-entry-button")).toBeNull();
@@ -103,7 +103,7 @@ describe("SpinningWheel overlay", () => {
 
   it("entry button is shown when wheel is available", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     render(<SpinningWheelEntryButton />);
     expect(screen.getByTestId("wheel-entry-button")).toBeDefined();
@@ -111,7 +111,7 @@ describe("SpinningWheel overlay", () => {
 
   it("clicking entry button opens the wheel overlay", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     render(<SpinningWheelEntryButton />);
     fireEvent.click(screen.getByTestId("wheel-entry-button"));
@@ -127,7 +127,7 @@ describe("SpinningWheel overlay", () => {
 
   it("overlay renders with wheel, pointer, and spin button when open", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -139,7 +139,7 @@ describe("SpinningWheel overlay", () => {
 
   it("shows all 7 prize segment labels before spinning (VAL-WHEEL-011)", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -152,7 +152,7 @@ describe("SpinningWheel overlay", () => {
 
   it("close button dismisses the overlay (VAL-WHEEL-014)", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -162,7 +162,7 @@ describe("SpinningWheel overlay", () => {
 
   it("backdrop click dismisses the overlay", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -176,7 +176,7 @@ describe("SpinningWheel overlay", () => {
 
   it("close button is disabled during spin animation", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -187,7 +187,7 @@ describe("SpinningWheel overlay", () => {
 
   it("clicking close button during spin does not dismiss the overlay", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -198,7 +198,7 @@ describe("SpinningWheel overlay", () => {
 
   it("clicking backdrop during spin does not dismiss the overlay", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -211,7 +211,7 @@ describe("SpinningWheel overlay", () => {
     // The spin consumes the cooldown immediately; preventing close mid-spin
     // guarantees the animation completes and the reward is applied.
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -227,7 +227,7 @@ describe("SpinningWheel overlay", () => {
 
   it("close button is enabled and overlay can be dismissed before spinning (idle)", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -252,7 +252,7 @@ describe("SpinningWheel overlay", () => {
 
   it("spin button starts the spin and enters cooldown (VAL-WHEEL-003, VAL-WHEEL-012)", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: true, lastSpin: 0, spinCount: 0 },
+      spinningWheel: { available: true, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
@@ -266,7 +266,7 @@ describe("SpinningWheel overlay", () => {
 
   it("spin button is disabled during cooldown when wheel is not available", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1 },
+      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
