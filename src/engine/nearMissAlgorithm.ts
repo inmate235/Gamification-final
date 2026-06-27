@@ -70,7 +70,7 @@ export const WHEEL_SEGMENTS: WheelSegment[] = [
 export const BIG_PRIZE_INDEX = 0;
 /** The segment the near-miss lands on (counter-clockwise adjacent to big prize). */
 export const NEAR_MISS_INDEX = 6;
-export const NEAR_MISS_THRESHOLD = 0.25;
+export const NEAR_MISS_THRESHOLD = 0.40;
 export const SEGMENT_COUNT = WHEEL_SEGMENTS.length;
 export const SEGMENT_ANGLE = 360 / SEGMENT_COUNT; // ≈ 51.43°
 

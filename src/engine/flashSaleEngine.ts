@@ -279,9 +279,23 @@ const CATEGORY_ITEMS: Partial<Record<StoreCategory, string[]>> = {
   lifestyle: ["Amber candle set", "Linen throw blanket", "Brass desk lamp"],
 };
 
+/** Store-specific product description pools for aligned flash sales. */
+const STORE_ITEMS: Record<string, string[]> = {
+  "store-bloom": ["Silk midi dress", "Tailored overcoat", "Cashmere knit"],
+  "store-pulse": ["Wireless earbuds", "Glow earbuds", "Noise-canceling headphones"],
+  "store-technova": ["Neon mechanical keyboard", "Smart ring", "RGB mechanical keyboard"],
+  "store-chrome": ["Mesh watch band", "Steel watch link", "Leather cardholder"],
+  "store-prism": ["Iris sunglass lenses", "Polarized aviator sunglasses", "Prism sports frames"],
+  "store-lumiere": ["Amber candle set", "Scented soy candle", "Brass desk lamp"],
+  "store-maison": ["Linen throw blanket", "Woven cotton throw", "Plush throw pillow"],
+  "store-cafe-nuit": ["Midnight latte flight", "Cold brew sampler", "Double espresso blend"],
+  "store-sushi-yuki": ["Omakase box", "Premium sashimi platter", "Yuki sushi roll"],
+  "store-burger-hex": ["Hex combo meal", "Double truffle burger", "Hex smash burger"],
+};
+
 /** Build a personalized item description for a store's category. */
 function itemDescriptionFor(store: Store, template: DealTemplate): string {
-  const pool = CATEGORY_ITEMS[store.category];
+  const pool = STORE_ITEMS[store.id] || CATEGORY_ITEMS[store.category];
   if (pool && pool.length > 0) {
     const item = pickRandom(pool);
     return `${item} — ${template.item}`;
