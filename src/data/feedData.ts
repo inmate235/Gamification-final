@@ -23,6 +23,7 @@ export const timelineFeed: FeedItem[] = [
   {
     id: "feed-1-technova",
     storeId: STORE_TECHNOVA,
+    videoUrl: "/feed/cyberpunk-keyboard.mp4",
     prompt:
       "A hyper-energetic, fast-paced cyberpunk 3D animation showing glowing 'Neon Keyboards' from TechNova floating towards the camera with a massive '40% OFF' text overlay, neon lights flashing in sync with a heavy bass drop.",
     likes: 12450,
@@ -52,6 +53,7 @@ export const timelineFeed: FeedItem[] = [
   {
     id: "feed-4-chrome",
     storeId: STORE_CHROME,
+    videoUrl: "/feed/luxury-watch.mp4",
     prompt:
       "A luxurious, slow-motion macro shot of the 'Mesh Band' watch from Chrome. The camera focuses on the intricate details of the metal mesh catching the light. An elegant, minimalist '20% OFF' text fades in gracefully, exuding high status.",
     likes: 5600,

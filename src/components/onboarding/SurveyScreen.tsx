@@ -15,6 +15,7 @@ import {
 import { classifyBartleType } from "@/lib/bartle";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
+import { ParticleField } from "./ParticleField";
 
 /**
  * SurveyScreen — the style profile survey at `/survey`.
@@ -60,8 +61,42 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; weight?: Ico
 };
 
 /* ============================================================================
+   Stagger variants
+   ========================================================================== */
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.05,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: -32,
+    filter: "blur(8px)",
+    transition: { duration: 0.45, ease: [0.32, 0.72, 0, 1] },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16, filter: "blur(4px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.55, ease: [0.32, 0.72, 0, 1] },
+  },
+};
+
+/* ============================================================================
    Component
    ========================================================================== */
+
+const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
+const EXIT_DELAY = isTest ? 0 : 550;
 
 export function SurveyScreen() {
   const router = useRouter();
@@ -69,6 +104,7 @@ export function SurveyScreen() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigatedRef = useRef(false);
 
@@ -121,7 +157,10 @@ export function SurveyScreen() {
 
           if (!navigatedRef.current) {
             navigatedRef.current = true;
-            router.push("/mall");
+            setIsExiting(true);
+            setTimeout(() => {
+              router.push("/mall");
+            }, EXIT_DELAY);
           }
         } else {
           setCurrentIndex((prev) => prev + 1);
@@ -148,8 +187,20 @@ export function SurveyScreen() {
      ========================================================================== */
 
   return (
-    <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-6 py-16">
-      <div className="w-full max-w-2xl">
+    <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-6 py-16 overflow-hidden">
+      {/* Background themed Particle Field */}
+      <ParticleField
+        count={24}
+        color={["#d4af37", "#9d7fdb", "#4fd1c5"]}
+        className="absolute inset-0 z-0"
+      />
+
+      <motion.div
+        initial={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+        animate={isExiting ? { opacity: 0, filter: "blur(12px)", scale: 0.96 } : { opacity: 1, filter: "blur(0px)", scale: 1 }}
+        transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+        className="w-full max-w-2xl z-10 flex flex-col justify-center"
+      >
         {/* Eyebrow */}
         <div className="mb-8 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
@@ -158,22 +209,28 @@ export function SurveyScreen() {
           </span>
         </div>
 
-        {/* Progress dots */}
+        {/* Progress dots with layout transition */}
         <div className="mb-10 flex items-center justify-center gap-2.5">
-          {SURVEY_QUESTIONS.map((q, i) => (
-            <div
-              key={q.id}
-              className={cn(
-                "h-2 rounded-full transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                i < currentIndex && "w-2 bg-[#d4af37]",
-                i === currentIndex && "w-8 bg-[#d4af37] glow-gold",
-                i > currentIndex && "w-2 bg-white/15"
-              )}
-              aria-label={`Question ${i + 1}${
-                i < currentIndex ? " (answered)" : ""
-              }`}
-            />
-          ))}
+          {SURVEY_QUESTIONS.map((q, i) => {
+            const isActive = i === currentIndex;
+            const isCompleted = i < currentIndex;
+            return (
+              <motion.div
+                key={q.id}
+                layout
+                transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+                className={cn(
+                  "h-2 rounded-full",
+                  isActive && "w-8 bg-[#d4af37] glow-gold",
+                  isCompleted && "w-2 bg-[#d4af37]",
+                  !isActive && !isCompleted && "w-2 bg-white/15"
+                )}
+                aria-label={`Question ${i + 1}${
+                  isCompleted ? " (answered)" : ""
+                }`}
+              />
+            );
+          })}
         </div>
 
         {/* Question card — double bezel */}
@@ -182,25 +239,32 @@ export function SurveyScreen() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentQuestion.id}
-                initial={{ opacity: 0, x: 48, filter: "blur(8px)" }}
-                animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, x: -48, filter: "blur(8px)" }}
-                transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
               >
                 {/* Subtitle */}
                 {currentQuestion.subtitle && (
-                  <p className="mb-2 text-center text-xs uppercase tracking-[0.15em] text-[#71717a]">
+                  <motion.p
+                    variants={itemVariants}
+                    className="mb-2 text-center text-xs uppercase tracking-[0.15em] text-[#71717a]"
+                  >
                     {currentQuestion.subtitle}
-                  </p>
+                  </motion.p>
                 )}
 
                 {/* Prompt */}
-                <h2 className="mb-8 text-center text-2xl font-bold tracking-tight text-[#f5f5f7] sm:text-3xl">
+                <motion.h2
+                  variants={itemVariants}
+                  className="mb-8 text-center text-2xl font-bold tracking-tight text-[#f5f5f7] sm:text-3xl"
+                >
                   {currentQuestion.prompt}
-                </h2>
+                </motion.h2>
 
                 {/* Options grid */}
-                <div
+                <motion.div
+                  variants={itemVariants}
                   className={cn(
                     "grid gap-3",
                     currentQuestion.options.length > 2
@@ -219,8 +283,16 @@ export function SurveyScreen() {
                         onClick={() => handleSelect(option)}
                         whileTap={{ scale: 0.97 }}
                         disabled={isAdvancing}
+                        animate={
+                          selectedOption === null
+                            ? { opacity: 1, scale: 1 }
+                            : isSelected
+                            ? { opacity: 1, scale: 1.02 }
+                            : { opacity: 0.35, scale: 0.97 }
+                        }
+                        transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
                         className={cn(
-                          "group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl p-5 text-center ring-1 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]",
+                          "group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl p-5 text-center ring-1 active:scale-[0.98] cursor-pointer",
                           isSelected
                             ? "bg-[#d4af37]/10 ring-[#d4af37]/60 glow-gold"
                             : "bg-white/5 ring-white/10 hover:bg-white/8 hover:ring-white/20"
@@ -275,13 +347,13 @@ export function SurveyScreen() {
                         <AnimatePresence>
                           {isSelected && (
                             <motion.div
-                              initial={{ scale: 0, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              exit={{ scale: 0, opacity: 0 }}
+                              initial={{ scale: 0, rotate: -45, opacity: 0 }}
+                              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                              exit={{ scale: 0, rotate: 45, opacity: 0 }}
                               transition={{
                                 type: "spring",
-                                stiffness: 300,
-                                damping: 20,
+                                stiffness: 450,
+                                damping: 18,
                               }}
                               className="absolute right-3 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[#d4af37]"
                             >
@@ -296,7 +368,7 @@ export function SurveyScreen() {
                       </motion.button>
                     );
                   })}
-                </div>
+                </motion.div>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -306,7 +378,7 @@ export function SurveyScreen() {
         <p className="mt-6 text-center text-[10px] uppercase tracking-[0.15em] text-[#71717a]">
           Question {currentIndex + 1} of {totalQuestions}
         </p>
-      </div>
+      </motion.div>
     </main>
   );
 }

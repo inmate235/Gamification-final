@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { Heart, ChatCircle, ShareFat, Storefront, ShoppingBag } from "@phosphor-icons/react";
-import { motion } from "framer-motion";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { Heart, ChatCircle, ShareFat, Storefront, ShoppingBag, SpeakerHigh, SpeakerSlash, Flame, ArrowRight } from "@phosphor-icons/react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { FeedItem } from "@/data/feedData";
 import { stores } from "@/data/mallData";
 import { useUIStore } from "@/stores/uiStore";
@@ -12,7 +12,29 @@ interface TimelineVideoProps {
 
 export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
   const [isLiked, setIsLiked] = useState(false);
+  const [heartParticles, setHeartParticles] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [showXp, setShowXp] = useState(false);
+  const nextParticleId = useRef(0);
+
   const showOverlay = useUIStore((s) => s.showOverlay);
+  const setTimelineOpen = useUIStore((s) => s.setTimelineOpen);
+  const isMuted = useUIStore((s) => s.isMuted);
+  const setMuted = useUIStore((s) => s.setMuted);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      video.currentTime = 0;
+      video.play().catch((error) => {
+        console.warn("Autoplay failed or was prevented:", error);
+      });
+    } else {
+      video.pause();
+    }
+  }, [isActive]);
 
   const store = useMemo(() => {
     return stores.find((s) => s.id === item.storeId);
@@ -20,22 +42,43 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
 
   if (!store) return null;
 
+  const handleLike = () => {
+    const nextLiked = !isLiked;
+    setIsLiked(nextLiked);
+    if (nextLiked) {
+      // Spawn heart particles bursting outwards
+      const newParticles = Array.from({ length: 6 }).map(() => ({
+        id: nextParticleId.current++,
+        x: (Math.random() - 0.5) * 100,
+        y: -40 - Math.random() * 60,
+      }));
+      setHeartParticles(newParticles);
+      setTimeout(() => {
+        setHeartParticles([]);
+      }, 1000);
+    }
+  };
+
   const handleGoToStore = () => {
-    // Open the store detail overlay for this specific store
-    showOverlay("store-detail", { storeId: store.id });
+    setShowXp(true);
+    // Let XP float up before navigating
+    setTimeout(() => {
+      setShowXp(false);
+      setTimelineOpen(false);
+      showOverlay("store-detail", { storeId: store.id });
+    }, 600);
   };
 
   return (
     <div className="relative h-full w-full snap-start bg-black overflow-hidden flex items-center justify-center">
       {/* Video Placeholder / AI Video Background */}
-      {/* Fallback to CSS animation if no videoUrl is present, as per user instructions */}
       <div className="absolute inset-0 z-0">
         {item.videoUrl ? (
           <video
+            ref={videoRef}
             src={item.videoUrl}
-            autoPlay={isActive}
             loop
-            muted
+            muted={isMuted}
             playsInline
             className="w-full h-full object-cover"
           />
@@ -76,20 +119,56 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
         {/* Right side Action Bar */}
         <div className="absolute right-4 bottom-24 flex flex-col items-center gap-6 pointer-events-auto">
           <button 
-            onClick={() => setIsLiked(!isLiked)}
+            onClick={() => setMuted(!isMuted)}
             className="flex flex-col items-center gap-1 group"
+            aria-label={isMuted ? "Unmute video" : "Mute video"}
           >
             <div className="bg-black/20 backdrop-blur-md p-3 rounded-full border border-white/10 group-active:scale-95 transition-transform">
-              <Heart 
-                size={28} 
-                weight={isLiked ? "fill" : "regular"} 
-                className={isLiked ? "text-red-500" : "text-white"} 
-              />
+              {isMuted ? (
+                <SpeakerSlash size={28} className="text-white" />
+              ) : (
+                <SpeakerHigh size={28} className="text-white" />
+              )}
             </div>
             <span className="text-white text-xs font-medium shadow-black drop-shadow-md">
-              {item.likes + (isLiked ? 1 : 0)}
+              {isMuted ? "Muted" : "Sound"}
             </span>
           </button>
+
+          {/* Gamified Like Button with Particle Burst */}
+          <div className="relative flex flex-col items-center">
+            {/* Heart Particles */}
+            <AnimatePresence>
+              {heartParticles.map((p) => (
+                <motion.div
+                  key={p.id}
+                  className="absolute z-50 pointer-events-none text-red-500"
+                  initial={{ x: 0, y: 0, scale: 0.8, opacity: 1 }}
+                  animate={{ x: p.x, y: p.y, scale: 1.4, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                >
+                  <Heart size={20} weight="fill" />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            <button 
+              onClick={handleLike}
+              className="flex flex-col items-center gap-1 group"
+            >
+              <div className="bg-black/20 backdrop-blur-md p-3 rounded-full border border-white/10 group-active:scale-95 transition-transform">
+                <Heart 
+                  size={28} 
+                  weight={isLiked ? "fill" : "regular"} 
+                  className={isLiked ? "text-red-500" : "text-white"} 
+                />
+              </div>
+              <span className="text-white text-xs font-medium shadow-black drop-shadow-md">
+                {item.likes + (isLiked ? 1 : 0)}
+              </span>
+            </button>
+          </div>
 
           <button className="flex flex-col items-center gap-1 group">
             <div className="bg-black/20 backdrop-blur-md p-3 rounded-full border border-white/10 group-active:scale-95 transition-transform">
@@ -115,27 +194,56 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
             <h3 className="text-white font-bold text-lg drop-shadow-md">{store.name}</h3>
           </div>
           
-          <div className="bg-black/40 backdrop-blur-md rounded-xl p-3 border border-white/10">
+          <div className="bg-black/40 backdrop-blur-md rounded-xl p-3 border border-white/10 relative">
             <p className="text-white/90 text-sm font-medium mb-1 line-clamp-2">
               {store.dealInfo?.title}
             </p>
-            <p className="text-green-400 font-bold text-sm uppercase tracking-wider">
-              {store.dealInfo?.discount}
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-green-400 font-bold text-sm uppercase tracking-wider">
+                {store.dealInfo?.discount}
+              </p>
+              <span className="text-[10px] text-red-400 font-bold flex items-center gap-0.5 animate-pulse bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+                <Flame size={10} weight="fill" className="text-red-500" />
+                Ending soon
+              </span>
+            </div>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleGoToStore}
-            className="mt-2 flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-900/50 relative overflow-hidden group"
-          >
-            {/* Shimmer effect */}
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer" />
-            
-            <ShoppingBag size={20} weight="fill" />
-            <span>Shop Now</span>
-          </motion.button>
+          {/* Shop Now CTA with floating +XP feedback */}
+          <div className="relative">
+            <AnimatePresence>
+              {showXp && (
+                <motion.div
+                  className="absolute left-1/2 -translate-x-1/2 top-[-30px] text-yellow-400 font-mono font-bold text-sm pointer-events-none drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]"
+                  initial={{ y: 0, opacity: 1, scale: 0.8 }}
+                  animate={{ y: -30, opacity: 0, scale: 1.2 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  +10 XP
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleGoToStore}
+              className="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-900/50 relative overflow-hidden group"
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer" />
+              
+              <ShoppingBag size={20} weight="fill" />
+              <span>Shop Now</span>
+              <motion.div
+                animate={{ x: [0, 4, 0] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <ArrowRight size={16} weight="bold" />
+              </motion.div>
+            </motion.button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Coin, Fire, MapPin, Lightning } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -66,22 +66,34 @@ export function StatusBar() {
   const showOverlay = useUIStore((s) => s.showOverlay);
 
   const tierStyle = TIER_STYLES[tier];
-  // Comeback bonus is active when the store says so. The EventScheduler
-  // clears the bonus when it expires, so we only need to check the flag
-  // (no Date.now() during render to avoid impure calls).
   const comebackActive =
     comebackBonus !== null && comebackBonus.active;
 
-  /* --- Pulse the token count whenever it changes (real-time emphasis) --- */
+  /* --- Pulse the token count and show float up indicators --- */
   const prevTokensRef = useRef(tokens);
   const [isEarn, setIsEarn] = useState(true);
+  const [floatRewards, setFloatRewards] = useState<{ id: number; amount: string; isEarn: boolean }[]>([]);
+  const floatIdRef = useRef(0);
+
   useEffect(() => {
     if (tokens !== prevTokensRef.current) {
-      setIsEarn(tokens > prevTokensRef.current);
+      const diff = tokens - prevTokensRef.current;
+      const earn = diff > 0;
+      setIsEarn(earn);
+      
+      const id = floatIdRef.current++;
+      const amountStr = earn ? `+${diff}` : `${diff}`;
+      setFloatRewards((prev) => [...prev, { id, amount: amountStr, isEarn: earn }]);
+      
+      setTimeout(() => {
+        setFloatRewards((prev) => prev.filter((r) => r.id !== id));
+      }, 1000);
+
       prevTokensRef.current = tokens;
     }
   }, [tokens]);
-  const pulseKey = tokens; // remounts the span on every change -> replay pulse
+
+  const pulseKey = tokens;
 
   return (
     <header
@@ -99,7 +111,7 @@ export function StatusBar() {
         >
           {/* Tokens */}
           <div
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 relative"
             data-testid="status-tokens"
             aria-label="Tokens"
           >
@@ -118,6 +130,25 @@ export function StatusBar() {
             >
               {tokens}
             </motion.span>
+
+            {/* Floating Reward Burst */}
+            <AnimatePresence>
+              {floatRewards.map((r) => (
+                <motion.span
+                  key={r.id}
+                  className={cn(
+                    "absolute font-mono text-xs font-bold pointer-events-none left-4 top-[-20px] drop-shadow-md",
+                    r.isEarn ? "text-[#d4af37]" : "text-red-400"
+                  )}
+                  initial={{ y: 0, opacity: 1, scale: 0.8 }}
+                  animate={{ y: -25, opacity: 0, scale: 1.2 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                >
+                  {r.amount}
+                </motion.span>
+              ))}
+            </AnimatePresence>
           </div>
 
           <Divider />
@@ -152,11 +183,17 @@ export function StatusBar() {
             data-testid="status-streak"
             aria-label="Day Streak"
           >
-            <Fire
-              size={16}
-              weight="light"
-              className={cn("text-[#9d7fdb]", streakBroken && "opacity-50")}
-            />
+            <motion.div
+              key={streakCount}
+              animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            >
+              <Fire
+                size={16}
+                weight="light"
+                className={cn("text-[#9d7fdb]", streakBroken && "opacity-50")}
+              />
+            </motion.div>
             <span
               className={cn(
                 "font-mono text-sm font-semibold tabular-nums sm:text-base",

@@ -551,4 +551,5 @@ export interface UIState {
   bottomPanelExpanded: boolean;
   isTimelineOpen: boolean;
   hasSeenTimelineOnboarding: boolean;
+  isMuted: boolean;
 }

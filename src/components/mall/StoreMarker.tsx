@@ -85,13 +85,25 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
         }
       }}
     >
-      {/* Glow halo */}
-      <circle
+      {/* Glow halo - pulsing via framer-motion */}
+      <motion.circle
         cx={store.position.x}
         cy={store.position.y}
         r={18}
         fill={color}
-        opacity={0.18}
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.15, 0.35, 0.15]
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        style={{
+          transformOrigin: `${store.position.x}px ${store.position.y}px`,
+          transformBox: "fill-box"
+        }}
       />
       {/* Marker body */}
       <rect
@@ -125,6 +137,60 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
           <StoreIcon name={store.icon} color={color} />
         </div>
       </foreignObject>
+
+      {/* Bobbing deal badge (%) */}
+      {store.dealInfo && (
+        <motion.g
+          animate={{ y: [0, -3, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{ transformOrigin: `${store.position.x + 14}px ${store.position.y - 14}px` }}
+        >
+          <circle
+            cx={store.position.x + 14}
+            cy={store.position.y - 14}
+            r={7}
+            fill="#d4af37"
+            stroke="#12121a"
+            strokeWidth={1.5}
+          />
+          <text
+            x={store.position.x + 14}
+            y={store.position.y - 11}
+            fill="#0a0a0f"
+            fontSize="8px"
+            fontWeight="bold"
+            textAnchor="middle"
+          >
+            %
+          </text>
+        </motion.g>
+      )}
+
+      {/* Hot/Busy indicator (🔥) */}
+      {store.visitorCount > 50 && (
+        <motion.g
+          animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          style={{ transformOrigin: `${store.position.x - 14}px ${store.position.y - 14}px` }}
+        >
+          <circle
+            cx={store.position.x - 14}
+            cy={store.position.y - 14}
+            r={6}
+            fill="#ef4444"
+            stroke="#12121a"
+            strokeWidth={1}
+          />
+          <text
+            x={store.position.x - 14}
+            y={store.position.y - 11}
+            fontSize="8px"
+            textAnchor="middle"
+          >
+            🔥
+          </text>
+        </motion.g>
+      )}
     </motion.g>
   );
 }

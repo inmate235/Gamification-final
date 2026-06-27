@@ -19,6 +19,7 @@ export interface UIStore extends UIState {
   setBottomPanelExpanded: (expanded: boolean) => void;
   setTimelineOpen: (isOpen: boolean) => void;
   markTimelineOnboardingSeen: () => void;
+  setMuted: (muted: boolean) => void;
   reset: () => void;
 }
 
@@ -28,6 +29,7 @@ const initialUIState: UIState = {
   bottomPanelExpanded: true,
   isTimelineOpen: false,
   hasSeenTimelineOnboarding: false,
+  isMuted: true,
 };
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -49,6 +51,9 @@ export const useUIStore = create<UIStore>((set) => ({
 
   markTimelineOnboardingSeen: () =>
     set({ hasSeenTimelineOnboarding: true }),
+
+  setMuted: (muted) =>
+    set({ isMuted: muted }),
 
   reset: () => set({ ...initialUIState }),
 }));

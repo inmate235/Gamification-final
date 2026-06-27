@@ -42,6 +42,8 @@ vi.mock("framer-motion", () => {
       div: mk("div"),
       span: mk("span"),
       button: mk("button"),
+      circle: mk("circle"),
+      g: mk("g"),
     },
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
@@ -59,6 +61,9 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Star: make("Star"),
     Users: make("Users"),
     Tag: make("Tag"),
+    CheckCircle: make("CheckCircle"),
+    Sparkle: make("Sparkle"),
+    Flame: make("Flame"),
   };
 });
 
@@ -82,7 +87,7 @@ describe("StoreDetail overlay", () => {
     const store = getStoreById("store-bloom")!;
     useUIStore.getState().showOverlay("store-detail", store);
     render(<StoreDetail />);
-    expect(screen.getByText("Bloom")).toBeInTheDocument();
+    expect(screen.getAllByText("Bloom")[0]).toBeInTheDocument();
     expect(screen.getByText(/Fashion/i)).toBeInTheDocument();
     expect(screen.getByTestId("store-visitor-count")).toHaveTextContent(
       String(store.visitorCount)

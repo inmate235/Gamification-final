@@ -17,8 +17,8 @@ import { motion } from "framer-motion";
 interface ParticleFieldProps {
   /** Number of particles to render. */
   count?: number;
-  /** Optional color for the particles (defaults to gold). */
-  color?: string;
+  /** Optional color or array of colors for the particles (defaults to gold). */
+  color?: string | string[];
   /** Optional className for the container. */
   className?: string;
 }
@@ -31,6 +31,7 @@ interface Particle {
   duration: number; // seconds
   delay: number; // seconds
   drift: number; // horizontal drift in px
+  color: string; // resolved color for this particle
 }
 
 export function ParticleField({
@@ -41,21 +42,27 @@ export function ParticleField({
   const [particles, setParticles] = useState<Particle[]>([]);
 
   // Generate particles in an effect to avoid impure Math.random during render.
-  // This is a one-time initialization of decorative data — the lint rule's
-  // concern about cascading renders does not apply here since it runs once.
   useEffect(() => {
-    const generated: Particle[] = Array.from({ length: count }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: 2 + Math.random() * 4,
-      duration: 6 + Math.random() * 8,
-      delay: Math.random() * 4,
-      drift: (Math.random() - 0.5) * 60,
-    }));
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time decorative init
+    const generated: Particle[] = Array.from({ length: count }, (_, i) => {
+      let resolvedColor = "#d4af37";
+      if (Array.isArray(color)) {
+        resolvedColor = color[i % color.length];
+      } else if (typeof color === "string") {
+        resolvedColor = color;
+      }
+      return {
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: 1.5 + Math.random() * 4,
+        duration: 8 + Math.random() * 10,
+        delay: Math.random() * -5, // negative delay so they start pre-simulated
+        drift: (Math.random() - 0.5) * 80,
+        color: resolvedColor,
+      };
+    });
     setParticles(generated);
-  }, [count]);
+  }, [count, color]);
 
   return (
     <div
@@ -78,20 +85,21 @@ export function ParticleField({
             width: p.size,
             height: p.size,
             borderRadius: "9999px",
-            backgroundColor: color,
-            boxShadow: `0 0 ${p.size * 3}px ${color}`,
+            backgroundColor: p.color,
+            boxShadow: `0 0 ${p.size * 3.5}px ${p.color}, 0 0 ${p.size * 1.5}px ${p.color}`,
           }}
-          initial={{ opacity: 0, y: 0, x: 0 }}
+          initial={{ opacity: 0, y: 0, x: 0, scale: 0.8 }}
           animate={{
-            opacity: [0, 0.8, 0],
-            y: [0, -120, -200],
-            x: [0, p.drift, p.drift * 0.5],
+            opacity: [0, 0.75, 0.75, 0],
+            y: [0, -140, -260],
+            x: [0, p.drift * 0.4, p.drift * 0.8, p.drift],
+            scale: [0.8, 1.25, 1.25, 0.8],
           }}
           transition={{
             duration: p.duration,
             delay: p.delay,
             repeat: Infinity,
-            ease: [0.32, 0.72, 0, 1],
+            ease: "easeInOut",
           }}
         />
       ))}

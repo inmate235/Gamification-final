@@ -142,6 +142,26 @@ export function FlashSale() {
     setClaimed(false);
   }
 
+  const [liveViewers, setLiveViewers] = useState(sale?.socialProof ?? 23);
+
+  useEffect(() => {
+    if (sale) {
+      setLiveViewers(sale.socialProof ?? 23);
+    }
+  }, [sale?.id]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => {
+      setLiveViewers((prev) => {
+        const change = Math.random() > 0.5 ? 1 : -1;
+        const newVal = prev + change;
+        return newVal > 3 ? newVal : 4;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
+
   // Dismiss ("Maybe Later" / X / Escape / backdrop): no charge + refractory.
   const handleDismiss = useCallback(() => {
     const current = sale?.id;
@@ -227,8 +247,15 @@ export function FlashSale() {
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="bezel-card"
-              style={{ boxShadow: "0 0 24px rgba(232,121,161,0.18)" }}
+              className={cn(
+                "bezel-card transition-all duration-300",
+                sale.countdownSeconds < 30 ? "animate-deal-pulse" : ""
+              )}
+              style={{
+                boxShadow: sale.countdownSeconds < 30
+                  ? "0 0 32px rgba(239, 68, 68, 0.4)"
+                  : "0 0 24px rgba(232, 121, 161, 0.18)"
+              }}
             >
               <div className="bezel-card-inner p-6 sm:p-7">
                 {/* Header */}
@@ -286,20 +313,46 @@ export function FlashSale() {
                 {/* Countdown + social proof */}
                 <div className="mb-4 grid grid-cols-2 gap-3">
                   <div
-                    className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10"
+                    className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10 flex items-center justify-between"
                     data-testid="flash-sale-timer"
                   >
-                    <div className="flex items-center gap-1.5 text-[#e879a1]">
-                      <Timer size={14} weight="light" />
-                      <span className="text-[10px] uppercase tracking-[0.12em]">
-                        Ends in
-                      </span>
+                    <div>
+                      <div className="flex items-center gap-1.5 text-[#e879a1]">
+                        <Timer size={14} weight="light" />
+                        <span className="text-[10px] uppercase tracking-[0.12em]">
+                          Ends in
+                        </span>
+                      </div>
+                      <Countdown
+                        key={sale.id}
+                        remaining={sale.countdownSeconds}
+                        onExpire={onExpire}
+                      />
                     </div>
-                    <Countdown
-                      key={sale.id}
-                      remaining={sale.countdownSeconds}
-                      onExpire={onExpire}
-                    />
+                    {/* SVG Countdown Ring */}
+                    <div className="relative w-8 h-8 shrink-0">
+                      <svg className="w-8 h-8 transform -rotate-90">
+                        <circle
+                          cx="16"
+                          cy="16"
+                          r="12"
+                          className="stroke-white/10"
+                          strokeWidth="2.5"
+                          fill="transparent"
+                        />
+                        <motion.circle
+                          cx="16"
+                          cy="16"
+                          r="12"
+                          className={sale.countdownSeconds < 30 ? "stroke-red-500" : "stroke-[#e879a1]"}
+                          strokeWidth="2.5"
+                          fill="transparent"
+                          strokeDasharray="75.4"
+                          strokeDashoffset={75.4 - (75.4 * Math.max(0, sale.countdownSeconds)) / 90}
+                          transition={{ duration: 1, ease: "linear" }}
+                        />
+                      </svg>
+                    </div>
                   </div>
                   <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
                     <div className="flex items-center gap-1.5 text-[#4fd1c5]">
@@ -312,7 +365,7 @@ export function FlashSale() {
                       className="mt-1 font-mono text-lg font-bold tabular-nums text-[#f5f5f7]"
                       data-testid="flash-sale-social-proof"
                     >
-                      {sale.socialProof ?? 23}
+                      {liveViewers}
                     </p>
                     <p className="mt-0.5 text-[10px] text-[#71717a]">
                       people viewing this deal

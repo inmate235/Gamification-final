@@ -1,24 +1,51 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Star, Users, Tag } from "@phosphor-icons/react/dist/ssr";
+import { X, Star, Users } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
+import { usePlayerStore } from "@/stores/playerStore";
+import { getStoreById } from "@/data/mallData";
+import { DealCard } from "@/components/mall/DealCard";
+import { calculateDeficitPrice } from "@/stores/economyStore";
+import { showTokenFeedback } from "@/engine/tokenEconomy";
 import type { Store } from "@/types";
 import { cn } from "@/lib/utils";
 
 /**
  * StoreDetail — the glass overlay shown when a store marker is tapped.
  *
- * Displays the store's name, category, fake 5-star reviews (all 4-5 ratings,
- * NO disclosure labels per Section 4.5.2), amplified visitor count framed as
- * "now browsing", and any current deal info.
- *
- * Dismissable via backdrop click, X button, or Escape. While open, map
- * interaction is blocked (the overlay captures clicks).
+ * Displays the store's name, category, fake 5-star reviews,
+ * amplified visitor count framed as "now browsing", and any current deal info.
+ * Supports store resolution from feed data payload.
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
+
+/* ============================================================================
+   CountingTicker — micro-animated visitor counter
+   ========================================================================== */
+function CountingTicker({ value }: { value: number }) {
+  const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
+  const [displayValue, setDisplayValue] = useState(isTest ? value : Math.max(0, value - 15));
+  useEffect(() => {
+    if (isTest) return;
+    let start = Math.max(0, value - 15);
+    const end = value;
+    if (start === end) return;
+    const duration = 800; // 800ms
+    const stepTime = Math.abs(Math.floor(duration / (end - start)));
+    const timer = setInterval(() => {
+      start += 1;
+      setDisplayValue(start);
+      if (start >= end) {
+        clearInterval(timer);
+      }
+    }, Math.max(stepTime, 20));
+    return () => clearInterval(timer);
+  }, [value]);
+  return <>{displayValue}</>;
+}
 
 /* ============================================================================
    Component
@@ -26,10 +53,60 @@ const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
 export function StoreDetail() {
   const activeOverlay = useUIStore((s) => s.activeOverlay);
-  const overlayData = useUIStore((s) => s.overlayData) as Store | null;
+  const rawOverlayData = useUIStore((s) => s.overlayData);
   const hideOverlay = useUIStore((s) => s.hideOverlay);
+  
+  const tokens = usePlayerStore((s) => s.tokens);
+  const spendTokens = usePlayerStore((s) => s.spendTokens);
 
-  const isOpen = activeOverlay === "store-detail" && overlayData !== null;
+  const [claimed, setClaimed] = useState(false);
+
+  // Resolve store from either a full store object or a lookup by ID
+  const store = useMemo(() => {
+    if (!rawOverlayData) return null;
+    if ("category" in (rawOverlayData as any)) {
+      return rawOverlayData as Store;
+    }
+    const payload = rawOverlayData as { storeId?: string };
+    if (payload && payload.storeId) {
+      return getStoreById(payload.storeId) || null;
+    }
+    return null;
+  }, [rawOverlayData]);
+
+  // Provenance flag: did the user arrive here via a feed recommendation click?
+  const fromFeed = useMemo(() => {
+    if (!rawOverlayData) return false;
+    return !("category" in (rawOverlayData as any));
+  }, [rawOverlayData]);
+
+  const [prevStoreId, setPrevStoreId] = useState<string | null>(null);
+  if (store && store.id !== prevStoreId) {
+    setPrevStoreId(store.id);
+    setClaimed(false);
+  }
+
+  const isOpen = activeOverlay === "store-detail" && store !== null;
+
+  // Deficit cost frozen at open time
+  const dealCost = useMemo(() => {
+    if (!store || !store.dealInfo) return 0;
+    return calculateDeficitPrice(tokens);
+  }, [store?.id]);
+
+  const canAfford = tokens >= dealCost;
+  const shortfall = Math.max(0, dealCost - tokens);
+
+  const handleClaim = () => {
+    const ok = spendTokens(dealCost);
+    if (ok) {
+      setClaimed(true);
+      setTimeout(() => {
+        showTokenFeedback("spend", dealCost, `Deal Claimed! -${dealCost} Tokens`);
+        hideOverlay();
+      }, 1300);
+    }
+  };
 
   /* --- Escape to close --- */
   useEffect(() => {
@@ -45,7 +122,7 @@ export function StoreDetail() {
 
   return (
     <AnimatePresence>
-      {isOpen && overlayData && (
+      {isOpen && store && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -56,7 +133,7 @@ export function StoreDetail() {
           data-testid="store-detail-overlay"
           role="dialog"
           aria-modal="true"
-          aria-label={`${overlayData.name} details`}
+          aria-label={`${store.name} details`}
         >
           {/* Backdrop */}
           <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
@@ -75,11 +152,18 @@ export function StoreDetail() {
                 {/* Header */}
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
-                      {capitalize(overlayData.category)}
-                    </span>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
+                        {capitalize(store.category)}
+                      </span>
+                      {fromFeed && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold text-blue-400 ring-1 ring-blue-500/30">
+                          From your feed
+                        </span>
+                      )}
+                    </div>
                     <h2 className="mt-3 text-2xl font-bold tracking-tight text-[#f5f5f7] sm:text-3xl">
-                      {overlayData.name}
+                      {store.name}
                     </h2>
                   </div>
                   <button
@@ -99,7 +183,7 @@ export function StoreDetail() {
                   <Users size={18} weight="light" className="text-[#4fd1c5]" />
                   <div>
                     <p className="font-mono text-lg font-semibold tabular-nums text-[#4fd1c5]">
-                      {overlayData.visitorCount}
+                      <CountingTicker value={store.visitorCount} />
                     </p>
                     <p className="text-[11px] uppercase tracking-[0.12em] text-[#71717a]">
                       Shoppers now browsing
@@ -107,21 +191,22 @@ export function StoreDetail() {
                   </div>
                 </div>
 
-                {/* Current deal */}
-                {overlayData.dealInfo && (
-                  <div
-                    className="mb-6 flex items-center gap-3 rounded-2xl bg-[#d4af37]/8 px-4 py-3 ring-1 ring-[#d4af37]/25"
-                    data-testid="store-deal"
-                  >
-                    <Tag size={18} weight="light" className="text-[#d4af37]" />
-                    <div>
-                      <p className="text-sm font-semibold text-[#d4af37]">
-                        {overlayData.dealInfo.title}
-                      </p>
-                      <p className="text-xs text-[#a1a1aa]">
-                        {overlayData.dealInfo.discount}
-                      </p>
-                    </div>
+                {/* Gamified Deal Card replacing flat deal layout */}
+                {store.dealInfo && (
+                  <div className="mb-6" data-testid="store-deal">
+                    <DealCard
+                      deal={{
+                        title: store.dealInfo.title,
+                        discount: store.dealInfo.discount,
+                        tokenCost: dealCost,
+                        countdownSeconds: 240, // 4 minutes
+                      }}
+                      storeName={store.name}
+                      onClaim={handleClaim}
+                      isClaimed={claimed}
+                      canAfford={canAfford}
+                      shortfall={shortfall}
+                    />
                   </div>
                 )}
 
@@ -142,13 +227,13 @@ export function StoreDetail() {
                         />
                       ))}
                       <span className="ml-1 font-mono text-xs text-[#d4af37]">
-                        {aggregateRating(overlayData).toFixed(1)}
+                        {aggregateRating(store).toFixed(1)}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    {overlayData.reviews.map((review) => (
+                    {store.reviews.map((review) => (
                       <div
                         key={review.id}
                         className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"
@@ -192,9 +277,6 @@ export function StoreDetail() {
                     ))}
                   </div>
                 </div>
-
-                {/* Intentionally NO "sponsored", "ad", or disclosure label.
-                    Reviews are fabricated per Section 4.5.2. */}
               </div>
             </div>
           </motion.div>
