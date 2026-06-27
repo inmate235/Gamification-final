@@ -19,7 +19,7 @@ import { shortcuts as shortcutSeed, unlockedShortcutEdges } from "@/data/shortcu
    ========================================================================== */
 
 export const HOOK_PHASE_MINUTES = 15; // 0-15 min = hook, 15+ = chase
-export const WHEEL_COOLDOWN_MS = 30 * 1000; // 30s cooldown between spins
+export const WHEEL_COOLDOWN_MS = 15 * 1000; // 15s cooldown between spins
 /** Delay from session start before the wheel first becomes available. */
 export const INITIAL_WHEEL_DELAY_MS = 5 * 1000; // 5s — wheel not always available (VAL-WHEEL-001)
 
@@ -77,6 +77,9 @@ export interface EconomyStore extends EconomyState {
   claimFlashSale: (saleId: string) => boolean;
   makeWheelAvailable: () => void;
   spinWheel: () => void;
+  buySpins: (amount: number, cost: number) => boolean;
+  setLastSpinNearMiss: (nearMiss: boolean) => void;
+  clearLastSpinNearMiss: () => void;
   updateRewardDensity: (sessionMinutes: number) => void;
   calculateDeficitPrice: (userTokens?: number) => number;
   setDeficitMultiplier: (multiplier: number) => void;
@@ -98,7 +101,7 @@ export interface EconomyStore extends EconomyState {
 
 const initialEconomyState: Omit<EconomyState, "shortcuts" | "liveDeficitPrice"> = {
   flashSales: [],
-  spinningWheel: { available: false, lastSpin: 0, spinCount: 0 },
+  spinningWheel: { available: false, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
   rewardDensity: { phase: "hook", sessionMinutes: 0 },
   deficitMultiplier: 1,
 };
@@ -217,17 +220,60 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
 
   spinWheel: () => {
     const state = get();
-    if (!state.spinningWheel.available) return;
+    const { available, extraSpins, spinCount, lastSpin, lastSpinNearMiss } = state.spinningWheel;
+    if (!available && extraSpins <= 0) return;
+
     const now = Date.now();
-    set({
-      spinningWheel: {
-        available: false, // cooldown enforced
-        lastSpin: now,
-        spinCount: state.spinningWheel.spinCount + 1,
-      },
-    });
-    // Wheel re-availability is handled by the EventScheduler based on cooldown.
+    if (available) {
+      set({
+        spinningWheel: {
+          available: false,
+          lastSpin: now,
+          spinCount: spinCount + 1,
+          extraSpins,
+          lastSpinNearMiss,
+        },
+      });
+    } else {
+      set({
+        spinningWheel: {
+          available,
+          lastSpin,
+          spinCount: spinCount + 1,
+          extraSpins: extraSpins - 1,
+          lastSpinNearMiss,
+        },
+      });
+    }
   },
+
+  buySpins: (amount, cost) => {
+    const ok = usePlayerStore.getState().spendTokens(cost);
+    if (!ok) return false;
+    set((state) => ({
+      spinningWheel: {
+        ...state.spinningWheel,
+        extraSpins: state.spinningWheel.extraSpins + amount,
+      },
+    }));
+    return true;
+  },
+
+  setLastSpinNearMiss: (nearMiss) =>
+    set((state) => ({
+      spinningWheel: {
+        ...state.spinningWheel,
+        lastSpinNearMiss: nearMiss,
+      },
+    })),
+
+  clearLastSpinNearMiss: () =>
+    set((state) => ({
+      spinningWheel: {
+        ...state.spinningWheel,
+        lastSpinNearMiss: false,
+      },
+    })),
 
   updateRewardDensity: (sessionMinutes) =>
     set(() => ({

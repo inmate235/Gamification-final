@@ -32,9 +32,12 @@ import { TierDemotionThreat } from "./TierDemotionThreat";
 import { StreakAnxietyMessage } from "./StreakAnxietyMessage";
 import { StreakRecoveryBanner } from "./StreakRecoveryBanner";
 import { StreakPenaltyNotification } from "./StreakPenaltyNotification";
+import { TimelineFeed } from "@/components/social/TimelineFeed";
+import { TimelineEntryButton } from "@/components/social/TimelineEntryButton";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSocialStore } from "@/stores/socialStore";
+import { useUIStore } from "@/stores/uiStore";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -118,8 +121,25 @@ export function MallExperience() {
     // tick fires).
     useSocialStore.getState().updateLeaderboard();
 
+    // Swipe right to open timeline
+    let touchStartX = 0;
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.changedTouches[0].screenX;
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].screenX;
+      // swipe right distance threshold
+      if (touchEndX - touchStartX > 100) {
+        useUIStore.getState().setTimelineOpen(true);
+      }
+    };
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchend", handleTouchEnd);
+
     return () => {
       resetEventSchedulerSingleton();
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [grantOnboardingTrialPerks]);
 
@@ -145,6 +165,11 @@ export function MallExperience() {
       {/* Streak penalty notification (VAL-STREAK-005..008) */}
       <StreakPenaltyNotification />
 
+      {/* Top Right Actions (Eye-catching placement) */}
+      <div className="fixed top-20 right-4 z-30 flex flex-col items-end gap-3 sm:top-24">
+        <SpinningWheelEntryButton />
+      </div>
+
       {/* Map area — padded to clear the fixed status bar + bottom panel */}
       <motion.div
         initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
@@ -160,8 +185,8 @@ export function MallExperience() {
 
       {/* Action Dock (Consolidated entry points) */}
       <div className="fixed bottom-24 right-4 z-30 flex flex-col items-end gap-3 sm:bottom-28">
+        <TimelineEntryButton />
         <LeaderboardEntryButton />
-        <SpinningWheelEntryButton />
         <ShortcutEntryButton />
         <FlashSaleEntryButton />
       </div>
@@ -188,6 +213,7 @@ export function MallExperience() {
       <ExitFriction />
       <Leaderboard />
       <Celebration />
+      <TimelineFeed />
     </main>
   );
 }

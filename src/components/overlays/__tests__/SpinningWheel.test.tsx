@@ -278,10 +278,69 @@ describe("SpinningWheel overlay", () => {
 
   it("shows cooldown hint when wheel is not available in idle phase", () => {
     useEconomyStore.setState({
-      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1 },
+      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1, extraSpins: 0, lastSpinNearMiss: false },
     });
     useUIStore.getState().showOverlay("spinning-wheel");
     render(<SpinningWheel />);
     expect(screen.getByTestId("wheel-cooldown-hint")).toBeDefined();
+  });
+
+  /* --- Spin purchasing & extraSpins --- */
+
+  it("shows purchase panel when wheel is on cooldown", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1, extraSpins: 0, lastSpinNearMiss: false },
+    });
+    usePlayerStore.setState({ tokens: 10 });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+    
+    expect(screen.getByText("Buy More Spins")).toBeDefined();
+    expect(screen.getByText("1 Spin")).toBeDefined();
+    expect(screen.getByText("Duo Pack (3 Spins)")).toBeDefined();
+    expect(screen.getByText("Jackpot Bundle (5 Spins)")).toBeDefined();
+  });
+
+  it("allows purchasing 1 spin for 3 tokens", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1, extraSpins: 0, lastSpinNearMiss: false },
+    });
+    usePlayerStore.setState({ tokens: 10 });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+
+    fireEvent.click(screen.getByText("1 Spin"));
+    expect(usePlayerStore.getState().tokens).toBe(7);
+    expect(useEconomyStore.getState().spinningWheel.extraSpins).toBe(1);
+  });
+
+  it("shows near-miss discount spin option when lastSpinNearMiss is true", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1, extraSpins: 0, lastSpinNearMiss: true },
+    });
+    usePlayerStore.setState({ tokens: 5 });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+
+    expect(screen.getByText("1 Discounted Spin")).toBeDefined();
+    fireEvent.click(screen.getByText("1 Discounted Spin"));
+    expect(usePlayerStore.getState().tokens).toBe(3);
+    expect(useEconomyStore.getState().spinningWheel.extraSpins).toBe(1);
+  });
+
+  it("allows spinning using extraSpins", () => {
+    useEconomyStore.setState({
+      spinningWheel: { available: false, lastSpin: Date.now(), spinCount: 1, extraSpins: 2, lastSpinNearMiss: false },
+    });
+    useUIStore.getState().showOverlay("spinning-wheel");
+    render(<SpinningWheel />);
+
+    // Spin button should say "SPIN WHEEL (2 SPINS LEFT)"
+    const btn = screen.getByTestId("wheel-spin-button");
+    expect(btn.textContent).toContain("SPIN WHEEL (2 SPINS LEFT)");
+    fireEvent.click(btn);
+
+    expect(useEconomyStore.getState().spinningWheel.extraSpins).toBe(1);
+    expect(useEconomyStore.getState().spinningWheel.spinCount).toBe(2);
   });
 });

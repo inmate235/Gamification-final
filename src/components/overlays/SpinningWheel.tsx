@@ -18,6 +18,7 @@ import {
 } from "@/engine/nearMissAlgorithm";
 import { cn } from "@/lib/utils";
 import { BrainRotCelebration } from "./BrainRotCelebration";
+import { buySpins } from "@/engine/tokenEconomy";
 
 /**
  * SpinningWheel — the variable-reward spinning wheel overlay with near-miss
@@ -95,41 +96,67 @@ function labelPos(index: number): { x: number; y: number; rotate: number } {
 
 export function SpinningWheelEntryButton() {
   const showOverlay = useUIStore((s) => s.showOverlay);
-  const wheelAvailable = useEconomyStore((s) => s.spinningWheel.available);
+  const spinningWheel = useEconomyStore((s) => s.spinningWheel);
+  const wheelAvailable = spinningWheel.available;
+  const extraSpins = spinningWheel.extraSpins ?? 0;
+  const spinCount = spinningWheel.spinCount;
   const activeOverlay = useUIStore((s) => s.activeOverlay);
 
   const onOpen = useCallback(() => {
     showOverlay("spinning-wheel");
   }, [showOverlay]);
 
-  if (!wheelAvailable) return null;
+  if (!wheelAvailable && spinCount === 0) return null;
   if (activeOverlay !== "none" && activeOverlay !== "spinning-wheel") return null;
+
+  const labelText = wheelAvailable
+    ? "Free Spin"
+    : extraSpins > 0
+      ? `Spins (${extraSpins})`
+      : "Spin";
+
+  const showPulsingDot = wheelAvailable || extraSpins > 0;
 
   return (
     <motion.button
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.85 }}
-      transition={{ duration: 0.7, ease: PREMIUM_EASE }}
+      initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+      exit={{ opacity: 0, scale: 0.5, rotate: 10 }}
+      transition={{ type: "spring", stiffness: 300, damping: 15 }}
       onClick={onOpen}
       aria-label="Spin the wheel for a reward"
-      className="relative flex items-center gap-2 rounded-full bg-[#12121a]/80 px-4 py-2.5 ring-1 ring-[#d4af37]/40 backdrop-blur-md transition-all duration-700 hover:bg-[#12121a] active:scale-[0.97]"
+      className="relative flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#ff0055]/90 via-[#aa00ff]/90 to-[#0055ff]/90 px-5 py-3 ring-2 ring-white/50 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 shadow-[0_0_25px_rgba(255,0,255,0.8)] overflow-hidden origin-top-right"
       data-testid="wheel-entry-button"
     >
       <motion.div
-        animate={{ rotate: [0, 360] }}
-        transition={{ duration: 8, ease: PREMIUM_EASE, repeat: Infinity }}
-      >
-        <CircleNotch size={16} weight="light" className="text-[#d4af37]" />
-      </motion.div>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#d4af37]">
-        Spin
-      </span>
-      <motion.span
-        className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#d4af37]"
-        animate={{ opacity: [1, 0.3, 1], scale: [1, 1.3, 1] }}
-        transition={{ duration: 1.5, ease: PREMIUM_EASE, repeat: Infinity }}
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg]"
+        animate={{ x: ["-150%", "250%"] }}
+        transition={{ duration: 2, ease: "linear", repeat: Infinity, repeatDelay: 0.5 }}
       />
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1.2, ease: "linear", repeat: Infinity }}
+        className="relative z-10 shrink-0"
+      >
+        <div style={{
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          background: "conic-gradient(#ff0055 0deg 60deg, #ffaa00 60deg 120deg, #00ff55 120deg 180deg, #00ffff 180deg 240deg, #0055ff 240deg 300deg, #aa00ff 300deg 360deg)",
+          border: "2px solid rgba(255,255,255,0.9)",
+          boxShadow: "0 0 10px rgba(255,255,255,0.6)"
+        }} />
+      </motion.div>
+      <span className="relative z-10 text-[12px] font-black uppercase tracking-[0.1em] text-white drop-shadow-md">
+        {labelText}
+      </span>
+      {showPulsingDot && (
+        <motion.span
+          className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-[#00ff55] shadow-[0_0_10px_#00ff55]"
+          animate={{ opacity: [1, 0.4, 1], scale: [1, 1.4, 1] }}
+          transition={{ duration: 0.8, ease: "easeInOut", repeat: Infinity }}
+        />
+      )}
     </motion.button>
   );
 }
@@ -157,9 +184,14 @@ type Phase = "idle" | "spinning" | "result";
 
 function SpinningWheelContent() {
   const hideOverlay = useUIStore((s) => s.hideOverlay);
-  const wheelAvailable = useEconomyStore((s) => s.spinningWheel.available);
+  const spinningWheel = useEconomyStore((s) => s.spinningWheel);
+  const wheelAvailable = spinningWheel.available;
+  const extraSpins = spinningWheel.extraSpins ?? 0;
+  const lastSpinNearMiss = spinningWheel.lastSpinNearMiss ?? false;
   const spinWheelStore = useEconomyStore((s) => s.spinWheel);
+  const setLastSpinNearMiss = useEconomyStore((s) => s.setLastSpinNearMiss);
   const tier = usePlayerStore((s) => s.tier);
+  const playerTokens = usePlayerStore((s) => s.tokens);
 
   // Fresh state on every mount (no useEffect reset needed).
   const [phase, setPhase] = useState<Phase>("idle");
@@ -172,20 +204,20 @@ function SpinningWheelContent() {
 
   /* --- Spin handler --- */
   const handleSpin = useCallback(() => {
-    if (phase !== "idle" || !wheelAvailable) return;
+    if (phase !== "idle" || (!wheelAvailable && extraSpins <= 0)) return;
 
     const spinResult = computeSpinResult(tier);
     setResult(spinResult);
     setPhase("spinning");
     setHighlightBigPrize(false);
 
-    // Start cooldown (sets available=false, lastSpin=now, spinCount++).
+    // Start cooldown or decrement extra spin.
     spinWheelStore();
 
     const target = computeTargetRotation(rotationRef.current, spinResult.segmentIndex);
     rotationRef.current = target;
     setRotation(target);
-  }, [phase, wheelAvailable, tier, spinWheelStore]);
+  }, [phase, wheelAvailable, extraSpins, tier, spinWheelStore]);
 
   /* --- Animation complete: apply reward + show result --- */
   const onAnimationComplete = useCallback(() => {
@@ -195,11 +227,19 @@ function SpinningWheelContent() {
     setOutcome(rewardOutcome);
     setPhase("result");
 
+    // Persist near-miss state in store
+    setLastSpinNearMiss(result.nearMiss);
+
     // Near-miss: pulse the big prize to emphasise "so close!"
     if (result.nearMiss) {
       setHighlightBigPrize(true);
     }
-  }, [phase, result]);
+  }, [phase, result, setLastSpinNearMiss]);
+
+  /* --- Buy spins handler --- */
+  const handleBuySpins = useCallback((amount: number, cost: number) => {
+    buySpins(amount, cost);
+  }, []);
 
   /* --- Close handler ---
      Prevent closing the overlay mid-spin (option (a) preferred fix). The
@@ -245,6 +285,10 @@ function SpinningWheelContent() {
         onClick={handleClose}
         data-testid="wheel-backdrop"
       />
+
+      {phase === "result" && result && (
+        <BrainRotCelebration result={result} onClose={() => setPhase("idle")} />
+      )}
 
       {/* Double-bezel glass card */}
       <motion.div
@@ -373,7 +417,6 @@ function SpinningWheelContent() {
               />
               <circle cx={CX} cy={CY} r={R_INNER - 6} fill="#1a1a25" />
             </motion.svg>
-
             {/* Center icon */}
             <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
               <Coins size={24} weight="light" className="text-[#d4af37]" />
@@ -381,24 +424,115 @@ function SpinningWheelContent() {
           </div>
 
           {/* Spin button / Result */}
-          <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="mt-6 flex flex-col items-center gap-3 w-full">
             <AnimatePresence mode="wait">
               {phase === "idle" && (
-                <motion.button
-                  key="spin"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.4, ease: PREMIUM_EASE }}
-                  onClick={handleSpin}
-                  disabled={!wheelAvailable}
-                  className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#d4af37] to-[#b8941f] px-8 py-3.5 text-sm font-bold text-black transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] disabled:opacity-50"
-                  style={{ boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}
-                  data-testid="wheel-spin-button"
-                >
-                  <Sparkle size={16} weight="fill" />
-                  SPIN THE WHEEL
-                </motion.button>
+                <div className="flex flex-col items-center gap-4 w-full">
+                  {(wheelAvailable || extraSpins > 0) ? (
+                    <motion.button
+                      key="spin"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.4, ease: PREMIUM_EASE }}
+                      onClick={handleSpin}
+                      className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#d4af37] to-[#b8941f] px-8 py-3.5 text-sm font-bold text-black transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                      style={{ boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}
+                      data-testid="wheel-spin-button"
+                    >
+                      <Sparkle size={16} weight="fill" />
+                      {wheelAvailable ? "SPIN THE WHEEL (FREE)" : `SPIN WHEEL (${extraSpins} SPINS LEFT)`}
+                    </motion.button>
+                  ) : (
+                    <button
+                      disabled
+                      className="hidden"
+                      data-testid="wheel-spin-button"
+                    />
+                  )}
+
+                  {!wheelAvailable && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-full max-w-sm rounded-2xl bg-white/5 ring-1 ring-white/10 p-4 flex flex-col gap-3 backdrop-blur-md"
+                    >
+                      <div className="flex justify-between items-center border-b border-white/10 pb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa] flex items-center gap-1.5">
+                          <Coins size={14} className="text-[#d4af37]" /> Buy More Spins
+                        </span>
+                        <span className="text-[10px] text-[#71717a] font-mono">
+                          Balance: {playerTokens} tokens
+                        </span>
+                      </div>
+
+                      {lastSpinNearMiss && (
+                        <motion.button
+                          onClick={() => handleBuySpins(1, 2)}
+                          disabled={playerTokens < 2}
+                          className="relative flex items-center justify-between rounded-xl bg-[#d4af37]/10 ring-1 ring-[#d4af37]/45 px-4 py-3 text-left transition-all duration-700 hover:bg-[#d4af37]/20 active:scale-[0.98] disabled:opacity-50 overflow-hidden"
+                          animate={{ boxShadow: ["0 0 0px rgba(212,175,55,0)", "0 0 8px rgba(212,175,55,0.2)", "0 0 0px rgba(212,175,55,0)"] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <div className="absolute right-0 top-0 bg-[#d4af37] text-black text-[8px] font-bold px-2 py-0.5 uppercase rounded-bl-lg tracking-wider">
+                            Near-Miss Offer
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">1 Discounted Spin</div>
+                            <div className="text-[10px] text-[#a1a1aa] mt-0.5">So close! Get right back in!</div>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono text-sm font-bold text-[#d4af37]">
+                            <Coins size={14} /> 2
+                          </div>
+                        </motion.button>
+                      )}
+
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          onClick={() => handleBuySpins(1, 3)}
+                          disabled={playerTokens < 3}
+                          className="flex items-center justify-between rounded-xl bg-white/5 ring-1 ring-white/10 px-4 py-2.5 text-left transition-all duration-700 hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-[#f5f5f7]">1 Spin</div>
+                            <div className="text-[10px] text-[#71717a]">Instant action</div>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-[#a1a1aa]">
+                            <Coins size={12} /> 3
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => handleBuySpins(3, 7)}
+                          disabled={playerTokens < 7}
+                          className="flex items-center justify-between rounded-xl bg-white/5 ring-1 ring-white/10 px-4 py-2.5 text-left transition-all duration-700 hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-[#f5f5f7]">Duo Pack (3 Spins)</div>
+                            <div className="text-[10px] text-[#4fd1c5] font-semibold">Save 2 tokens!</div>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-[#a1a1aa]">
+                            <Coins size={12} /> 7
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => handleBuySpins(5, 10)}
+                          disabled={playerTokens < 10}
+                          className="flex items-center justify-between rounded-xl bg-gradient-to-r from-[#d4af37]/10 to-[#b8941f]/10 ring-1 ring-[#d4af37]/30 px-4 py-2.5 text-left transition-all duration-700 hover:from-[#d4af37]/20 hover:to-[#b8941f]/20 active:scale-[0.98] disabled:opacity-50"
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-[#d4af37]">Jackpot Bundle (5 Spins)</div>
+                            <div className="text-[10px] text-[#d4af37]/80 font-bold uppercase tracking-wide">Best Value! Save 5</div>
+                          </div>
+                          <div className="flex items-center gap-1 font-mono text-xs font-bold text-[#d4af37]">
+                            <Coins size={12} /> 10
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
               )}
 
               {phase === "spinning" && (
@@ -462,8 +596,6 @@ function SpinningWheelContent() {
             )}
           </div>
         </div>
-        
-        {phase === "result" && result && <BrainRotCelebration result={result} />}
       </motion.div>
     </motion.div>
   );

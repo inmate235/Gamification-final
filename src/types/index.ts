@@ -290,6 +290,8 @@ export interface SpinningWheelState {
   available: boolean;
   lastSpin: number; // epoch ms
   spinCount: number;
+  extraSpins: number;
+  lastSpinNearMiss: boolean;
 }
 
 export interface EconomyState {
@@ -547,4 +549,6 @@ export interface UIState {
   activeOverlay: OverlayType;
   overlayData: unknown;
   bottomPanelExpanded: boolean;
+  isTimelineOpen: boolean;
+  hasSeenTimelineOnboarding: boolean;
 }

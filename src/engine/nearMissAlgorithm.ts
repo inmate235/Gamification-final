@@ -70,7 +70,7 @@ export const WHEEL_SEGMENTS: WheelSegment[] = [
 export const BIG_PRIZE_INDEX = 0;
 /** The segment the near-miss lands on (counter-clockwise adjacent to big prize). */
 export const NEAR_MISS_INDEX = 6;
-export const NEAR_MISS_THRESHOLD = 0.40;
+export const NEAR_MISS_THRESHOLD = 0.25;
 export const SEGMENT_COUNT = WHEEL_SEGMENTS.length;
 export const SEGMENT_ANGLE = 360 / SEGMENT_COUNT; // ≈ 51.43°
 
@@ -79,31 +79,30 @@ export const SEGMENT_ANGLE = 360 / SEGMENT_COUNT; // ≈ 51.43°
    ========================================================================== */
 
 /**
- * Weights for the 60% non-near-miss spins, indexed by segment.
+ * Weights for the 75% non-near-miss spins, indexed by segment.
  * Must sum to 1.0.
  *
- * Base (Bronze / Silver / Gold): moderate win rate, meaningful "nothing".
- * Neodymium: boosted token weights, minimal "nothing" (higher win rate per
- * DECISIONS perk inventory — VAL-WHEEL-016).
+ * Base (Bronze / Silver / Gold): evened out to avoid over-landing on low tier / nothing.
+ * Neodymium: boosted token weights, minimal "nothing".
  */
 const BASE_WEIGHTS: number[] = [
-  0.06, // 10 tokens
-  0.14, // 5 tokens
-  0.14, // map reveal
-  0.18, // 3 tokens
-  0.14, // flash sale
-  0.18, // 1 token
-  0.16, // nothing
+  0.10, // 10 tokens (boosted from 0.06)
+  0.15, // 5 tokens (boosted from 0.14)
+  0.16, // map reveal (boosted from 0.14)
+  0.16, // 3 tokens (reduced from 0.18)
+  0.13, // flash sale (reduced from 0.14)
+  0.15, // 1 token (reduced from 0.18)
+  0.15, // nothing (reduced from 0.16)
 ];
 
 const NEO_WEIGHTS: number[] = [
-  0.12, // 10 tokens
-  0.20, // 5 tokens
-  0.14, // map reveal
-  0.20, // 3 tokens
-  0.10, // flash sale
-  0.18, // 1 token
-  0.06, // nothing
+  0.16, // 10 tokens (boosted from 0.12)
+  0.22, // 5 tokens (boosted from 0.20)
+  0.16, // map reveal (boosted from 0.14)
+  0.20, // 3 tokens (evened out)
+  0.10, // flash sale (evened out)
+  0.12, // 1 token (reduced from 0.18)
+  0.04, // nothing (reduced from 0.06)
 ];
 
 /* ============================================================================

@@ -21,7 +21,7 @@ import type { PlayerPosition } from "@/types";
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
-const MOVE_DURATION = 0.85; // seconds — perceptible, not excessive
+const MOVE_DURATION = 2.5; // seconds — slower to match a walking pace
 
 interface AvatarPath {
   x: number[];
@@ -64,7 +64,7 @@ export function PlayerAvatar() {
       }}
       transition={{
         duration: MOVE_DURATION,
-        ease: PREMIUM_EASE,
+        ease: "linear",
         times: hasWaypoints ? [0, 0.5, 1] : undefined,
       }}
       data-testid="player-avatar"

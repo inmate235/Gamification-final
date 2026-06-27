@@ -94,7 +94,7 @@ export function TaskPanel() {
   const hasGated = activeTasks.some((t) => t.timeGated && t.gateUntil);
 
   return (
-    <>
+    <div data-testid="task-panel">
       {/* Floating Entry Orb */}
       <AnimatePresence>
         {!expanded && (
@@ -119,7 +119,10 @@ export function TaskPanel() {
                 Quests
               </span>
               {taskCount > 0 && (
-                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#9d7fdb] px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(157,127,219,0.5)]">
+                <span
+                  className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#9d7fdb] px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(157,127,219,0.5)]"
+                  data-testid="task-panel-count"
+                >
                   {taskCount}
                 </span>
               )}
@@ -156,14 +159,23 @@ export function TaskPanel() {
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#9d7fdb]/10 ring-1 ring-[#9d7fdb]/30">
                       <ListChecks size={20} weight="light" className="text-[#9d7fdb]" />
                     </div>
-                    <h2 className="text-lg font-semibold uppercase tracking-widest text-white">
+                    <h2 className="text-lg font-semibold uppercase tracking-widest text-white flex items-center gap-2">
                       Active Quests
+                      {taskCount > 0 && (
+                        <span
+                          className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#9d7fdb] px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(157,127,219,0.5)]"
+                          data-testid="task-panel-count"
+                        >
+                          {taskCount}
+                        </span>
+                      )}
                     </h2>
                   </div>
                   <button
                     onClick={handleToggle}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-colors hover:bg-white/10"
                     aria-label="Close quests"
+                    data-testid="task-panel-toggle"
                   >
                     <CaretDown size={16} weight="light" className="text-[#a1a1aa]" />
                   </button>
@@ -187,7 +199,7 @@ export function TaskPanel() {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
 

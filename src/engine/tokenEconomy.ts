@@ -118,12 +118,25 @@ export function claimFlashSale(
   return ok;
 }
 
+/**
+ * Purchase spins: deducts token cost, increments extra spins count,
+ * and triggers a spend celebration overlay.
+ */
+export function buySpins(amount: number, cost: number): boolean {
+  const ok = useEconomyStore.getState().buySpins(amount, cost);
+  if (ok) {
+    showTokenFeedback("spend", cost, `Spins Purchased! -${cost} Tokens`);
+  }
+  return ok;
+}
+
 const tokenEconomy = {
   showTokenFeedback,
   awardTaskReward,
   awardWheelReward,
   unlockShortcut,
   claimFlashSale,
+  buySpins,
 };
 
 export default tokenEconomy;
