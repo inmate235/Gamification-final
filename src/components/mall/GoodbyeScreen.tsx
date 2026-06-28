@@ -36,13 +36,13 @@ export function GoodbyeScreen() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.15 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium ring-1 text-[#9d7fdb]"
+              className="mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium ring-1 text-[#7c3aed]"
               style={{
-                borderColor: "#9d7fdb55",
-                background: "#9d7fdb14",
+                borderColor: "#7c3aed55",
+                background: "#7c3aed14",
               }}
             >
-              <Sparkle size={12} weight="light" style={{ color: "#9d7fdb" }} />
+              <Sparkle size={12} weight="light" style={{ color: "#7c3aed" }} />
               You left the mall
             </motion.span>
 
@@ -51,7 +51,7 @@ export function GoodbyeScreen() {
               initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 0.7, ease: PREMIUM_EASE, delay: 0.3 }}
-              className="text-3xl font-bold tracking-tight text-[#f5f5f7] sm:text-4xl"
+              className="sticker-heading text-3xl sm:text-4xl"
             >
               Come back soon
             </motion.h1>
@@ -60,7 +60,7 @@ export function GoodbyeScreen() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.45 }}
-              className="mt-3 text-sm text-[#a1a1aa]"
+              className="mt-4 text-sm text-[#4b4b4b] max-w-[34ch]"
             >
               Your {streakCount}-day streak and progress are waiting for you.
               The mall is open whenever you are.
@@ -72,8 +72,7 @@ export function GoodbyeScreen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.6 }}
               onClick={returnToMall}
-              className="group mt-8 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#d4af37] to-[#b8941f] px-6 py-3.5 text-sm font-bold text-black transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97]"
-              style={{ boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}
+              className="btn-magenta group mt-8"
               data-testid="return-to-mall"
             >
               <Heart size={15} weight="fill" />

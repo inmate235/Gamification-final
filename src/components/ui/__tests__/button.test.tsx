@@ -8,13 +8,13 @@ describe("Button", () => {
     render(<Button>Enter Mall</Button>);
     const btn = screen.getByRole("button", { name: "Enter Mall" });
     expect(btn).toBeInTheDocument();
-    expect(btn.className).toContain("from-[#d4af37]");
+    expect(btn.className).toContain("bg-[#e6009e]");
   });
 
   it("applies secondary variant classes", () => {
     render(<Button variant="secondary">Cancel</Button>);
     const btn = screen.getByRole("button", { name: "Cancel" });
-    expect(btn.className).toContain("bg-white/5");
+    expect(btn.className).toContain("bg-[#f4f4f5]");
   });
 
   it("fires onClick handler", async () => {

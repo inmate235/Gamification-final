@@ -32,7 +32,7 @@ const PENALTY_ICONS = {
 
 const PENALTY_COLORS = {
   "token-loss": "#ef4444",
-  "perk-loss": "#e879a1",
+  "perk-loss": "#e6009e",
   "tier-demotion": "#b87333",
 } as const;
 
@@ -72,11 +72,11 @@ export function StreakPenaltyNotification() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -24, scale: 0.9 }}
         transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-        className="fixed left-1/2 top-32 z-40 flex max-w-[340px] -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 ring-1 backdrop-blur-2xl"
+        className="fixed left-1/2 top-32 z-40 flex max-w-[340px] -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 ring-1 backdrop-blur-sm"
         style={{
-          background: "rgba(18,18,26,0.96)",
-          borderColor: `${color}55`,
-          boxShadow: `0 0 24px ${color}33`,
+          background: "rgba(255,255,255,0.97)",
+          borderColor: `${color}40`,
+          boxShadow: "0 4px 20px rgba(20,20,20,0.08)",
         }}
         role="alert"
         data-testid="streak-penalty-notification"
@@ -85,22 +85,22 @@ export function StreakPenaltyNotification() {
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
           style={{ background: `${color}15` }}
         >
-          <Icon size={16} weight="light" style={{ color }} />
+          <Icon size={16} weight="fill" style={{ color }} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-[#f5f5f7]">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-[#141414]">
             <Warning size={12} weight="fill" style={{ color }} />
             <span className="capitalize">{penalty.type.replace("-", " ")}</span>
-            <span className="text-xs font-normal text-[#71717a]">
+            <span className="text-xs font-normal text-[#8a8a8a]">
               · Day {penalty.missedDay} miss
             </span>
           </p>
-          <p className="mt-0.5 text-xs text-[#a1a1aa]">{penalty.message}</p>
+          <p className="mt-0.5 text-xs text-[#4b4b4b]">{penalty.message}</p>
         </div>
         <button
           onClick={handleDismiss}
           aria-label="Dismiss"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#71717a] transition-colors hover:text-[#f5f5f7]"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#8a8a8a] transition-colors hover:text-[#141414]"
         >
           <span className="text-lg leading-none">×</span>
         </button>

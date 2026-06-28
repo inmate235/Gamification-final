@@ -119,7 +119,7 @@ export function TierPerksPanel() {
           aria-modal="true"
           aria-label="Membership perks"
         >
-          <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
+          <div className="absolute inset-0 backdrop-blur-md bg-[#141414]/40" />
 
           <motion.div
             initial={{ opacity: 0, y: 48, scale: 0.96 }}
@@ -134,20 +134,20 @@ export function TierPerksPanel() {
                 {/* Header */}
                 <div className="mb-6 flex items-start justify-between">
                   <div>
-                    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
-                      <Sparkle size={12} weight="light" className="text-[#d4af37]" />
+                    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-[#8a8a8a] ring-1 ring-[#141414]/10">
+                      <Sparkle size={12} weight="fill" className="text-[#e6009e]" />
                       Membership
                     </span>
-                    <h2 className="mt-3 text-2xl font-bold tracking-tight text-[#f5f5f7]">
+                    <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-[#141414]">
                       Your perks
                     </h2>
                   </div>
                   <button
                     onClick={hideOverlay}
                     aria-label="Close perks panel"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] hover:bg-white/10"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#141414]/5 ring-1 ring-[#141414]/10 transition-all duration-200 active:scale-[0.97] hover:bg-[#141414]/10"
                   >
-                    <X size={16} weight="light" />
+                    <X size={16} weight="bold" className="text-[#141414]" />
                   </button>
                 </div>
 
@@ -163,11 +163,10 @@ export function TierPerksPanel() {
                     return (
                       <div
                         key={t}
-                        className="flex flex-col items-center gap-2 rounded-2xl px-2 py-3 ring-1 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                        className="flex flex-col items-center gap-2 rounded-2xl px-2 py-3 ring-1 transition-all duration-200"
                         style={{
-                          borderColor: active ? v.color : "rgba(255,255,255,0.08)",
+                          borderColor: active ? v.color : "rgba(20,20,20,0.08)",
                           background: active ? `${v.color}14` : "transparent",
-                          boxShadow: active ? v.glow : "none",
                         }}
                         data-testid={`tier-ladder-${t}`}
                         data-active={active ? "true" : "false"}
@@ -184,14 +183,13 @@ export function TierPerksPanel() {
                             className="h-3 w-3 rounded-full"
                             style={{
                               background: v.color,
-                              boxShadow: active ? `0 0 10px ${v.color}` : "none",
                             }}
                           />
                         </div>
                         <span
                           className="text-[10px] font-semibold uppercase tracking-[0.1em]"
                           style={{
-                            color: active ? v.color : past ? "#a1a1aa" : "#71717a",
+                            color: active ? v.color : past ? "#8a8a8a" : "#8a8a8a",
                           }}
                         >
                           {v.label}
@@ -222,25 +220,25 @@ export function TierPerksPanel() {
 
                     <div className="space-y-3" data-testid="tier-perks-current">
                       <PerkLine
-                        icon={<Tag size={16} weight="light" />}
+                        icon={<Tag size={16} weight="fill" />}
                         label="Flash sale frequency"
                         value={currentPerks.flashSaleFrequency}
                         color={visual.color}
                       />
                       <PerkLine
-                        icon={<Coin size={16} weight="light" />}
+                        icon={<Coin size={16} weight="fill" />}
                         label="Token multiplier"
                         value={currentPerks.tokenMultiplier}
                         color={visual.color}
                       />
                       <PerkLine
-                        icon={<MapPin size={16} weight="light" />}
+                        icon={<MapPin size={16} weight="fill" />}
                         label="Map visibility"
                         value={currentPerks.mapVisibility}
                         color={visual.color}
                       />
                       <PerkLine
-                        icon={<Crosshair size={16} weight="light" />}
+                        icon={<Crosshair size={16} weight="fill" />}
                         label="Deal radar"
                         value={currentPerks.dealRadar}
                         color={visual.color}
@@ -249,8 +247,8 @@ export function TierPerksPanel() {
 
                     {/* Neodymium exclusive perks (VAL-TIER-026) */}
                     {tier === "neodymium" && currentPerks.exclusives.length > 0 && (
-                      <div className="mt-5 border-t border-white/8 pt-4" data-testid="tier-perks-neodymium-exclusives">
-                        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9d7fdb]">
+                      <div className="mt-5 border-t border-[#141414]/8 pt-4" data-testid="tier-perks-neodymium-exclusives">
+                        <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7c3aed]">
                           Neodymium exclusives
                         </p>
                         <div className="space-y-3">
@@ -259,10 +257,10 @@ export function TierPerksPanel() {
                             return (
                               <PerkLine
                                 key={ex.id}
-                                icon={<Icon size={16} weight="light" />}
+                                icon={<Icon size={16} weight="fill" />}
                                 label={ex.label}
                                 value={ex.value}
-                                color="#9d7fdb"
+                                color="#7c3aed"
                               />
                             );
                           })}
@@ -275,7 +273,7 @@ export function TierPerksPanel() {
                 {/* Trial perks (endowment effect) with expiry countdown */}
                 {trialPerks.length > 0 && (
                   <div className="mb-6" data-testid="tier-perks-trial">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e879a1]">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e6009e]">
                       Trial perks
                     </p>
                     <div className="space-y-2">
@@ -289,17 +287,17 @@ export function TierPerksPanel() {
                 {/* Permanent earned perks (if any) */}
                 {perks.length > 0 && (
                   <div className="mb-6">
-                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4fd1c5]">
+                    <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#14b8a6]">
                       Earned perks
                     </p>
                     <div className="space-y-2">
                       {perks.map((perk) => (
                         <div
                           key={perk.id}
-                          className="rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/8"
+                          className="rounded-xl bg-[#f4f4f5] px-3 py-2.5 ring-1 ring-[#141414]/8"
                         >
-                          <p className="text-sm font-medium text-[#f5f5f7]">{perk.name}</p>
-                          <p className="text-xs text-[#a1a1aa]">{perk.description}</p>
+                          <p className="text-sm font-medium text-[#141414]">{perk.name}</p>
+                          <p className="text-xs text-[#4b4b4b]">{perk.description}</p>
                         </div>
                       ))}
                     </div>
@@ -309,10 +307,10 @@ export function TierPerksPanel() {
                 {/* Aspiration hint to next tier (VAL-TIER-028) */}
                 {nextTier && (
                   <div
-                    className="rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/8"
+                    className="rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8"
                     data-testid="tier-perks-hint"
                   >
-                    <p className="text-xs text-[#a1a1aa]">
+                    <p className="text-xs text-[#4b4b4b]">
                       <span className="font-semibold" style={{ color: TIER_VISUALS[nextTier].color }}>
                         {remaining} more
                       </span>{" "}
@@ -351,7 +349,7 @@ function PerkLine({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2.5 text-[#a1a1aa]">
+      <div className="flex items-center gap-2.5 text-[#4b4b4b]">
         <span style={{ color }}>{icon}</span>
         <span className="text-xs uppercase tracking-[0.1em]">{label}</span>
       </div>
@@ -373,29 +371,28 @@ function TrialPerkCard({ perk, now }: { perk: Perk; now: number }) {
 
   return (
     <div
-      className="rounded-xl px-3 py-2.5 ring-1 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+      className="rounded-xl px-3 py-2.5 ring-1 transition-all duration-200"
       style={{
-        background: isWarning ? "rgba(232,121,161,0.08)" : "rgba(255,255,255,0.03)",
-        borderColor: isWarning ? "rgba(232,121,161,0.4)" : "rgba(255,255,255,0.08)",
-        boxShadow: isWarning ? "0 0 16px rgba(232,121,161,0.2)" : "none",
+        background: isWarning ? "rgba(230,0,158,0.08)" : "rgba(20,20,20,0.03)",
+        borderColor: isWarning ? "rgba(230,0,158,0.4)" : "rgba(20,20,20,0.08)",
       }}
       data-testid={`trial-perk-${perk.id}`}
       data-warning={isWarning ? "true" : "false"}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-[#f5f5f7]">{perk.name}</p>
-          <p className="truncate text-xs text-[#a1a1aa]">{perk.description}</p>
+          <p className="truncate text-sm font-medium text-[#141414]">{perk.name}</p>
+          <p className="truncate text-xs text-[#4b4b4b]">{perk.description}</p>
         </div>
         <div
           className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-mono tabular-nums"
           style={{
-            color: isWarning ? "#e879a1" : "#a1a1aa",
-            background: isWarning ? "rgba(232,121,161,0.12)" : "rgba(255,255,255,0.04)",
+            color: isWarning ? "#e6009e" : "#8a8a8a",
+            background: isWarning ? "rgba(230,0,158,0.12)" : "rgba(20,20,20,0.04)",
           }}
           data-testid={`trial-perk-countdown-${perk.id}`}
         >
-          {isWarning ? <Warning size={12} weight="fill" /> : <Clock size={12} weight="light" />}
+          {isWarning ? <Warning size={12} weight="fill" /> : <Clock size={12} weight="fill" />}
           {perk.expiresAt !== undefined ? countdown : "permanent"}
         </div>
       </div>

@@ -62,10 +62,10 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
       data-testid={`phantom-avatar-${phantom.id}`}
       aria-label={`${phantom.name}: ${phantom.currentAction}`}
     >
-      {/* Subtle pulsing ring (amethyst, distinct from player gold) */}
+      {/* Subtle pulsing ring (purple, distinct from player magenta) */}
       <motion.circle
         r={10}
-        fill="#9d7fdb"
+        fill="#7c3aed"
         opacity={0.15}
         animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.03, 0.15] }}
         transition={{
@@ -77,24 +77,24 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
       />
       {/* Mid glow */}
-      <circle r={7} fill="#9d7fdb" opacity={0.25} />
-      {/* Core amethyst dot (smaller than player's gold dot) */}
+      <circle r={7} fill="#7c3aed" opacity={0.25} />
+      {/* Core purple dot (smaller than player's magenta dot) */}
       <circle
         r={4.5}
-        fill="#9d7fdb"
-        stroke="#c4b0e8"
+        fill="#7c3aed"
+        stroke="#c4b5fd"
         strokeWidth={1}
-        style={{ filter: "drop-shadow(0 0 5px rgba(157,127,219,0.6))" }}
+        style={{ filter: "drop-shadow(0 0 5px rgba(124,58,237,0.6))" }}
       />
       {/* Inner highlight */}
-      <circle r={1.5} fill="#e8defb" opacity={0.8} />
+      <circle r={1.5} fill="#ede9fe" opacity={0.8} />
 
       {/* Activity label — name + action, shown as SVG text */}
       <text
         x={0}
         y={-16}
         textAnchor="middle"
-        className="fill-[#c4b0e8] text-[9px] font-medium"
+        className="fill-[#c4b5fd] text-[9px] font-medium"
         style={{ pointerEvents: "none", userSelect: "none" }}
         opacity={0.7}
       >

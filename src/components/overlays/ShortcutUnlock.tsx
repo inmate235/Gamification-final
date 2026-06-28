@@ -197,10 +197,10 @@ export function ShortcutUnlock() {
                     {unlocked.map((s) => (
                       <div
                         key={s.id}
-                        className="flex items-center gap-2.5 rounded-2xl bg-[#4fd1c5]/8 px-4 py-2.5 ring-1 ring-[#4fd1c5]/20"
+                        className="flex items-center gap-2.5 rounded-2xl bg-[#14b8a6]/8 px-4 py-2.5 ring-1 ring-[#14b8a6]/20"
                       >
-                        <Check size={14} weight="bold" className="text-[#4fd1c5]" />
-                        <span className="text-xs font-medium text-[#4fd1c5]">
+                        <Check size={14} weight="bold" className="text-[#14b8a6]" />
+                        <span className="text-xs font-medium text-[#14b8a6]">
                           {zoneLabel(s.fromZoneId)} ↔ {zoneLabel(s.toZoneId)}
                         </span>
                         <span className="ml-auto text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
@@ -284,7 +284,7 @@ function ActiveShortcutCard({
             "rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-200 active:scale-[0.98]",
             canAfford
               ? "btn-magenta"
-              : "cursor-not-allowed bg-white text-[#71717a] ring-1 ring-[#141414]/10"
+              : "cursor-not-allowed bg-white text-[#8a8a8a] ring-1 ring-[#141414]/10"
           )}
           data-testid="shortcut-unlock-button"
         >

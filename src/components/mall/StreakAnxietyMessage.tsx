@@ -48,31 +48,31 @@ export function StreakAnxietyMessage() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.92 }}
           transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-          className="fixed bottom-24 left-1/2 z-20 flex max-w-[340px] -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 ring-1 backdrop-blur-2xl sm:bottom-28"
+          className="fixed bottom-24 left-1/2 z-20 flex max-w-[340px] -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 ring-1 backdrop-blur-sm sm:bottom-28"
           style={{
-            background: "rgba(18,18,26,0.92)",
-            borderColor: "rgba(157,127,219,0.35)",
-            boxShadow: "0 0 20px rgba(157,127,219,0.15)",
+            background: "rgba(255,255,255,0.96)",
+            borderColor: "rgba(124,58,237,0.25)",
+            boxShadow: "0 4px 20px rgba(20,20,20,0.08)",
           }}
           role="status"
           data-testid="streak-anxiety-message"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#9d7fdb]/15">
-            <Fire size={16} weight="light" className="text-[#9d7fdb]" />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/12">
+            <Fire size={16} weight="fill" className="text-[#7c3aed]" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[#f5f5f7]">
+            <p className="text-sm font-semibold text-[#141414]">
               {streak.broken ? "Streak broken" : `Day ${streak.count} streak`}
             </p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-[#a1a1aa]">
-              <ClockClockwise size={10} weight="light" className="shrink-0 text-[#9d7fdb]" />
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-[#4b4b4b]">
+              <ClockClockwise size={10} weight="fill" className="shrink-0 text-[#7c3aed]" />
               <span className="truncate">{message}</span>
             </p>
           </div>
           <button
             onClick={handleDismiss}
             aria-label="Dismiss"
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#71717a] transition-colors hover:text-[#f5f5f7]"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#8a8a8a] transition-colors hover:text-[#141414]"
           >
             <span className="text-lg leading-none">×</span>
           </button>

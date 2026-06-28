@@ -71,9 +71,9 @@ export function TierUpgrade() {
         >
           {/* Tier-colored full-viewport wash */}
           <div
-            className="absolute inset-0 backdrop-blur-2xl"
+            className="absolute inset-0 backdrop-blur-md"
             style={{
-              background: `radial-gradient(ellipse at center, ${visual.color}22 0%, rgba(10,10,15,0.86) 60%, rgba(10,10,15,0.96) 100%)`,
+              background: `radial-gradient(ellipse at center, ${visual.color}1a 0%, rgba(20,20,20,0.3) 60%, rgba(20,20,20,0.45) 100%)`,
             }}
           />
 
@@ -103,7 +103,7 @@ export function TierUpgrade() {
                     background: `${visual.color}14`,
                   }}
                 >
-                  <Sparkle size={12} weight="light" style={{ color: visual.color }} />
+                  <Sparkle size={12} weight="fill" style={{ color: visual.color }} />
                   Membership Upgrade
                 </motion.div>
 
@@ -132,7 +132,7 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   transition={{ duration: 0.7, ease: PREMIUM_EASE, delay: 0.45 }}
-                  className="text-3xl font-bold tracking-tight sm:text-4xl"
+                  className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
                   style={{ color: visual.color }}
                   data-testid="tier-upgrade-title"
                 >
@@ -144,7 +144,7 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.6 }}
-                  className="mt-3 text-sm text-[#a1a1aa]"
+                  className="mt-3 text-sm text-[#4b4b4b]"
                 >
                   {visual.tagline}
                 </motion.p>
@@ -168,8 +168,7 @@ export function TierUpgrade() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.95 }}
                   onClick={hideOverlay}
-                  className="group mt-8 inline-flex items-center gap-3 rounded-full px-6 py-3 text-sm font-semibold text-black transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97]"
-                  style={{ background: `linear-gradient(135deg, ${visual.color}, ${visual.color}cc)` }}
+                  className="btn-magenta group mt-8"
                   data-testid="tier-upgrade-cta"
                 >
                   Explore my perks
@@ -200,8 +199,8 @@ function PerkRow({
   color: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/8">
-      <span className="text-xs uppercase tracking-[0.12em] text-[#71717a]">
+    <div className="flex items-center justify-between rounded-xl bg-[#f4f4f5] px-3 py-2 ring-1 ring-[#141414]/8">
+      <span className="text-xs uppercase tracking-[0.12em] text-[#8a8a8a]">
         {label}
       </span>
       <span className="text-sm font-medium" style={{ color }}>

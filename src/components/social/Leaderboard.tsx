@@ -62,12 +62,12 @@ interface MetricTab {
 }
 
 const METRIC_TABS: MetricTab[] = [
-  { metric: "tokens", label: "Tokens", icon: <Coin size={13} weight="light" /> },
-  { metric: "time", label: "Time", icon: <Clock size={13} weight="light" /> },
+  { metric: "tokens", label: "Tokens", icon: <Coin size={13} weight="fill" /> },
+  { metric: "time", label: "Time", icon: <Clock size={13} weight="fill" /> },
   {
     metric: "exploration",
     label: "Explore",
-    icon: <MapPin size={13} weight="light" />,
+    icon: <MapPin size={13} weight="fill" />,
   },
 ];
 
@@ -97,11 +97,11 @@ export function LeaderboardEntryButton() {
       transition={{ duration: 0.7, ease: PREMIUM_EASE }}
       onClick={open}
       aria-label="Open the leaderboard"
-      className="flex items-center gap-2 rounded-full bg-[#12121a]/80 px-4 py-2.5 ring-1 ring-[#4fd1c5]/30 backdrop-blur-md transition-all duration-700 hover:bg-[#12121a] active:scale-[0.97]"
+      className="flex items-center gap-2 rounded-full bg-[#e6009e] px-4 py-2.5 ring-2 ring-white shadow-[0_6px_0_#b8007e] transition-all duration-200 active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
       data-testid="leaderboard-entry-button"
     >
-      <Trophy size={16} weight="light" className="text-[#4fd1c5]" />
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a1a1aa]">
+      <Trophy size={16} weight="fill" className="text-white" />
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
         Ranks
       </span>
     </motion.button>
@@ -167,7 +167,7 @@ export function Leaderboard() {
           aria-modal="true"
           aria-label="Leaderboard"
         >
-          <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
+          <div className="absolute inset-0 backdrop-blur-md bg-[#141414]/40" />
 
           <motion.div
             initial={{ opacity: 0, y: 48, scale: 0.96 }}
@@ -182,17 +182,17 @@ export function Leaderboard() {
                 {/* Header */}
                 <div className="mb-5 flex items-start justify-between">
                   <div>
-                    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
-                      <Trophy size={12} weight="light" className="text-[#4fd1c5]" />
+                    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-[#8a8a8a] ring-1 ring-[#141414]/10">
+                      <Trophy size={12} weight="fill" className="text-[#e6009e]" />
                       Leaderboard
                     </span>
-                    <h2 className="mt-3 text-2xl font-bold tracking-tight text-[#f5f5f7]">
+                    <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-[#141414]">
                       Mall Rankings
                     </h2>
                     {playerEntry && (
-                      <p className="mt-1 text-xs text-[#a1a1aa]">
+                      <p className="mt-1 text-xs text-[#4b4b4b]">
                         You&apos;re ranked{" "}
-                        <span className="font-semibold text-[#4fd1c5]">
+                        <span className="font-semibold text-[#e6009e]">
                           #{playerEntry.rank}
                         </span>{" "}
                         of {leaderboard.length}
@@ -202,15 +202,15 @@ export function Leaderboard() {
                   <button
                     onClick={handleClose}
                     aria-label="Close leaderboard"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] hover:bg-white/10"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#141414]/5 ring-1 ring-[#141414]/10 transition-all duration-200 active:scale-[0.97] hover:bg-[#141414]/10"
                   >
-                    <X size={16} weight="light" />
+                    <X size={16} weight="bold" className="text-[#141414]" />
                   </button>
                 </div>
 
                 {/* Metric sort tabs (VAL-LEADER-019) */}
                 <div
-                  className="mb-4 flex gap-1.5 rounded-full bg-white/[0.03] p-1 ring-1 ring-white/8"
+                  className="mb-4 flex gap-1.5 rounded-full bg-[#f4f4f5] p-1 ring-1 ring-[#141414]/8"
                   data-testid="leaderboard-metric-tabs"
                   role="tablist"
                   aria-label="Sort leaderboard by metric"
@@ -224,10 +224,10 @@ export function Leaderboard() {
                         aria-selected={active}
                         onClick={() => setActiveMetric(tab.metric)}
                         className={cn(
-                          "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                          "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200",
                           active
-                            ? "bg-[#4fd1c5]/15 text-[#4fd1c5]"
-                            : "text-[#71717a] hover:text-[#a1a1aa]",
+                            ? "bg-[#e6009e]/15 text-[#e6009e]"
+                            : "text-[#8a8a8a] hover:text-[#4b4b4b]",
                         )}
                         data-testid={`leaderboard-metric-${tab.metric}`}
                         data-active={active ? "true" : "false"}
@@ -254,7 +254,7 @@ export function Leaderboard() {
                 </ol>
 
                 {/* Caption */}
-                <p className="mt-4 text-center text-[10px] uppercase tracking-[0.18em] text-[#71717a]">
+                <p className="mt-4 text-center text-[10px] uppercase tracking-[0.18em] text-[#8a8a8a]">
                   Updates live as you explore
                 </p>
               </div>
@@ -292,16 +292,11 @@ function LeaderboardRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 transition-all duration-200",
         isPlayer
-          ? "bg-[#4fd1c5]/10 ring-[#4fd1c5]/40"
-          : "bg-white/[0.02] ring-white/8",
+          ? "bg-[#e6009e]/8 ring-[#e6009e]/30"
+          : "bg-[#f4f4f5] ring-[#141414]/8",
       )}
-      style={
-        isPlayer
-          ? { boxShadow: "0 0 16px rgba(79,209,197,0.18)" }
-          : undefined
-      }
       data-testid="leaderboard-row"
       data-player={isPlayer ? "true" : "false"}
       data-rank={entry.rank}
@@ -310,10 +305,9 @@ function LeaderboardRow({
       <div
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums"
         style={{
-          color: isTop ? "#d4af37" : isPlayer ? "#4fd1c5" : "#a1a1aa",
-          background: isTop ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.03)",
-          ringColor: isTop ? "rgba(212,175,55,0.3)" : "rgba(255,255,255,0.08)",
-        } as React.CSSProperties}
+          color: isTop ? "#e6b800" : isPlayer ? "#e6009e" : "#8a8a8a",
+          background: isTop ? "rgba(230,184,0,0.12)" : "rgba(20,20,20,0.04)",
+        }}
         data-testid="leaderboard-rank"
       >
         {isTop ? <Crown size={14} weight="fill" /> : entry.rank}
@@ -325,24 +319,23 @@ function LeaderboardRow({
           className="h-2.5 w-2.5 shrink-0 rounded-full"
           style={{
             background: tierVisual.color,
-            boxShadow: `0 0 8px ${tierVisual.color}66`,
           }}
         />
         <div className="min-w-0">
           <p
             className={cn(
               "truncate text-sm font-medium",
-              isPlayer ? "text-[#4fd1c5]" : "text-[#f5f5f7]",
+              isPlayer ? "text-[#e6009e]" : "text-[#141414]",
             )}
           >
             {entry.name}
             {isPlayer && (
-              <span className="ml-1.5 text-[10px] uppercase tracking-[0.15em] text-[#4fd1c5]/70">
+              <span className="ml-1.5 text-[10px] uppercase tracking-[0.15em] text-[#e6009e]/70">
                 You
               </span>
             )}
           </p>
-          <p className="truncate text-[10px] uppercase tracking-[0.12em] text-[#71717a]">
+          <p className="truncate text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
             {tierVisual.label}
           </p>
         </div>
@@ -351,21 +344,21 @@ function LeaderboardRow({
       {/* All three metrics (VAL-LEADER-007) — active one emphasized */}
       <div className="flex shrink-0 items-center gap-2.5 font-mono tabular-nums">
         <MetricChip
-          icon={<Coin size={11} weight="light" />}
+          icon={<Coin size={11} weight="fill" />}
           value={`${entry.tokenCount}`}
-          color={metric === "tokens" ? "#d4af37" : "#71717a"}
+          color={metric === "tokens" ? "#e6b800" : "#8a8a8a"}
           active={metric === "tokens"}
         />
         <MetricChip
-          icon={<Clock size={11} weight="light" />}
+          icon={<Clock size={11} weight="fill" />}
           value={`${entry.timeInMall}m`}
-          color={metric === "time" ? "#9d7fdb" : "#71717a"}
+          color={metric === "time" ? "#7c3aed" : "#8a8a8a"}
           active={metric === "time"}
         />
         <MetricChip
-          icon={<MapPin size={11} weight="light" />}
+          icon={<MapPin size={11} weight="fill" />}
           value={`${entry.explorationPercent}%`}
-          color={metric === "exploration" ? "#4fd1c5" : "#71717a"}
+          color={metric === "exploration" ? "#14b8a6" : "#8a8a8a"}
           active={metric === "exploration"}
         />
       </div>
@@ -373,7 +366,7 @@ function LeaderboardRow({
       {/* Primary metric value (the active sort metric) for quick scanning */}
       <span
         className="hidden shrink-0 text-sm font-bold tabular-nums sm:block"
-        style={{ color: isPlayer ? "#4fd1c5" : "#f5f5f7" }}
+        style={{ color: isPlayer ? "#e6009e" : "#141414" }}
       >
         {primaryLabel}
       </span>
@@ -395,7 +388,7 @@ function MetricChip({
   return (
     <span
       className={cn(
-        "flex items-center gap-0.5 text-[11px] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "flex items-center gap-0.5 text-[11px] transition-all duration-200",
         active && "scale-110",
       )}
       style={{ color }}
@@ -443,8 +436,7 @@ export function ProximityAlertBanner() {
         <button
           type="button"
           onClick={() => dismiss(latest.id)}
-          className="flex items-center gap-2.5 rounded-full bg-[#12121a]/95 px-4 py-2.5 ring-1 ring-[#4fd1c5]/40 backdrop-blur-2xl transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97]"
-          style={{ boxShadow: "0 0 20px rgba(79,209,197,0.25)" }}
+          className="flex items-center gap-2.5 rounded-full bg-white px-4 py-2.5 ring-2 ring-[#e6009e]/30 shadow-[0_4px_16px_rgba(20,20,20,0.1)] transition-all duration-200 active:scale-[0.97]"
           aria-label={`${latest.message} — tap to dismiss`}
         >
           <motion.span
@@ -455,10 +447,10 @@ export function ProximityAlertBanner() {
               repeat: Infinity,
             }}
           >
-            <CaretUp size={14} weight="fill" className="text-[#4fd1c5]" />
+            <CaretUp size={14} weight="fill" className="text-[#e6009e]" />
           </motion.span>
           <span
-            className="text-xs font-medium text-[#f5f5f7]"
+            className="text-xs font-medium text-[#141414]"
             data-testid="proximity-alert-text"
           >
             {latest.message}

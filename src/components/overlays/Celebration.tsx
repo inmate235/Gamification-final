@@ -36,9 +36,9 @@ export function Celebration() {
   }, [isOpen, hideOverlay]);
 
   const isEarn = kind === "earn";
-  const accent = isEarn ? "#d4af37" : "#ef4444";
-  const ring = isEarn ? "rgba(212,175,55,0.4)" : "rgba(239,68,68,0.4)";
-  const glow = isEarn ? "0 0 28px rgba(212,175,55,0.35)" : "0 0 28px rgba(239,68,68,0.35)";
+  const accent = isEarn ? "#e6009e" : "#ef4444";
+  const ring = isEarn ? "rgba(230,0,158,0.4)" : "rgba(239,68,68,0.4)";
+  const glow = isEarn ? "0 4px 20px rgba(20,20,20,0.1)" : "0 4px 20px rgba(20,20,20,0.1)";
 
   return (
     <AnimatePresence>
@@ -60,7 +60,7 @@ export function Celebration() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: isEarn ? -16 : 16, scale: 0.95 }}
             transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-            className="relative flex items-center gap-3 rounded-full bg-[#12121a]/90 px-6 py-3 ring-1 backdrop-blur-2xl"
+            className="relative flex items-center gap-3 rounded-full bg-white px-6 py-3 ring-1 backdrop-blur-sm shadow-[0_8px_24px_rgba(20,20,20,0.12)]"
             style={{ boxShadow: glow, ["--tw-ring-color" as string]: ring }}
           >
             <motion.div
@@ -103,7 +103,7 @@ export function Celebration() {
 
 function ParticleBurst({ kind }: { kind: "earn" | "spend" }) {
   const isEarn = kind === "earn";
-  const color = isEarn ? "#d4af37" : "#ef4444";
+  const color = isEarn ? "#e6009e" : "#ef4444";
   const particles = Array.from({ length: 14 });
   return (
     <div className="pointer-events-none absolute left-1/2 top-1/2 h-0 w-0">

@@ -41,10 +41,10 @@ export function LeaveMallButton() {
         transition={{ duration: 0.7, ease: PREMIUM_EASE }}
         onClick={onLeave}
         aria-label="Leave the mall"
-        className="fixed top-24 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-[#12121a]/60 ring-1 ring-white/5 backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#12121a]/80 active:scale-[0.97] sm:top-28 sm:left-4"
+        className="fixed top-24 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white ring-1 ring-[#141414]/10 shadow-[0_4px_16px_rgba(20,20,20,0.08)] backdrop-blur-sm transition-all duration-200 hover:bg-[#f4f4f5] active:scale-[0.97] sm:top-28 sm:left-4"
         data-testid="leave-mall-button"
       >
-        <SignOut size={16} weight="light" className="text-[#71717a] ml-0.5" />
+        <SignOut size={16} weight="bold" className="text-[#8a8a8a] ml-0.5" />
       </motion.button>
     </AnimatePresence>
   );

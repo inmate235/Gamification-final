@@ -83,7 +83,7 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-900 via-slate-900 to-black p-8 text-center relative overflow-hidden">
+          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#e6009e]/30 via-[#7c3aed]/20 to-[#14b8a6]/25 p-8 text-center relative overflow-hidden">
              {/* Simulated video content / placeholder */}
             <motion.div 
               animate={{ 
@@ -93,8 +93,8 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="z-10"
             >
-              <div className="w-48 h-48 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.1)] mb-8">
-                 <Storefront size={64} weight="duotone" className="text-white/60" />
+              <div className="w-48 h-48 rounded-2xl bg-white/15 backdrop-blur-md border-2 border-[#e6009e]/40 flex items-center justify-center shadow-[0_0_50px_rgba(230,0,158,0.15)] mb-8">
+                 <Storefront size={64} weight="duotone" className="text-white/70" />
               </div>
             </motion.div>
             
@@ -199,11 +199,11 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
               {store.dealInfo?.title}
             </p>
             <div className="flex items-center justify-between mt-1">
-              <p className="text-green-400 font-bold text-sm uppercase tracking-wider">
+              <p className="text-[#e6009e] font-bold text-sm uppercase tracking-wider">
                 {store.dealInfo?.discount}
               </p>
-              <span className="text-[10px] text-red-400 font-bold flex items-center gap-0.5 animate-pulse bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
-                <Flame size={10} weight="fill" className="text-red-500" />
+              <span className="text-[10px] text-[#ef4444] font-bold flex items-center gap-0.5 animate-pulse bg-[#ef4444]/10 px-1.5 py-0.5 rounded border border-[#ef4444]/20">
+                <Flame size={10} weight="fill" className="text-[#ef4444]" />
                 Ending soon
               </span>
             </div>
@@ -214,7 +214,7 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
             <AnimatePresence>
               {showXp && (
                 <motion.div
-                  className="absolute left-1/2 -translate-x-1/2 top-[-30px] text-yellow-400 font-mono font-bold text-sm pointer-events-none drop-shadow-[0_0_8px_rgba(234,179,8,0.6)]"
+                  className="absolute left-1/2 -translate-x-1/2 top-[-30px] text-[#ffe600] font-mono font-bold text-sm pointer-events-none drop-shadow-[0_0_8px_rgba(255,230,0,0.6)]"
                   initial={{ y: 0, opacity: 1, scale: 0.8 }}
                   animate={{ y: -30, opacity: 0, scale: 1.2 }}
                   exit={{ opacity: 0 }}
@@ -227,13 +227,10 @@ export function TimelineVideo({ item, isActive }: TimelineVideoProps) {
 
             <motion.button
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleGoToStore}
-              className="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-900/50 relative overflow-hidden group"
+              className="btn-magenta relative w-full !rounded-2xl group"
             >
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer" />
-              
               <ShoppingBag size={20} weight="fill" />
               <span>Shop Now</span>
               <motion.div

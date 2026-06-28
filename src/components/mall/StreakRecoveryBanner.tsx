@@ -55,25 +55,25 @@ export function StreakRecoveryBanner() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.92 }}
           transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-          className="fixed left-1/2 top-20 z-30 flex max-w-[360px] -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 ring-1 backdrop-blur-2xl"
+          className="fixed left-1/2 top-20 z-30 flex max-w-[360px] -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3 ring-1 backdrop-blur-sm"
           style={{
-            background: "rgba(18,18,26,0.95)",
-            borderColor: "rgba(157,127,219,0.40)",
-            boxShadow: "0 0 24px rgba(157,127,219,0.20)",
+            background: "rgba(255,255,255,0.96)",
+            borderColor: "rgba(124,58,237,0.30)",
+            boxShadow: "0 4px 20px rgba(20,20,20,0.08)",
           }}
           role="status"
           data-testid="streak-recovery-banner"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#9d7fdb]/15">
-            <Fire size={16} weight="light" className="text-[#9d7fdb]" />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/12">
+            <Fire size={16} weight="fill" className="text-[#7c3aed]" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[#f5f5f7]">
+            <p className="text-sm font-semibold text-[#141414]">
               Streak Recovery Window
             </p>
-            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[#a1a1aa]">
-              <Timer size={10} weight="light" className="shrink-0 text-[#9d7fdb]" />
-              <span className="font-mono tabular-nums text-[#9d7fdb]">
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[#4b4b4b]">
+              <Timer size={10} weight="fill" className="shrink-0 text-[#7c3aed]" />
+              <span className="font-mono tabular-nums text-[#7c3aed]">
                 {countdownText}
               </span>
               <span className="truncate">to recover your streak</span>
@@ -81,7 +81,7 @@ export function StreakRecoveryBanner() {
             {comebackActive && (
               <p
                 className="mt-1 flex items-center gap-1 text-xs font-semibold"
-                style={{ color: "#d4af37" }}
+                style={{ color: "#e6009e" }}
                 data-testid="comeback-bonus-indicator"
               >
                 <Lightning size={10} weight="fill" className="shrink-0" />
@@ -95,7 +95,7 @@ export function StreakRecoveryBanner() {
           <button
             onClick={handleDismiss}
             aria-label="Dismiss"
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#71717a] transition-colors hover:text-[#f5f5f7]"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#8a8a8a] transition-colors hover:text-[#141414]"
           >
             <span className="text-lg leading-none">×</span>
           </button>

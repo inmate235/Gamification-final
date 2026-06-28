@@ -355,7 +355,7 @@ export function FlashSale() {
                     </div>
                   </div>
                   <div className="rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8">
-                    <div className="flex items-center gap-1.5 text-[#4fd1c5]">
+                    <div className="flex items-center gap-1.5 text-[#14b8a6]">
                       <Users size={14} weight="fill" />
                       <span className="text-[10px] uppercase tracking-[0.12em]">
                         Viewing
@@ -376,15 +376,15 @@ export function FlashSale() {
                 {/* Token cost + grab / claimed state */}
                 {claimed ? (
                   <div
-                    className="flex items-center justify-center gap-2 rounded-2xl bg-[#4fd1c5]/10 px-4 py-4 ring-1 ring-[#4fd1c5]/30"
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-[#14b8a6]/10 px-4 py-4 ring-1 ring-[#14b8a6]/30"
                     data-testid="flash-sale-claimed"
                   >
                     <CheckCircle
                       size={18}
                       weight="fill"
-                      className="text-[#4fd1c5]"
+                      className="text-[#14b8a6]"
                     />
-                    <span className="text-sm font-semibold tracking-tight text-[#4fd1c5]">
+                    <span className="text-sm font-semibold tracking-tight text-[#14b8a6]">
                       Deal Claimed!
                     </span>
                   </div>
@@ -409,7 +409,7 @@ export function FlashSale() {
                         "flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-200 active:scale-[0.98]",
                         canAfford
                           ? "btn-magenta"
-                          : "cursor-not-allowed bg-white text-[#71717a] ring-1 ring-[#141414]/10"
+                          : "cursor-not-allowed bg-white text-[#8a8a8a] ring-1 ring-[#141414]/10"
                       )}
                       data-testid="flash-sale-grab-button"
                     >

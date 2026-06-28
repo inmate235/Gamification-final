@@ -73,7 +73,7 @@ export function PlayerAvatar() {
       {/* Outer pulsing glow ring */}
       <motion.circle
         r={14}
-        fill="#d4af37"
+        fill="#e6009e"
         opacity={0.25}
         animate={{ scale: [1, 1.5, 1], opacity: [0.25, 0.05, 0.25] }}
         transition={{
@@ -84,17 +84,17 @@ export function PlayerAvatar() {
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
       />
       {/* Mid glow */}
-      <circle r={9} fill="#d4af37" opacity={0.35} />
-      {/* Core gold dot */}
+      <circle r={9} fill="#e6009e" opacity={0.35} />
+      {/* Core magenta dot */}
       <circle
         r={6}
-        fill="#d4af37"
-        stroke="#f5e6a8"
+        fill="#e6009e"
+        stroke="#ff9ed4"
         strokeWidth={1.5}
-        style={{ filter: "drop-shadow(0 0 8px rgba(212,175,55,0.8))" }}
+        style={{ filter: "drop-shadow(0 0 8px rgba(230,0,158,0.8))" }}
       />
       {/* Inner highlight */}
-      <circle r={2} fill="#fff7d6" opacity={0.9} />
+      <circle r={2} fill="#ffd6f0" opacity={0.9} />
     </motion.g>
   );
 }

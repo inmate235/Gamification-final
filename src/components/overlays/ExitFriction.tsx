@@ -130,16 +130,16 @@ function ExitFrictionContent({ layer, data }: ContentProps) {
       aria-modal="true"
       aria-label={`Leave mall — layer ${layer}`}
     >
-      {/* Backdrop — layer-tinted glass */}
+      {/* Backdrop — light tinted glass */}
       <div
-        className="absolute inset-0 backdrop-blur-2xl"
+        className="absolute inset-0 backdrop-blur-md"
         style={{
           background:
             layer === 3
-              ? "radial-gradient(ellipse at center, rgba(157,127,219,0.16) 0%, rgba(10,10,15,0.88) 60%, rgba(10,10,15,0.96) 100%)"
+              ? "radial-gradient(ellipse at center, rgba(124,58,237,0.12) 0%, rgba(20,20,20,0.3) 60%, rgba(20,20,20,0.45) 100%)"
               : layer === 2
-                ? "radial-gradient(ellipse at center, rgba(239,68,68,0.12) 0%, rgba(10,10,15,0.88) 60%, rgba(10,10,15,0.96) 100%)"
-                : "radial-gradient(ellipse at center, rgba(212,175,55,0.10) 0%, rgba(10,10,15,0.88) 60%, rgba(10,10,15,0.96) 100%)",
+                ? "radial-gradient(ellipse at center, rgba(239,68,68,0.1) 0%, rgba(20,20,20,0.3) 60%, rgba(20,20,20,0.45) 100%)"
+                : "radial-gradient(ellipse at center, rgba(230,0,158,0.08) 0%, rgba(20,20,20,0.3) 60%, rgba(20,20,20,0.45) 100%)",
         }}
         data-testid="exit-friction-backdrop"
       />
@@ -159,15 +159,15 @@ function ExitFrictionContent({ layer, data }: ContentProps) {
             <button
               onClick={stayInMall}
               aria-label="Stay in the mall"
-              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 text-[#a1a1aa] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] hover:text-white"
+              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#141414]/5 ring-1 ring-[#141414]/10 text-[#8a8a8a] transition-all duration-200 active:scale-[0.97] hover:text-[#141414]"
               data-testid="exit-friction-close"
             >
-              <X size={16} weight="light" />
+              <X size={16} weight="bold" />
             </button>
 
             {/* Layer indicator */}
             <div className="mb-5 flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[#71717a]">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[#8a8a8a]">
                 {layer === 3 ? "Final offer" : `Attempt ${layer} of 3`}
               </span>
             </div>
@@ -192,11 +192,11 @@ function ExitFrictionContent({ layer, data }: ContentProps) {
 function Layer1({ display }: { display: ExitFrictionData }) {
   return (
     <div data-testid="exit-friction-layer-1">
-      <Eyebrow color="#d4af37">Before you go</Eyebrow>
-      <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#f5f5f7] sm:text-3xl">
+      <Eyebrow color="#e6009e">Before you go</Eyebrow>
+      <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-[#141414] sm:text-3xl">
         Wait — you&rsquo;ll miss out
       </h2>
-      <p className="mt-2 text-sm text-[#a1a1aa]">
+      <p className="mt-2 text-sm text-[#4b4b4b]">
         A few things are still waiting for you inside the mall.
       </p>
 
@@ -207,37 +207,37 @@ function Layer1({ display }: { display: ExitFrictionData }) {
             {display.missedSales.slice(0, 3).map((sale, i) => (
               <MissRow
                 key={`sale-${i}`}
-                icon={<Tag size={16} weight="light" className="text-[#e879a1]" />}
+                icon={<Tag size={16} weight="fill" className="text-[#e6009e]" />}
                 title={`${sale.discount} at ${sale.storeName}`}
                 sub={`${formatCountdown(sale.countdownSeconds)} left`}
-                accent="#e879a1"
+                accent="#e6009e"
               />
             ))}
           </div>
         ) : (
           <MissRow
-            icon={<Tag size={16} weight="light" className="text-[#71717a]" />}
+            icon={<Tag size={16} weight="fill" className="text-[#8a8a8a]" />}
             title="No flash sales right now"
             sub="But new ones appear as you explore"
-            accent="#71717a"
+            accent="#8a8a8a"
           />
         )}
 
         {/* Unexplored percentage (VAL-EXIT-006) */}
         <MissRow
-          icon={<MapPin size={16} weight="light" className="text-[#4fd1c5]" />}
+          icon={<MapPin size={16} weight="fill" className="text-[#14b8a6]" />}
           title={`You're ${display.explorationPercent}% explored`}
           sub={`${display.unexploredPercent}% of the mall remains a mystery`}
-          accent="#4fd1c5"
+          accent="#14b8a6"
           testId="exit-friction-unexplored"
         />
 
         {/* Tokens away from shortcut (VAL-EXIT-007) */}
         <MissRow
-          icon={<Coins size={16} weight="light" className="text-[#d4af37]" />}
+          icon={<Coins size={16} weight="fill" className="text-[#e6b800]" />}
           title={`Only ${display.tokensAwayFromShortcut} tokens from a shortcut`}
           sub="Earn just a couple more to unlock a faster route"
-          accent="#d4af37"
+          accent="#e6b800"
           testId="exit-friction-tokens-away"
         />
       </div>
@@ -258,29 +258,29 @@ function Layer2({ display }: { display: ExitFrictionData }) {
   return (
     <div data-testid="exit-friction-layer-2">
       <Eyebrow color="#ef4444">Think twice</Eyebrow>
-      <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#f5f5f7] sm:text-3xl">
+      <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-[#141414] sm:text-3xl">
         Your {display.streakCount}-day streak will break
       </h2>
-      <p className="mt-2 text-sm text-[#a1a1aa]">
+      <p className="mt-2 text-sm text-[#4b4b4b]">
         You&rsquo;ve built real momentum. Leaving now puts all of it at risk.
       </p>
 
       {/* Streak status (VAL-EXIT-009) */}
       <div
-        className="mt-6 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/8"
+        className="mt-6 flex items-center gap-3 rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8"
         data-testid="exit-friction-streak"
       >
         <motion.div
           animate={{ scale: [1, 1.08, 1] }}
           transition={{ duration: 2, ease: PREMIUM_EASE, repeat: Infinity }}
         >
-          <Fire size={22} weight="light" className="text-[#9d7fdb]" />
+          <Fire size={22} weight="fill" className="text-[#f59e0b]" />
         </motion.div>
         <div>
-          <p className="text-sm font-semibold text-[#f5f5f7]">
+          <p className="text-sm font-semibold text-[#141414]">
             Day {display.streakCount} streak
           </p>
-          <p className="text-xs text-[#a1a1aa]">
+          <p className="text-xs text-[#4b4b4b]">
             Leave now and you risk losing it.
           </p>
         </div>
@@ -288,67 +288,67 @@ function Layer2({ display }: { display: ExitFrictionData }) {
 
       {/* Sunk-cost summary (VAL-EXIT-010, VAL-EXIT-023..025) */}
       <div className="mt-4" data-testid="exit-friction-sunk-cost">
-        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-[#71717a]">
+        <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-[#8a8a8a]">
           What you&rsquo;ve invested
         </p>
         <div className="grid grid-cols-2 gap-2.5">
           <SunkStat
-            icon={<Coins size={14} weight="light" />}
+            icon={<Coins size={14} weight="fill" />}
             label="Tokens earned"
             value={sunk.cumulativeTokensEarned}
-            color="#d4af37"
+            color="#e6b800"
             testId="exit-friction-sunk-tokens"
           />
           <SunkStat
-            icon={<Clock size={14} weight="light" />}
+            icon={<Clock size={14} weight="fill" />}
             label="Time spent"
             value={`${sunk.timeSpentMinutes}m`}
-            color="#4fd1c5"
+            color="#14b8a6"
             testId="exit-friction-sunk-time"
           />
           <SunkStat
-            icon={<MapPin size={14} weight="light" />}
+            icon={<MapPin size={14} weight="fill" />}
             label="Explored"
             value={`${sunk.explorationPercent}%`}
-            color="#4fd1c5"
+            color="#14b8a6"
             testId="exit-friction-sunk-progress"
           />
           <SunkStat
-            icon={<Trophy size={14} weight="light" />}
+            icon={<Trophy size={14} weight="fill" />}
             label="Perks unlocked"
             value={sunk.perksUnlocked}
-            color="#9d7fdb"
+            color="#7c3aed"
           />
           <SunkStat
-            icon={<Sparkle size={14} weight="light" />}
+            icon={<Sparkle size={14} weight="fill" />}
             label="Tasks done"
             value={sunk.tasksCompleted}
-            color="#d4af37"
+            color="#e6b800"
           />
           <SunkStat
-            icon={<Trophy size={14} weight="light" />}
+            icon={<Trophy size={14} weight="fill" />}
             label="Rank"
             value={sunk.leaderboardRank > 0 ? `#${sunk.leaderboardRank}` : "—"}
-            color="#e879a1"
+            color="#e6009e"
           />
         </div>
       </div>
 
       {/* Friends still inside (VAL-EXIT-011) */}
       <div
-        className="mt-4 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/8"
+        className="mt-4 flex items-center gap-3 rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8"
         data-testid="exit-friction-friends"
       >
-        <Users size={20} weight="light" className="text-[#9d7fdb]" />
-        <p className="text-sm text-[#f5f5f7]">
+        <Users size={20} weight="fill" className="text-[#7c3aed]" />
+        <p className="text-sm text-[#141414]">
           <span className="font-semibold">{primaryFriend}</span>
           {others > 0 ? (
-            <span className="text-[#a1a1aa]">
+            <span className="text-[#4b4b4b]">
               {" "}
               and {others} other{others === 1 ? "" : "s"} are still exploring
             </span>
           ) : (
-            <span className="text-[#a1a1aa]"> is still exploring</span>
+            <span className="text-[#4b4b4b]"> is still exploring</span>
           )}
         </p>
       </div>
@@ -364,35 +364,35 @@ function Layer3({ display }: { display: ExitFrictionData }) {
   const bargain = display.bargain;
   return (
     <div data-testid="exit-friction-layer-3">
-      <Eyebrow color="#9d7fdb">Last chance</Eyebrow>
-      <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#f5f5f7] sm:text-3xl">
+      <Eyebrow color="#7c3aed">Last chance</Eyebrow>
+      <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-[#141414] sm:text-3xl">
         Stay just {bargain.stayMinutes} more minutes
       </h2>
-      <p className="mt-2 text-sm text-[#a1a1aa]">
+      <p className="mt-2 text-sm text-[#4b4b4b]">
         We&rsquo;ll make it worth your while. Accept these bonuses and keep your
         progress safe.
       </p>
 
       <div className="mt-6 space-y-2.5" data-testid="exit-friction-bargain">
         <BargainRow
-          icon={<CircleNotch size={18} weight="light" />}
+          icon={<CircleNotch size={18} weight="fill" />}
           title="Bonus spinning wheel"
           sub="A free spin, right now"
-          color="#d4af37"
+          color="#e6009e"
           testId="exit-friction-bonus-wheel"
         />
         <BargainRow
-          icon={<ShieldStar size={18} weight="light" />}
+          icon={<ShieldStar size={18} weight="fill" />}
           title="Streak protection"
           sub={`Your ${display.streakCount}-day streak is safe`}
-          color="#9d7fdb"
+          color="#7c3aed"
           testId="exit-friction-streak-protection"
         />
         <BargainRow
-          icon={<Heartbeat size={18} weight="light" />}
+          icon={<Heartbeat size={18} weight="fill" />}
           title={`${bargain.tokenBoost}x token boost`}
           sub={`For the next ${bargain.stayMinutes} minutes`}
-          color="#4fd1c5"
+          color="#14b8a6"
           testId="exit-friction-token-boost"
         />
       </div>
@@ -415,21 +415,11 @@ function Actions({ layer }: { layer: 1 | 2 | 3 }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.15 }}
         onClick={isFinal ? acceptRescueBargain : stayInMall}
-        className="group inline-flex items-center justify-center gap-2.5 rounded-full px-6 py-3.5 text-sm font-bold text-black transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
-        style={{
-          background:
-            layer === 3
-              ? "linear-gradient(135deg, #9d7fdb, #7c5dc9)"
-              : "linear-gradient(135deg, #d4af37, #b8941f)",
-          boxShadow:
-            layer === 3
-              ? "0 0 24px rgba(157,127,219,0.35)"
-              : "0 0 20px rgba(212,175,55,0.3)",
-        }}
+        className="btn-magenta group inline-flex w-full items-center justify-center gap-2.5"
         data-testid="exit-friction-stay"
       >
         {isFinal ? "Accept & Stay" : "Keep Exploring"}
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/15 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/15 transition-transform duration-200 group-hover:translate-x-0.5">
           <ArrowRight size={14} weight="bold" />
         </span>
       </motion.button>
@@ -440,11 +430,11 @@ function Actions({ layer }: { layer: 1 | 2 | 3 }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.25 }}
         onClick={leaveAnyway}
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-white/5 px-6 py-3 text-sm font-medium text-[#a1a1aa] ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] hover:text-[#f5f5f7]"
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-medium text-[#4b4b4b] ring-1 ring-[#141414]/10 transition-all duration-200 active:scale-[0.98] hover:bg-[#f4f4f5]"
         data-testid="exit-friction-leave"
       >
-        <SignOut size={15} weight="light" />
-        {isFinal ? "Leave anyway" : "Leave anyway"}
+        <SignOut size={15} weight="bold" />
+        Leave anyway
       </motion.button>
     </div>
   );
@@ -466,7 +456,7 @@ function Eyebrow({
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium ring-1"
       style={{ color, borderColor: `${color}55`, background: `${color}14` }}
     >
-      <Sparkle size={11} weight="light" style={{ color }} />
+      <Sparkle size={11} weight="fill" style={{ color }} />
       {children}
     </span>
   );
@@ -487,7 +477,7 @@ function MissRow({
 }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/8"
+      className="flex items-center gap-3 rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8"
       data-testid={testId}
     >
       <div
@@ -497,8 +487,8 @@ function MissRow({
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-[#f5f5f7]">{title}</p>
-        <p className="truncate text-xs text-[#a1a1aa]">{sub}</p>
+        <p className="truncate text-sm font-medium text-[#141414]">{title}</p>
+        <p className="truncate text-xs text-[#4b4b4b]">{sub}</p>
       </div>
     </div>
   );
@@ -519,7 +509,7 @@ function SunkStat({
 }) {
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/8"
+      className="flex items-center gap-2.5 rounded-xl bg-[#f4f4f5] px-3 py-2.5 ring-1 ring-[#141414]/8"
       data-testid={testId}
     >
       <span style={{ color }}>{icon}</span>
@@ -527,7 +517,7 @@ function SunkStat({
         <p className="font-mono text-base font-bold leading-none" style={{ color }}>
           {value}
         </p>
-        <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#71717a]">
+        <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#8a8a8a]">
           {label}
         </p>
       </div>
@@ -554,7 +544,6 @@ function BargainRow({
       style={{
         background: `${color}10`,
         borderColor: `${color}40`,
-        boxShadow: `0 0 14px ${color}18`,
       }}
       data-testid={testId}
     >
@@ -568,7 +557,7 @@ function BargainRow({
         <p className="text-sm font-semibold" style={{ color }}>
           {title}
         </p>
-        <p className="text-xs text-[#a1a1aa]">{sub}</p>
+        <p className="text-xs text-[#4b4b4b]">{sub}</p>
       </div>
     </div>
   );

@@ -41,22 +41,22 @@ export function TierDemotionThreat() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -24, scale: 0.9 }}
           transition={{ duration: 0.7, ease: PREMIUM_EASE }}
-          className="fixed left-1/2 top-20 z-30 flex max-w-[320px] -translate-x-1/2 items-center gap-3 rounded-2xl bg-[#12121a]/95 px-4 py-3 ring-1 backdrop-blur-2xl"
+          className="fixed left-1/2 top-20 z-30 flex max-w-[320px] -translate-x-1/2 items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 backdrop-blur-sm"
           style={{
-            borderColor: "rgba(239,68,68,0.45)",
-            boxShadow: "0 0 24px rgba(239,68,68,0.25)",
+            borderColor: "rgba(239,68,68,0.35)",
+            boxShadow: "0 4px 20px rgba(20,20,20,0.08)",
           }}
           role="alert"
           data-testid="tier-demotion-threat"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ef4444]/15">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ef4444]/12">
             <Warning size={16} weight="fill" className="text-[#ef4444]" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-[#f5f5f7]">
+            <p className="text-sm font-semibold text-[#141414]">
               Your {currentVisual.label} tier is at risk
             </p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-[#a1a1aa]">
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-[#4b4b4b]">
               <ArrowDown size={10} weight="bold" style={{ color: threatenedVisual.color }} />
               Miss another day and you drop to{" "}
               <span className="font-semibold" style={{ color: threatenedVisual.color }}>
@@ -68,7 +68,7 @@ export function TierDemotionThreat() {
           <button
             onClick={() => setDismissed(true)}
             aria-label="Dismiss warning"
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#71717a] transition-colors hover:text-[#f5f5f7]"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[#8a8a8a] transition-colors hover:text-[#141414]"
           >
             <span className="text-lg leading-none">×</span>
           </button>
