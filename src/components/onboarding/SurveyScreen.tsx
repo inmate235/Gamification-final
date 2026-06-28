@@ -69,18 +69,19 @@ const ICON_MAP: Record<
    Motion
    ========================================================================== */
 
-const POP = [0.34, 1.56, 0.64, 1] as const;
 const SMOOTH = [0.22, 0.61, 0.36, 1] as const;
+const GENTLE_POP = [0.34, 1.16, 0.64, 1] as const;
 
 const containerVariants: Variants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 0, x: 32 },
   visible: {
     opacity: 1,
+    x: 0,
     transition: { staggerChildren: 0.07, delayChildren: 0.04 },
   },
   exit: {
     opacity: 0,
-    x: -28,
+    x: -32,
     transition: { duration: 0.4, ease: SMOOTH },
   },
 };
@@ -96,7 +97,7 @@ const cardVariants: Variants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.5, ease: POP },
+    transition: { duration: 0.5, ease: GENTLE_POP },
   },
 };
 
@@ -202,7 +203,7 @@ export function SurveyScreen() {
           key={`survey-step-bg-${currentQuestion.id}`}
           initial={{ opacity: 0.45, scale: 1.02 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
+          exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.55, ease: SMOOTH }}
           className="pointer-events-none absolute inset-0"
           style={{
@@ -248,7 +249,7 @@ export function SurveyScreen() {
               <motion.div
                 key={q.id}
                 layout
-                transition={{ duration: 0.5, ease: POP }}
+                transition={{ duration: 0.5, ease: SMOOTH }}
                 className={cn(
                   "h-2.5 rounded-full transition-colors",
                   isActive && "w-8 bg-[#e6009e]",

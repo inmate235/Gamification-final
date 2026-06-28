@@ -14,7 +14,6 @@ import { MallMap } from "./MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { StoreDetail } from "@/components/overlays/StoreDetail";
 import { Celebration } from "@/components/overlays/Celebration";
-import { ShortcutUnlock } from "@/components/overlays/ShortcutUnlock";
 import { FlashSale } from "@/components/overlays/FlashSale";
 import { ShopOverlay, ShopEntryButton } from "@/components/overlays/ShopOverlay";
 import { SpinningWheel, SpinningWheelEntryButton } from "@/components/overlays/SpinningWheel";
@@ -80,11 +79,10 @@ export function MallExperience() {
     checkStreakOnVisit();
 
     const scheduler = getEventScheduler({
-      onTrialPerkExpired: (_perkId, perkName) => {
-        // Notify the user that a trial perk was lost (VAL-TIER-015). Uses the
-        // spend (red, downward) celebration treatment so the loss is visually
-        // distinct from a token gain.
-        showTokenFeedback("spend", 0, `Trial expired: ${perkName}`);
+      onTrialPerkExpired: (_perkId, _perkName) => {
+        // Trial perk expiry is handled silently — the perk is removed from
+        // the player's perks list by the engine, but no disruptive popup is
+        // shown during gameplay. The TierPerksPanel still reflects the change.
       },
       onMissedDayPenalty: (result) => {
         // Surface the streak-miss penalty via the token-feedback overlay so
@@ -232,7 +230,6 @@ export function MallExperience() {
           {/* Overlays */}
           <StoreDetail />
           <ShopOverlay />
-          <ShortcutUnlock />
           <FlashSale />
           <SpinningWheel />
           <TierUpgrade />

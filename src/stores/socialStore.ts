@@ -25,44 +25,115 @@ import type {
 import {
   phantoms as initialPhantoms,
   initialLeaderboard,
-  samplePhantomAction,
-  PHANTOM_ZONE_POSITIONS,
+  wanderWithinZone,
+  moveTowardTarget,
+  moveTowardZone,
+  pickStoreInZone,
+  pickAdjacentZone,
+  isNearTarget,
+  storeInStoreAction,
+  approachingAction,
+  leavingAction,
+  transitioningAction,
+  idleWanderAction,
+  noticeAction,
 } from "@/data/phantomData";
+import { getStoreById, getZoneById, stores as allStores } from "@/data/mallData";
 import { usePlayerStore } from "./playerStore";
 import { useMapStore } from "./mapStore";
 import { useSessionStore } from "./sessionStore";
+import { useEconomyStore } from "./economyStore";
 
 /* ============================================================================
-   Bartle-type-aware phantom positioning (VAL-CROSS-039)
+   Helpers
    ========================================================================== */
 
-/**
- * Select a zone key for a phantom move, biased by the player's Bartle type.
- *
- * For Explorer-type players (who selected "solo adventure" in the survey),
- * phantoms are preferentially positioned at UNEXPLORED (fogged) zones so
- * more phantom activity appears at unexplored areas, creating a sense of
- * discovery and social proof in the unknown (VAL-CROSS-039).
- *
- * For other Bartle types, phantoms are positioned randomly across all zones
- * (baseline behavior).
- */
-function pickPhantomZoneKey(
-  fogState: Record<string, boolean>,
-  bartleType: string | null,
-): string {
-  const zoneKeys = Object.keys(PHANTOM_ZONE_POSITIONS);
-
-  if (bartleType === "explorer") {
-    // For explorers: 60% chance to pick an unexplored (fogged) zone, 40% any zone.
-    const foggedKeys = zoneKeys.filter((k) => !fogState[k]);
-    if (foggedKeys.length > 0 && Math.random() < 0.6) {
-      return foggedKeys[Math.floor(Math.random() * foggedKeys.length)]!;
-    }
+/** Simple deterministic string hash for deriving per-phantom behavioral variance. */
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) | 0;
   }
-
-  return zoneKeys[Math.floor(Math.random() * zoneKeys.length)]!;
+  return Math.abs(h);
 }
+
+/* ============================================================================
+   Per-phantom behavior state machine
+   (module-level — not stored on PhantomUser to keep the type shape intact)
+   ========================================================================== */
+
+type PhantomPhase =
+  | "wandering"
+  | "approaching-store"
+  | "in-store"
+  | "leaving"
+  | "transitioning";
+
+interface PhantomBehaviorState {
+  phase: PhantomPhase;
+  targetStoreId: string | null;
+  targetZoneId: string | null;
+  ticksInPhase: number;
+  dwellTicks: number;
+}
+
+const phantomStates = new Map<string, PhantomBehaviorState>();
+
+/** Track the player's previous zone to detect zone-entry events. */
+let previousPlayerZone: string | null = null;
+
+/** Create an initial FSM state for a newly observed phantom. */
+function initFSMState(): PhantomBehaviorState {
+  return {
+    phase: "wandering",
+    targetStoreId: null,
+    targetZoneId: null,
+    ticksInPhase: 0,
+    dwellTicks: 0,
+  };
+}
+
+/** Reset all FSM state (called from the store reset). */
+function resetPhantomStates(): void {
+  phantomStates.clear();
+  previousPlayerZone = null;
+}
+
+/** Euclidean distance between two points. */
+function distance(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): number {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+/**
+ * Identify the goalpost-pinned phantom — the closest phantom above the
+ * player's token count within gap <= 3. Token bumps are skipped for this
+ * phantom so the goalpost-shifting invariant (VAL-LEADER-010) is never
+ * broken by in-store score bumps.
+ */
+function pinnedAbovePhantomId(playerTokens: number): string | null {
+  const phantomsList = useSocialStore.getState().phantoms;
+  const above = phantomsList
+    .filter((p) => p.tokenCount > playerTokens)
+    .sort((a, b) => a.tokenCount - b.tokenCount);
+  const closest = above[0];
+  if (!closest) return null;
+  if (closest.tokenCount - playerTokens <= 3) return closest.id;
+  return null;
+}
+
+/** Find active flash sales for a given store. */
+function flashSalesForStore(storeId: string): Array<{ id: string }> {
+  return useEconomyStore
+    .getState()
+    .flashSales.filter((s) => s.storeId === storeId && !s.claimed);
+}
+
+/* ============================================================================
+   Helpers
+   ========================================================================== */
 
 /** Read a leaderboard entry's value for the active sort metric. */
 function entryMetricValue(
@@ -172,20 +243,268 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
   movePhantoms: () => {
     const bartleType = usePlayerStore.getState().bartleType;
     const fogState = useMapStore.getState().fogState;
-    set((state) => ({
-      phantoms: state.phantoms.map((p) => {
-        const nextKey = pickPhantomZoneKey(fogState, bartleType);
-        const nextPos = nextKey
-          ? PHANTOM_ZONE_POSITIONS[nextKey]
-          : p.position;
-        return {
-          ...p,
-          position: nextPos ? { ...nextPos } : p.position,
-          currentAction: samplePhantomAction(),
-          lastActivity: "just now",
-        };
-      }),
-    }));
+    const playerPos = useMapStore.getState().playerPosition;
+    const playerTokens = usePlayerStore.getState().tokens;
+
+    // Detect player zone entry for phantom reactivity.
+    const playerChangedZone =
+      previousPlayerZone !== null && previousPlayerZone !== playerPos.zoneId;
+    previousPlayerZone = playerPos.zoneId;
+
+    // Stores near the player (for "phantom leaves store" reaction).
+    const storesNearPlayer = allStores.filter(
+      (s) => s.zoneId === playerPos.zoneId && distance(s.position, playerPos) < 80,
+    );
+
+    // Identify the goalpost-pinned phantom (skip token bumps for it).
+    const pinnedId = pinnedAbovePhantomId(playerTokens);
+
+    // Collect flash-sale claim side effects to apply after set().
+    const flashSalesToClaim: string[] = [];
+
+    set((state) => {
+      const newPhantoms = state.phantoms.map((p) => {
+        // Get or initialize FSM state.
+        let fsm = phantomStates.get(p.id) ?? initFSMState();
+        const idHash = hashString(p.id);
+        let position = p.position;
+        let currentAction = p.currentAction;
+        let tokenCount = p.tokenCount;
+
+        // --- Player reactivity ---
+
+        // When the player enters a zone, some phantoms already there notice.
+        if (playerChangedZone && position.zoneId === playerPos.zoneId) {
+          if (Math.random() < 0.4) {
+            fsm = { ...initFSMState() };
+            currentAction = noticeAction();
+            phantomStates.set(p.id, fsm);
+            return { ...p, position, currentAction, tokenCount, lastActivity: "just now" };
+          }
+        }
+
+        // When the player is near a store with an in-store phantom, the
+        // phantom may leave that store.
+        if (fsm.phase === "in-store" && fsm.targetStoreId) {
+          const nearStore = storesNearPlayer.find((s) => s.id === fsm.targetStoreId);
+          if (nearStore && Math.random() < 0.5) {
+            fsm = { ...fsm, phase: "leaving", ticksInPhase: 0 };
+            currentAction = leavingAction(nearStore.name);
+            phantomStates.set(p.id, fsm);
+            return { ...p, position, currentAction, tokenCount, lastActivity: "just now" };
+          }
+        }
+
+        // --- FSM transitions ---
+        fsm = { ...fsm, ticksInPhase: fsm.ticksInPhase + 1 };
+
+        switch (fsm.phase) {
+          case "wandering": {
+            const moveChance = 0.55 + (idHash % 30) / 100;
+            if (Math.random() > moveChance) {
+              // Idle — always drift a little so no phantom fully freezes.
+              if (Math.random() < 0.25) currentAction = idleWanderAction();
+              position = wanderWithinZone(position, 20 + (idHash % 15));
+              break;
+            }
+            // Try to target a store in the current zone.
+            const store = pickStoreInZone(position.zoneId);
+            if (store) {
+              // Transition and immediately take the first step toward the store.
+              fsm = { ...fsm, phase: "approaching-store", targetStoreId: store.id, ticksInPhase: 0 };
+              const stepSizeW = 50 + (idHash % 25);
+              position = moveTowardTarget(position, store.position, stepSizeW);
+              currentAction = approachingAction(store.name);
+            } else {
+              // No stores in this zone — transition to an adjacent zone.
+              const adjZone = pickAdjacentZone(position.zoneId, fogState, bartleType);
+              if (adjZone) {
+                // Transition and immediately start moving toward the adjacent zone.
+                fsm = { ...fsm, phase: "transitioning", targetZoneId: adjZone, ticksInPhase: 0 };
+                position = moveTowardZone(position, adjZone, 55);
+                const zone = getZoneById(adjZone);
+                currentAction = transitioningAction(zone?.name ?? adjZone);
+              } else {
+                // Wander locally.
+                position = wanderWithinZone(position, 40 + (idHash % 25));
+                currentAction = idleWanderAction();
+              }
+            }
+            break;
+          }
+
+          case "approaching-store": {
+            const store = fsm.targetStoreId ? getStoreById(fsm.targetStoreId) : null;
+            if (!store) {
+              fsm = { ...fsm, phase: "wandering", targetStoreId: null, ticksInPhase: 0 };
+              currentAction = idleWanderAction();
+              break;
+            }
+            const stepSize = 50 + (idHash % 25);
+            position = moveTowardTarget(position, store.position, stepSize);
+            if (isNearTarget(position, store.position, 25)) {
+              // Arrived — enter the store.
+              const dwellTicks = 2 + Math.floor(Math.random() * 4);
+              fsm = { ...fsm, phase: "in-store", ticksInPhase: 0, dwellTicks };
+              currentAction = storeInStoreAction(store.id);
+              // Snap near the store with slight jitter.
+              position = {
+                x: store.position.x + (Math.random() - 0.5) * 20,
+                y: store.position.y + (Math.random() - 0.5) * 20,
+                zoneId: position.zoneId,
+              };
+            } else {
+              currentAction = approachingAction(store.name);
+            }
+            break;
+          }
+
+          case "in-store": {
+            const store = fsm.targetStoreId ? getStoreById(fsm.targetStoreId) : null;
+            if (!store) {
+              fsm = { ...fsm, phase: "wandering", targetStoreId: null, ticksInPhase: 0 };
+              currentAction = idleWanderAction();
+              break;
+            }
+            // Jitter near the store.
+            position = {
+              x: store.position.x + (Math.random() - 0.5) * 20,
+              y: store.position.y + (Math.random() - 0.5) * 20,
+              zoneId: position.zoneId,
+            };
+            currentAction = storeInStoreAction(store.id);
+
+            // Dwell complete — produce consequences and leave.
+            if (fsm.ticksInPhase >= fsm.dwellTicks) {
+              // Occasionally bump tokens (skip pinned phantom).
+              if (p.id !== pinnedId && Math.random() < 0.35) {
+                tokenCount += 1 + Math.floor(Math.random() * 2);
+              }
+              // Occasionally "claim" a flash sale for this store.
+              if (Math.random() < 0.2) {
+                const sales = flashSalesForStore(store.id);
+                if (sales.length > 0) {
+                  flashSalesToClaim.push(sales[0]!.id);
+                }
+              }
+              fsm = { ...fsm, phase: "leaving", ticksInPhase: 0 };
+              currentAction = leavingAction(store.name);
+            }
+            break;
+          }
+
+          case "leaving": {
+            const storeName = fsm.targetStoreId
+              ? getStoreById(fsm.targetStoreId)?.name ?? "the store"
+              : "the store";
+            const zone = getZoneById(position.zoneId);
+            const target = zone?.center ?? position;
+            position = moveTowardTarget(position, target, 45);
+            if (fsm.ticksInPhase >= 2 || isNearTarget(position, target, 40)) {
+              fsm = { ...fsm, phase: "wandering", targetStoreId: null, ticksInPhase: 0 };
+              currentAction = idleWanderAction();
+            } else {
+              currentAction = leavingAction(storeName);
+            }
+            break;
+          }
+
+          case "transitioning": {
+            const targetZoneId = fsm.targetZoneId;
+            if (!targetZoneId) {
+              fsm = { ...fsm, phase: "wandering", targetZoneId: null, ticksInPhase: 0 };
+              currentAction = idleWanderAction();
+              break;
+            }
+            position = moveTowardZone(position, targetZoneId, 55);
+            if (position.zoneId === targetZoneId) {
+              fsm = { ...fsm, phase: "wandering", targetZoneId: null, ticksInPhase: 0 };
+              currentAction = idleWanderAction();
+            } else {
+              const zone = getZoneById(targetZoneId);
+              currentAction = transitioningAction(zone?.name ?? targetZoneId);
+            }
+            break;
+          }
+        }
+
+        phantomStates.set(p.id, fsm);
+        return { ...p, position, currentAction, tokenCount, lastActivity: "just now" };
+      });
+
+      // --- Separation pass (skip in-store & approaching phantoms) ---
+      const MIN_DIST = 90;
+      const REPULSION_FORCE = 0.4;
+
+      for (let step = 0; step < 2; step++) {
+        for (let i = 0; i < newPhantoms.length; i++) {
+          const p1 = newPhantoms[i]!;
+          const fsm1 = phantomStates.get(p1.id);
+          // Skip phantoms that are targeted at a store position.
+          if (fsm1 && (fsm1.phase === "in-store" || fsm1.phase === "approaching-store")) {
+            continue;
+          }
+
+          // Separate from player.
+          if (p1.position.zoneId === playerPos.zoneId) {
+            const dx = p1.position.x - playerPos.x;
+            const dy = p1.position.y - playerPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            if (dist < MIN_DIST) {
+              const push = (MIN_DIST - dist) * REPULSION_FORCE;
+              p1.position = wanderWithinZone(
+                {
+                  x: p1.position.x + (dx / dist) * push,
+                  y: p1.position.y + (dy / dist) * push,
+                  zoneId: p1.position.zoneId,
+                },
+                0,
+              );
+            }
+          }
+
+          // Separate from other phantoms.
+          for (let j = i + 1; j < newPhantoms.length; j++) {
+            const p2 = newPhantoms[j]!;
+            const fsm2 = phantomStates.get(p2.id);
+            if (fsm2 && (fsm2.phase === "in-store" || fsm2.phase === "approaching-store")) {
+              continue;
+            }
+            if (p1.position.zoneId === p2.position.zoneId) {
+              const dx = p1.position.x - p2.position.x;
+              const dy = p1.position.y - p2.position.y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              if (dist < MIN_DIST) {
+                const push = (MIN_DIST - dist) * REPULSION_FORCE * 0.5;
+                p1.position = wanderWithinZone(
+                  {
+                    x: p1.position.x + (dx / dist) * push,
+                    y: p1.position.y + (dy / dist) * push,
+                    zoneId: p1.position.zoneId,
+                  },
+                  0,
+                );
+                p2.position = wanderWithinZone(
+                  {
+                    x: p2.position.x - (dx / dist) * push,
+                    y: p2.position.y - (dy / dist) * push,
+                    zoneId: p2.position.zoneId,
+                  },
+                  0,
+                );
+              }
+            }
+          }
+        }
+      }
+
+      return { phantoms: newPhantoms };
+    });
+
+    // Apply flash-sale claim side effects after set().
+    for (const saleId of flashSalesToClaim) {
+      useEconomyStore.getState().removeFlashSale(saleId);
+    }
   },
 
   updateLeaderboard: () => {
@@ -264,13 +583,15 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
       ),
     })),
 
-  reset: () =>
+  reset: () => {
+    resetPhantomStates();
     set({
       phantoms: initialPhantoms.map((p) => ({ ...p })),
       leaderboard: buildInitialLeaderboardWithPlayer(),
       proximityAlerts: [],
       activeMetric: "tokens",
-    }),
+    });
+  },
 }));
 
 export default useSocialStore;

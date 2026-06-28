@@ -54,6 +54,20 @@ export function PlayerAvatar() {
 
   const hasWaypoints = path.x.length > 1;
 
+  // Track target x direction to flip the avatar image
+  const targetX = path.x[path.x.length - 1] ?? playerPosition.x;
+  const [isFlipped, setIsFlipped] = useState(false);
+  const prevTargetXRef = useRef(targetX);
+
+  useEffect(() => {
+    if (targetX < prevTargetXRef.current) {
+      setIsFlipped(true); // walking left
+    } else if (targetX > prevTargetXRef.current) {
+      setIsFlipped(false); // walking right
+    }
+    prevTargetXRef.current = targetX;
+  }, [targetX]);
+
   return (
     <motion.g
       key={path.zone}
@@ -64,37 +78,66 @@ export function PlayerAvatar() {
       }}
       transition={{
         duration: MOVE_DURATION,
-        ease: "linear",
+        ease: "easeInOut",
         times: hasWaypoints ? [0, 0.5, 1] : undefined,
       }}
       data-testid="player-avatar"
       aria-label="Your avatar"
     >
-      {/* Outer pulsing glow ring */}
-      <motion.circle
-        r={14}
-        fill="#e6009e"
-        opacity={0.25}
-        animate={{ scale: [1, 1.5, 1], opacity: [0.25, 0.05, 0.25] }}
+      {/* Gamified Player Name Tag Pill */}
+      <g transform="translate(0, -80)" style={{ pointerEvents: "none", userSelect: "none" }}>
+        <rect
+          x={-24}
+          y={-8}
+          width={48}
+          height={16}
+          rx={6}
+          fill="#ffe600"
+          stroke="#141414"
+          strokeWidth={1.5}
+          style={{ filter: "drop-shadow(0 2px 4px rgba(20,20,20,0.2))" }}
+        />
+        <text
+          x={0}
+          y={3}
+          textAnchor="middle"
+          fill="#141414"
+          fontSize="9px"
+          fontWeight="900"
+          fontFamily="system-ui, -apple-system, sans-serif"
+        >
+          You
+        </text>
+      </g>
+
+      {/* Walking sway/bobbing animation wrapper */}
+      <motion.g
+        animate={{
+          y: [0, -4, 0],
+          rotate: [-3, 3, -3],
+          scaleX: isFlipped ? -1 : 1,
+        }}
         transition={{
-          duration: 2.4,
-          ease: PREMIUM_EASE,
-          repeat: Infinity,
+          y: { duration: 0.7, repeat: Infinity, ease: "easeInOut" },
+          rotate: { duration: 0.7, repeat: Infinity, ease: "easeInOut" },
+          scaleX: { duration: 0.25 }
         }}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
-      />
-      {/* Mid glow */}
-      <circle r={9} fill="#e6009e" opacity={0.35} />
-      {/* Core magenta dot */}
-      <circle
-        r={6}
-        fill="#e6009e"
-        stroke="#ff9ed4"
-        strokeWidth={1.5}
-        style={{ filter: "drop-shadow(0 0 8px rgba(230,0,158,0.8))" }}
-      />
-      {/* Inner highlight */}
-      <circle r={2} fill="#ffd6f0" opacity={0.9} />
+      >
+        {/* Animated shopper GIF — 172×129px (player-sized, largest on map) */}
+        <image
+          href="/assets/figma/shopper Icon/Original GIF 800x600 Cut.gif"
+          x={-86}
+          y={-64.5}
+          width={172}
+          height={129}
+          preserveAspectRatio="xMidYMid meet"
+          style={{
+            filter: "drop-shadow(0 0 12px rgba(230,0,158,0.7))",
+            imageRendering: "auto",
+          }}
+        />
+      </motion.g>
     </motion.g>
   );
 }

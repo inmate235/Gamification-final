@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useSocialStore } from "@/stores/socialStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -36,15 +36,32 @@ interface PhantomAvatarProps {
 function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   const { x, y } = phantom.position;
 
-  // Deterministic staggered delay derived from the phantom id so the pulsing
-  // rings are desynchronized without calling Math.random during render.
-  const pulseDelay = useMemo(() => {
+  // Deterministic staggered delay and movement speed derived from the phantom
+  // id so the pulsing rings are desynchronized and each phantom walks at a
+  // slightly different pace (4–10s) without calling Math.random during render.
+  const { pulseDelay, moveDuration } = useMemo(() => {
     let hash = 0;
     for (let i = 0; i < phantom.id.length; i += 1) {
       hash = (hash * 31 + phantom.id.charCodeAt(i)) | 0;
     }
-    return Math.abs(hash) % 1500 / 1000;
+    const absHash = Math.abs(hash);
+    return {
+      pulseDelay: (absHash % 1500) / 1000,
+      moveDuration: 4 + (absHash % 7), // 4–10 seconds
+    };
   }, [phantom.id]);
+
+  const [isFlipped, setIsFlipped] = useState(false);
+  const prevXRef = useRef(x);
+
+  useEffect(() => {
+    if (x < prevXRef.current) {
+      setIsFlipped(true); // walking left
+    } else if (x > prevXRef.current) {
+      setIsFlipped(false); // walking right
+    }
+    prevXRef.current = x;
+  }, [x]);
 
   return (
     <motion.g
@@ -55,51 +72,67 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
       transition={{
         opacity: { duration: 0.5, ease: PREMIUM_EASE },
         scale: { duration: 0.5, ease: PREMIUM_EASE },
-        x: { duration: 8, ease: "linear" },
-        y: { duration: 8, ease: "linear" }
+        x: { duration: moveDuration, ease: "easeInOut" },
+        y: { duration: moveDuration, ease: "easeInOut" }
       }}
       style={{ transformBox: "fill-box", transformOrigin: "center" }}
       data-testid={`phantom-avatar-${phantom.id}`}
       aria-label={`${phantom.name}: ${phantom.currentAction}`}
     >
-      {/* Subtle pulsing ring (purple, distinct from player magenta) */}
-      <motion.circle
-        r={10}
-        fill="#7c3aed"
-        opacity={0.15}
-        animate={{ scale: [1, 1.3, 1], opacity: [0.15, 0.03, 0.15] }}
+      {/* Gamified Name Tag Pill */}
+      <g transform="translate(0, -48)" style={{ pointerEvents: "none", userSelect: "none" }}>
+        <rect
+          x={-22}
+          y={-7}
+          width={44}
+          height={14}
+          rx={5}
+          fill="rgba(26, 26, 26, 0.85)"
+          stroke="#c4b5fd"
+          strokeWidth={1}
+          style={{ filter: "drop-shadow(0 1px 3px rgba(20,20,20,0.12))" }}
+        />
+        <text
+          x={0}
+          y={3}
+          textAnchor="middle"
+          fill="#ffffff"
+          fontSize="8px"
+          fontWeight="700"
+          fontFamily="system-ui, -apple-system, sans-serif"
+        >
+          {phantom.name}
+        </text>
+      </g>
+
+      {/* Walking sway/bobbing animation wrapper */}
+      <motion.g
+        animate={{
+          y: [0, -3, 0],
+          rotate: [-3, 3, -3],
+          scaleX: isFlipped ? -1 : 1,
+        }}
         transition={{
-          duration: 3,
-          ease: PREMIUM_EASE,
-          repeat: Infinity,
-          delay: pulseDelay,
+          y: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
+          rotate: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
+          scaleX: { duration: 0.25 }
         }}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
-      />
-      {/* Mid glow */}
-      <circle r={7} fill="#7c3aed" opacity={0.25} />
-      {/* Core purple dot (smaller than player's magenta dot) */}
-      <circle
-        r={4.5}
-        fill="#7c3aed"
-        stroke="#c4b5fd"
-        strokeWidth={1}
-        style={{ filter: "drop-shadow(0 0 5px rgba(124,58,237,0.6))" }}
-      />
-      {/* Inner highlight */}
-      <circle r={1.5} fill="#ede9fe" opacity={0.8} />
-
-      {/* Activity label — name + action, shown as SVG text */}
-      <text
-        x={0}
-        y={-16}
-        textAnchor="middle"
-        className="fill-[#c4b5fd] text-[9px] font-medium"
-        style={{ pointerEvents: "none", userSelect: "none" }}
-        opacity={0.7}
       >
-        {phantom.name}
-      </text>
+        {/* Animated shopper GIF — 90×67.5px (smaller than player's) */}
+        <image
+          href="/assets/figma/shopper Icon/Original GIF 800x600 Cut.gif"
+          x={-45}
+          y={-33.75}
+          width={90}
+          height={67.5}
+          preserveAspectRatio="xMidYMid meet"
+          style={{
+            filter: "drop-shadow(0 0 5px rgba(124,58,237,0.5))",
+            imageRendering: "auto",
+          }}
+        />
+      </motion.g>
     </motion.g>
   );
 }

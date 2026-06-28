@@ -430,27 +430,27 @@ export function ProximityAlertBanner() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -16, scale: 0.95 }}
         transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-        className="fixed left-1/2 top-20 z-30 -translate-x-1/2 px-3 sm:top-24"
+        className="fixed left-1/2 top-[96px] z-30 -translate-x-1/2 px-3 w-[calc(100%-120px)] max-w-[280px] sm:w-auto"
         data-testid="proximity-alert-banner"
       >
         <button
           type="button"
           onClick={() => dismiss(latest.id)}
-          className="flex items-center gap-2.5 rounded-full bg-white px-4 py-2.5 ring-2 ring-[#e6009e]/30 shadow-[0_4px_16px_rgba(20,20,20,0.1)] transition-all duration-200 active:scale-[0.97]"
+          className="flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-full bg-[#141414] px-4 py-2 ring-1 ring-[#ffffff]/15 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-200 active:scale-[0.97] hover:bg-[#202020] backdrop-blur-md"
           aria-label={`${latest.message} — tap to dismiss`}
         >
           <motion.span
-            animate={{ scale: [1, 1.18, 1] }}
+            animate={{ scale: [1, 1.25, 1] }}
             transition={{
               duration: 1.4,
               ease: PREMIUM_EASE,
               repeat: Infinity,
             }}
           >
-            <CaretUp size={14} weight="fill" className="text-[#e6009e]" />
+            <CaretUp size={14} weight="bold" className="text-[#e6b800]" />
           </motion.span>
           <span
-            className="text-xs font-medium text-[#141414]"
+            className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.06em] text-white truncate"
             data-testid="proximity-alert-text"
           >
             {latest.message}

@@ -165,10 +165,10 @@ export const TIER_PERKS: Record<Tier, TierPerkSet> = {
     dealRadar: "Deal radar + priority alerts",
     exclusives: [
       {
-        id: "neo-free-shortcuts",
+        id: "neo-infinite-sugar",
         icon: "Lightning",
-        label: "Free shortcut unlocks",
-        value: "All corridors open, no token cost",
+        label: "Infinite Sugar Rush",
+        value: "Unlimited refills at the Sugar Station",
         neodymiumExclusive: true,
       },
       {
@@ -234,9 +234,9 @@ export function buildTrialPerks(now: number = Date.now()): Perk[] {
       expiresAt,
     },
     {
-      id: "trial-free-shortcut",
-      name: "Free Shortcut (Trial)",
-      description: "One free shortcut unlock, on the house.",
+      id: "trial-free-sugar",
+      name: "Free Sugar Rush (Trial)",
+      description: "One free hyper-consumable from the Sugar Station.",
       type: "trial",
       expiresAt,
     },

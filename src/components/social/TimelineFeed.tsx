@@ -6,11 +6,52 @@ import { TimelineVideo } from "./TimelineVideo";
 import { TimelineOnboardingPopup } from "./TimelineOnboardingPopup";
 import { useUIStore } from "@/stores/uiStore";
 
+/* ============================================================================
+   Target store mechanism — allows other components (e.g. ShopOverlay) to
+   request that the timeline scroll to a specific store's feed item on open.
+   ========================================================================== */
+
+let _targetStoreId: string | null = null;
+
+/**
+ * Set the storeId the timeline should scroll to when it next opens.
+ * Pass null to clear. The value is consumed once on open then reset.
+ */
+export function setTimelineTargetStore(storeId: string | null): void {
+  _targetStoreId = storeId;
+}
+
 export function TimelineFeed() {
   const isTimelineOpen = useUIStore((s) => s.isTimelineOpen);
   const setTimelineOpen = useUIStore((s) => s.setTimelineOpen);
   const [activeIndex, setActiveIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToTarget = useRef(false);
+
+  // Scroll to the target store's feed item when the timeline opens
+  useEffect(() => {
+    if (!isTimelineOpen || !containerRef.current || hasScrolledToTarget.current) return;
+
+    if (_targetStoreId) {
+      const targetIndex = timelineFeed.findIndex((item) => item.storeId === _targetStoreId);
+      if (targetIndex >= 0) {
+        const child = containerRef.current.children[targetIndex] as HTMLElement | undefined;
+        if (child) {
+          child.scrollIntoView({ behavior: "auto" });
+          setActiveIndex(targetIndex);
+        }
+      }
+      hasScrolledToTarget.current = true;
+      _targetStoreId = null;
+    }
+  }, [isTimelineOpen]);
+
+  // Reset the scroll flag when the timeline closes so it works on re-open
+  useEffect(() => {
+    if (!isTimelineOpen) {
+      hasScrolledToTarget.current = false;
+    }
+  }, [isTimelineOpen]);
 
   // Intersection observer to determine active video
   useEffect(() => {

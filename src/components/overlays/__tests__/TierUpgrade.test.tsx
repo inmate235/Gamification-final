@@ -60,6 +60,17 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Sparkle: make("Sparkle"),
     ArrowRight: make("ArrowRight"),
     Medal: make("Medal"),
+    Crown: make("Crown"),
+    Coins: make("Coins"),
+    Timer: make("Timer"),
+    Users: make("Users"),
+    Warning: make("Warning"),
+    Fire: make("Fire"),
+    CheckCircle: make("CheckCircle"),
+    Tag: make("Tag"),
+    Eye: make("Eye"),
+    Lightning: make("Lightning"),
+    TrendDown: make("TrendDown"),
   };
 });
 

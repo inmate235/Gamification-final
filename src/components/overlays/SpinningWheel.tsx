@@ -351,15 +351,42 @@ function SpinningWheelContent() {
               </svg>
             </div>
 
-            {/* Outer ring — glossy 3D candy pink border */}
-            <div
-              className="absolute inset-0 rounded-full border-[10px] border-[#e6009e] shadow-[inset_0_4px_8px_rgba(255,255,255,0.7),inset_0_-4px_8px_rgba(0,0,0,0.5),0_12px_32px_rgba(230,0,158,0.4)]"
-              style={{
-                background: "transparent",
-                zIndex: 10,
-                pointerEvents: "none"
-              }}
-            />
+            {/* Outer ring — glossy 3D candy pink border (Candy-Crush premium pop) */}
+            <div className="absolute inset-0 z-10 pointer-events-none">
+              {/* Ambient glow halo (subtle pulse) */}
+              <motion.div
+                className="absolute -inset-3 rounded-full bg-[#e6009e]/35 blur-2xl"
+                animate={{ opacity: [0.45, 0.75, 0.45], scale: [1, 1.04, 1] }}
+                transition={{ duration: 2.4, ease: "easeInOut", repeat: Infinity }}
+              />
+              {/* Main candy ring — radial gradient + ring mask */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle at 32% 24%, #ffc2eb 0%, #ff6ccb 26%, #e6009e 58%, #a80071 100%)",
+                  WebkitMask:
+                    "radial-gradient(circle, transparent calc(100% - 12px), #000 calc(100% - 12px))",
+                  mask: "radial-gradient(circle, transparent calc(100% - 12px), #000 calc(100% - 12px))",
+                  boxShadow:
+                    "inset 0 3px 7px rgba(255,255,255,0.9), inset 0 -5px 9px rgba(110,0,72,0.65), 0 14px 38px rgba(230,0,158,0.6), 0 0 0 1px rgba(255,255,255,0.55)",
+                }}
+              />
+              {/* Specular top-left shine (screen blend for glossy pop) */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle at 30% 18%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 32%)",
+                  WebkitMask:
+                    "radial-gradient(circle, transparent calc(100% - 12px), #000 calc(100% - 12px))",
+                  mask: "radial-gradient(circle, transparent calc(100% - 12px), #000 calc(100% - 12px))",
+                  mixBlendMode: "screen",
+                }}
+              />
+              {/* Inner bright rim — crisp candy edge against segments */}
+              <div className="absolute inset-[10px] rounded-full ring-1 ring-white/75 shadow-[inset_0_2px_5px_rgba(255,255,255,0.65)]" />
+            </div>
 
             {/* Rotating wheel SVG */}
             <motion.svg

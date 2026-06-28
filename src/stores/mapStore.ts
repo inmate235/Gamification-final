@@ -19,7 +19,6 @@ import {
   areZonesAdjacent,
   ZONE_ENTRANCE,
 } from "@/data/mallData";
-import { useEconomyStore } from "./economyStore";
 
 /* ============================================================================
    Non-linear exploration scaling
@@ -151,14 +150,7 @@ export const useMapStore = create<MapStore>((set, get) => ({
 
   isAdjacent: (fromZoneId, toZoneId) => {
     // Static corridor adjacency.
-    if (areZonesAdjacent(fromZoneId, toZoneId)) return true;
-    // Unlocked shortcut routes (faster paths purchased with tokens).
-    const edges = useEconomyStore.getState().getUnlockedEdges();
-    return edges.some(
-      ([a, b]) =>
-        (a === fromZoneId && b === toZoneId) ||
-        (a === toZoneId && b === fromZoneId)
-    );
+    return areZonesAdjacent(fromZoneId, toZoneId);
   },
 
   visitStore: (storeId) =>

@@ -71,16 +71,15 @@ export function awardWheelReward(baseTokens: number): number {
    ========================================================================== */
 
 /**
- * Unlock a shortcut: deducts its frozen deficit tokenCost when affordable,
- * opening the faster route. Shows a spend feedback on success. Returns true
- * when the unlock succeeded (VAL-TOKEN-008, VAL-TOKEN-003).
+ * Buy a sugar consumable: deducts the dynamic tokenCost and shows a spend feedback.
+ * Returns true when the purchase succeeded.
  */
-export function unlockShortcut(shortcutId: string): boolean {
-  const shortcut = useEconomyStore
+export function buySugarItem(itemId: string): boolean {
+  const item = useEconomyStore
     .getState()
-    .shortcuts.find((s) => s.id === shortcutId);
-  const cost = shortcut?.tokenCost ?? 0;
-  const ok = useEconomyStore.getState().unlockShortcut(shortcutId);
+    .sugarItems.find((s) => s.id === itemId);
+  const cost = item?.tokenCost ?? 0;
+  const ok = useEconomyStore.getState().buySugarItem(itemId);
   if (ok) {
     showTokenFeedback("spend", cost, `-${cost} Tokens`);
   }
@@ -134,7 +133,7 @@ const tokenEconomy = {
   showTokenFeedback,
   awardTaskReward,
   awardWheelReward,
-  unlockShortcut,
+  buySugarItem,
   claimFlashSale,
   buySpins,
 };

@@ -264,24 +264,15 @@ export interface FlashSale {
 }
 
 /**
- * A token-purchasable shortcut that opens a faster route between two zones.
- * When `unlocked` becomes true the two zones are treated as adjacent by the
- * mapStore, and a distinct corridor line is drawn on the map.
- *
- * `tokenCost` is the deficit-engineered price FROZEN at the moment the
- * shortcut became the active offer (balance + 2..3 at that time). It is the
- * exact amount deducted on unlock. The live, always-just-out-of-reach teaser
- * price shown on the entry button is `economyStore.liveDeficitPrice` which
- * recalculates every scheduler tick.
+ * A highly addictive consumable item purchased from the Sugar Station.
+ * Tapping "buy" deducts the exact tokenCost and triggers an instant
+ * celebration.
  */
-export interface Shortcut {
+export interface SugarItem {
   id: string;
   name: string;
   description: string;
-  fromZoneId: string;
-  toZoneId: string;
-  tokenCost: number; // frozen deficit price (balance + 2..3 at activation)
-  unlocked: boolean;
+  tokenCost: number; // dynamically scaling price
 }
 
 export type RewardDensityPhase = "hook" | "chase";
@@ -299,8 +290,8 @@ export interface EconomyState {
   spinningWheel: SpinningWheelState;
   rewardDensity: { phase: RewardDensityPhase; sessionMinutes: number };
   deficitMultiplier: number;
-  /** Token-purchasable shortcuts (faster routes between zones). */
-  shortcuts: Shortcut[];
+  /** Addictive consumables purchased from the Sugar Station. */
+  sugarItems: SugarItem[];
   /**
    * The live deficit price (current balance + 2..3), recalculated every
    * scheduler tick. Used for the persistent "always short" spend teaser so

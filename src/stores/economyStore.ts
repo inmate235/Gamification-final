@@ -10,9 +10,9 @@
  */
 
 import { create } from "zustand";
-import type { EconomyState, FlashSale, Shortcut } from "@/types";
+import type { EconomyState, FlashSale } from "@/types";
 import { usePlayerStore } from "./playerStore";
-import { shortcuts as shortcutSeed, unlockedShortcutEdges } from "@/data/shortcutData";
+import { SUGAR_ITEMS } from "@/data/sugarData";
 
 /* ============================================================================
    Constants
@@ -85,56 +85,23 @@ export interface EconomyStore extends EconomyState {
   setDeficitMultiplier: (multiplier: number) => void;
   /** Recompute the live deficit teaser price (called each scheduler tick). */
   refreshLiveDeficitPrice: () => void;
-  /** Returns the first locked shortcut (the active buyable offer), or null. */
-  getActiveShortcut: () => Shortcut | null;
-  /** Returns unlocked shortcut edges for map adjacency. */
-  getUnlockedEdges: () => Array<[string, string]>;
   /**
-   * Unlock a shortcut: deducts its frozen tokenCost when affordable and
-   * marks it unlocked (opening the faster route). Freezes the next locked
-   * shortcut's cost at the new deficit price. Returns false when the balance
-   * is insufficient or the shortcut is already unlocked / unknown.
+   * Buy an addictive sugar consumable from the Sugar Station.
    */
-  unlockShortcut: (shortcutId: string) => boolean;
+  buySugarItem: (itemId: string) => boolean;
   reset: () => void;
 }
 
-const initialEconomyState: Omit<EconomyState, "shortcuts" | "liveDeficitPrice"> = {
+const initialEconomyState: Omit<EconomyState, "sugarItems" | "liveDeficitPrice"> = {
   flashSales: [],
   spinningWheel: { available: false, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
   rewardDensity: { phase: "hook", sessionMinutes: 0 },
   deficitMultiplier: 1,
 };
 
-/**
- * Build a fresh shortcuts list and freeze the first locked shortcut's cost at
- * the deficit price for the given balance. Used at init, reset, and after an
- * unlock (with the post-unlock balance) so the next offer is always priced
- * 2-3 tokens above what the user currently holds.
- */
-function buildShortcuts(balance: number): Shortcut[] {
-  const list = shortcutSeed.map((s) => ({ ...s, unlocked: false }));
-  if (list.length > 0) {
-    list[0]!.tokenCost = calculateDeficitPrice(balance);
-  }
-  return list;
-}
-
-/** Re-freeze the first locked shortcut's cost at the current deficit price. */
-function refreezeNextLockedShortcut(
-  list: Shortcut[],
-  balance: number
-): Shortcut[] {
-  const idx = list.findIndex((s) => !s.unlocked);
-  if (idx === -1) return list;
-  return list.map((s, i) =>
-    i === idx ? { ...s, tokenCost: calculateDeficitPrice(balance) } : s
-  );
-}
-
 export const useEconomyStore = create<EconomyStore>((set, get) => ({
   ...initialEconomyState,
-  shortcuts: buildShortcuts(0),
+  sugarItems: SUGAR_ITEMS,
   liveDeficitPrice: calculateDeficitPrice(0),
 
   triggerFlashSale: (sale) => {
@@ -294,28 +261,20 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
   refreshLiveDeficitPrice: () =>
     set({ liveDeficitPrice: calculateDeficitPrice(usePlayerStore.getState().tokens) }),
 
-  getActiveShortcut: () => {
-    const list = get().shortcuts;
-    return list.find((s) => !s.unlocked) ?? null;
-  },
-
-  getUnlockedEdges: () => unlockedShortcutEdges(get().shortcuts),
-
-  unlockShortcut: (shortcutId) => {
+  buySugarItem: (itemId) => {
     const state = get();
-    const shortcut = state.shortcuts.find((s) => s.id === shortcutId);
-    if (!shortcut || shortcut.unlocked) return false;
-    const ok = usePlayerStore.getState().spendTokens(shortcut.tokenCost);
+    const item = state.sugarItems.find((s) => s.id === itemId);
+    if (!item) return false;
+    const ok = usePlayerStore.getState().spendTokens(item.tokenCost);
     if (!ok) return false;
-    // Mark unlocked and freeze the next locked shortcut's cost at the new
-    // (post-spend) deficit price so the following offer is always 2-3 above
-    // the user's new balance.
+    
+    // Scale token cost slightly after purchase to build sunk cost and scarcity
     const newBalance = usePlayerStore.getState().tokens;
-    const updated = state.shortcuts.map((s) =>
-      s.id === shortcutId ? { ...s, unlocked: true } : s
+    const updated = state.sugarItems.map((s) =>
+      s.id === itemId ? { ...s, tokenCost: Math.floor(s.tokenCost * 1.5) } : s
     );
     set({
-      shortcuts: refreezeNextLockedShortcut(updated, newBalance),
+      sugarItems: updated,
       liveDeficitPrice: calculateDeficitPrice(newBalance),
     });
     return true;
@@ -324,7 +283,7 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
   reset: () =>
     set({
       ...initialEconomyState,
-      shortcuts: buildShortcuts(0),
+      sugarItems: SUGAR_ITEMS,
       liveDeficitPrice: calculateDeficitPrice(0),
     }),
 }));

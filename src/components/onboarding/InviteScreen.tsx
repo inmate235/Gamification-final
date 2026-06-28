@@ -70,6 +70,7 @@ const isTest =
 const EXIT_DELAY = isTest ? 0 : 550;
 const SMOOTH = [0.22, 0.61, 0.36, 1] as const;
 const POP = [0.34, 1.56, 0.64, 1] as const;
+const GENTLE_POP = [0.34, 1.16, 0.64, 1] as const;
 
 /**
  * Auto-format raw input into XXXXX-0000-XXX.
@@ -465,8 +466,8 @@ export function InviteScreen() {
               key="welcome-phase"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: POP }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.5, ease: SMOOTH }}
               className="rounded-[1.8rem] border border-[#141414]/10 bg-white/86 backdrop-blur-[2px] shadow-[0_14px_34px_rgba(20,20,20,0.08)] flex flex-col items-center justify-between flex-1 text-center overflow-hidden relative"
               onClick={skipAnimation}
             >
@@ -560,7 +561,7 @@ export function InviteScreen() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.25, ease: POP }}
+                  transition={{ duration: 0.6, delay: 0.25, ease: SMOOTH }}
                   className="flex flex-col items-center gap-2"
                 >
                   <h1 className="sticker-heading text-[clamp(2.1rem,9vw,2.9rem)]">
@@ -582,7 +583,7 @@ export function InviteScreen() {
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5, ease: POP }}
+                transition={{ duration: 0.6, delay: 0.5, ease: SMOOTH }}
                 className="w-full px-5 sm:px-8"
               >
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-[#8a8a8a]">
@@ -597,7 +598,7 @@ export function InviteScreen() {
                       transition={{
                         duration: 0.4,
                         delay: 0.65 + i * 0.1,
-                        ease: POP,
+                        ease: GENTLE_POP,
                       }}
                       className="flex items-center gap-3 rounded-2xl border border-[#141414]/8 bg-white/70 px-4 py-2.5"
                       style={{ boxShadow: "0 2px 8px rgba(20,20,20,0.06)" }}
@@ -625,7 +626,7 @@ export function InviteScreen() {
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.9, ease: POP }}
+                transition={{ duration: 0.5, delay: 0.9, ease: SMOOTH }}
                 className="w-full px-5 sm:px-8 pb-8 flex flex-col items-center gap-3"
                 onClick={(e) => e.stopPropagation()}
               >

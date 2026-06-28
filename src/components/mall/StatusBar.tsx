@@ -214,7 +214,7 @@ export function StatusBar() {
         <motion.div
           custom={2}
           variants={statVariants}
-          className="flex items-center gap-1.5"
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-gradient-to-r from-[#fff7ed] to-[#ffedd5] ring-1 ring-[#f97316]/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
           data-testid="status-streak"
           aria-label="Day Streak"
         >
@@ -227,20 +227,20 @@ export function StatusBar() {
               size={15}
               weight="fill"
               className={cn(
-                "text-[#f59e0b]",
-                streakBroken && "opacity-50"
+                "text-[#ea580c]",
+                streakBroken && "opacity-50 grayscale"
               )}
             />
           </motion.div>
-          <span className="font-mono text-sm font-semibold tabular-nums text-[#141414] sm:text-base">
-            {streakCount}
+          <span className="font-mono text-[13px] font-bold tabular-nums text-[#c2410c] sm:text-sm">
+            {streakCount} <span className="text-[9px] uppercase tracking-wider opacity-80">Day</span>
           </span>
           {comebackActive && (
             <motion.span
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: POP }}
-              className="flex items-center gap-0.5 rounded-full bg-[#e6009e]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#e6009e]"
+              className="ml-0.5 flex items-center gap-0.5 rounded-full bg-[#ea580c]/15 px-1 py-0.5 text-[9px] font-bold text-[#ea580c]"
               data-testid="status-comeback-bonus"
             >
               <Lightning size={8} weight="fill" />
