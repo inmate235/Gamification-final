@@ -129,6 +129,8 @@ describe("EventScheduler", () => {
         available: false,
         lastSpin: past,
         spinCount: 1,
+        extraSpins: 0,
+        lastSpinNearMiss: false,
       },
     });
 
