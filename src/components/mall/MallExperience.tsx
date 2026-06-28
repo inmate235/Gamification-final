@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { getEventScheduler, resetEventSchedulerSingleton } from "@/engine/EventScheduler";
 import { showTokenFeedback } from "@/engine/tokenEconomy";
 import { checkForTierUpgrade } from "@/engine/tierEngine";
@@ -143,78 +143,108 @@ export function MallExperience() {
     };
   }, [grantOnboardingTrialPerks]);
 
-  // After the user successfully leaves the mall (final "Leave anyway" on
-  // Layer 3), render the goodbye screen in place of the mall experience
-  // (VAL-EXIT-017, VAL-EXIT-032). The exit-friction state has already been
-  // reset on leave.
-  if (exited) {
-    return <GoodbyeScreen />;
-  }
-
   return (
-    <main className="relative z-10 flex min-h-[100dvh] flex-col">
-      {/* Top chrome */}
-      <StatusBar />
+    <AnimatePresence mode="wait">
+      {exited ? (
+        <motion.div
+          key="goodbye-screen"
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: PREMIUM_EASE }}
+        >
+          <GoodbyeScreen />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="mall-experience"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0, y: -16, filter: "blur(4px)" }}
+          transition={{ duration: 0.5, ease: PREMIUM_EASE }}
+          className="relative z-10 flex min-h-[100dvh] flex-col"
+        >
+          {/* Top chrome */}
+          <StatusBar />
 
-      {/* Streak recovery window banner (VAL-STREAK-010, -011) */}
-      <StreakRecoveryBanner />
+          {/* Streak recovery window banner (VAL-STREAK-010, -011) */}
+          <StreakRecoveryBanner />
 
-      {/* Tier demotion threat banner (shown when streak breaks) */}
-      <TierDemotionThreat />
+          {/* Tier demotion threat banner (shown when streak breaks) */}
+          <TierDemotionThreat />
 
-      {/* Streak penalty notification (VAL-STREAK-005..008) */}
-      <StreakPenaltyNotification />
+          {/* Streak penalty notification (VAL-STREAK-005..008) */}
+          <StreakPenaltyNotification />
 
-      {/* Top Right Actions (Eye-catching placement) */}
-      <div className="fixed top-20 right-4 z-30 flex flex-col items-end gap-3 sm:top-24">
-        <SpinningWheelEntryButton />
-      </div>
+          {/* Top Right Actions */}
+          <div className="fixed top-20 right-4 z-30 flex flex-col items-end gap-3 sm:top-24">
+            <SpinningWheelEntryButton />
+          </div>
 
-      {/* Map area — padded to clear the fixed status bar + bottom panel */}
-      <motion.div
-        initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.8, ease: PREMIUM_EASE }}
-        className="flex flex-1 items-center justify-center px-2 pb-32 pt-20 sm:px-4 sm:pb-40 sm:pt-24 md:px-6 md:pb-48 md:pt-28"
-      >
-        <MallMap />
-      </motion.div>
+          {/* Map area — padded to clear the fixed status bar + bottom panel */}
+          <motion.div
+            initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.8, ease: PREMIUM_EASE, delay: 0.15 }}
+            className="flex flex-1 items-center justify-center px-2 pb-32 pt-20 sm:px-4 sm:pb-40 sm:pt-24 md:px-6 md:pb-48 md:pt-28"
+          >
+            <MallMap />
+          </motion.div>
 
-      {/* Bottom chrome */}
-      <TaskPanel />
+          {/* Bottom chrome */}
+          <TaskPanel />
 
-      {/* Action Dock (Consolidated entry points) */}
-      <div className="fixed bottom-24 right-4 z-30 flex flex-col items-end gap-3 sm:bottom-28">
-        <TimelineEntryButton />
-        <LeaderboardEntryButton />
-        <ShortcutEntryButton />
-        <FlashSaleEntryButton />
-      </div>
-      
-      {/* Proximity alert banner (VAL-LEADER-011) */}
-      <ProximityAlertBanner />
+          {/* Action Dock (Consolidated entry points) — staggered cascade entrance */}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.12, delayChildren: 0.35 },
+              },
+            }}
+            className="fixed bottom-24 right-4 z-30 flex flex-col items-end gap-3 sm:bottom-28"
+          >
+            <motion.div variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: PREMIUM_EASE } } }}>
+              <TimelineEntryButton />
+            </motion.div>
+            <motion.div variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: PREMIUM_EASE } } }}>
+              <LeaderboardEntryButton />
+            </motion.div>
+            <motion.div variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: PREMIUM_EASE } } }}>
+              <ShortcutEntryButton />
+            </motion.div>
+            <motion.div variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: PREMIUM_EASE } } }}>
+              <FlashSaleEntryButton />
+            </motion.div>
+          </motion.div>
 
-      {/* Leave Mall control — triggers the exit friction flow (VAL-EXIT-001) */}
-      <LeaveMallButton />
+          {/* Proximity alert banner (VAL-LEADER-011) */}
+          <ProximityAlertBanner />
 
-      {/* Tier aspiration hint (appears near next tier) */}
-      <TierHint />
+          {/* Leave Mall control — triggers the exit friction flow (VAL-EXIT-001) */}
+          <LeaveMallButton />
 
-      {/* Streak anxiety messaging (VAL-STREAK-014) */}
-      <StreakAnxietyMessage />
+          {/* Tier aspiration hint (appears near next tier) */}
+          <TierHint />
 
-      {/* Overlays */}
-      <StoreDetail />
-      <ShortcutUnlock />
-      <FlashSale />
-      <SpinningWheel />
-      <TierUpgrade />
-      <TierPerksPanel />
-      <ExitFriction />
-      <Leaderboard />
-      <Celebration />
-      <TimelineFeed />
-    </main>
+          {/* Streak anxiety messaging (VAL-STREAK-014) */}
+          <StreakAnxietyMessage />
+
+          {/* Overlays */}
+          <StoreDetail />
+          <ShortcutUnlock />
+          <FlashSale />
+          <SpinningWheel />
+          <TierUpgrade />
+          <TierPerksPanel />
+          <ExitFriction />
+          <Leaderboard />
+          <Celebration />
+          <TimelineFeed />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

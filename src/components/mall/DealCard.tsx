@@ -219,7 +219,7 @@ export function DealCard({
             >
               {canAfford ? (
                 <span className="flex items-center justify-center gap-1.5">
-                  <Sparkle size={14} weight="fill" className="text-white" />
+                  <Sparkle size={14} weight="fill" />
                   Grab Deal
                 </span>
               ) : (

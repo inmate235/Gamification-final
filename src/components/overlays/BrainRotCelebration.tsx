@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import { Coin, Fire, Rocket, Sparkle, Brain, Eye, ChartLineUp, Alarm } from "@phosphor-icons/react/dist/ssr";
 import type { SpinResult } from "@/engine/nearMissAlgorithm";
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
@@ -93,7 +94,7 @@ export function BrainRotCelebration({ result, onClose }: BrainRotCelebrationProp
                 animate={{ opacity: [0.6, 1, 0.6] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
               >
-                Skip ➡️ Return to Wheel
+                Skip &middot; Return to Wheel
               </motion.span>
             </motion.button>
           )}
@@ -152,7 +153,7 @@ function JackpotAnimation() {
             className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-red-500 to-yellow-300 uppercase drop-shadow-[0_0_40px_rgba(255,0,0,1)] text-center leading-none"
             style={{ WebkitTextStroke: "3px black" }}
           >
-            JACKPOT!<br/>UNREAL!<br/>🤯🤑💰
+            JACKPOT!<br/>UNREAL!
           </motion.h1>
         </motion.div>
 
@@ -176,9 +177,9 @@ function JackpotAnimation() {
               delay: Math.random() * 1.5,
               ease: "linear",
             }}
-            className="absolute top-0 text-4xl md:text-5xl drop-shadow-2xl z-20"
+            className="absolute top-0 z-20"
           >
-            💰
+            <Coin size={36} weight="fill" className="text-yellow-400 drop-shadow-2xl" />
           </motion.div>
         ))}
       </div>
@@ -216,10 +217,16 @@ function HyperHypeAnimation() {
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white drop-shadow-[0_12px_24px_rgba(255,100,0,0.95)] uppercase tracking-tighter leading-none" style={{ WebkitTextStroke: "2px #ff4500" }}>
             POGGERS<br/>5 TOKENS!
           </h1>
-          <div className="flex justify-center gap-4 mt-4 text-5xl md:text-6xl">
-            <motion.span animate={{ y: [0, -20, 0] }} transition={{ duration: 0.25, repeat: Infinity }}>🔥</motion.span>
-            <motion.span animate={{ y: [0, -20, 0] }} transition={{ duration: 0.25, repeat: Infinity, delay: 0.08 }}>🚀</motion.span>
-            <motion.span animate={{ y: [0, -25, 0] }} transition={{ duration: 0.25, repeat: Infinity, delay: 0.16 }}>🔥</motion.span>
+          <div className="flex justify-center gap-6 mt-4">
+            <motion.span animate={{ y: [0, -20, 0] }} transition={{ duration: 0.25, repeat: Infinity }}>
+              <Fire size={40} weight="fill" className="text-orange-400 drop-shadow-[0_0_12px_rgba(255,100,0,0.8)]" />
+            </motion.span>
+            <motion.span animate={{ y: [0, -20, 0] }} transition={{ duration: 0.25, repeat: Infinity, delay: 0.08 }}>
+              <Rocket size={40} weight="fill" className="text-yellow-300 drop-shadow-[0_0_12px_rgba(255,200,0,0.8)]" />
+            </motion.span>
+            <motion.span animate={{ y: [0, -25, 0] }} transition={{ duration: 0.25, repeat: Infinity, delay: 0.16 }}>
+              <Fire size={40} weight="fill" className="text-orange-400 drop-shadow-[0_0_12px_rgba(255,100,0,0.8)]" />
+            </motion.span>
           </div>
         </motion.div>
       </div>
@@ -277,8 +284,10 @@ function MicroDoseAnimation() {
         <YouTubeLoop videoId="o1nbk0UWlO8" />
       </div>
 
-      <h1 className="text-5xl sm:text-7xl font-black text-green-400 drop-shadow-2xl uppercase tracking-tighter" style={{ WebkitTextStroke: "2px #004400" }}>
-        STONKS 📈 +1
+      <h1 className="flex items-center justify-center gap-3 text-5xl sm:text-7xl font-black text-green-400 drop-shadow-2xl uppercase tracking-tighter" style={{ WebkitTextStroke: "2px #004400" }}>
+        STONKS
+        <ChartLineUp size={48} weight="fill" className="text-green-400 drop-shadow-2xl" />
+        +1
       </h1>
       <motion.div className="flex gap-2 mt-2">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -287,9 +296,8 @@ function MicroDoseAnimation() {
             initial={{ scale: 0 }}
             animate={{ scale: [0, 1.6, 0] }}
             transition={{ duration: 0.5, delay: i * 0.04 }}
-            className="text-3xl"
           >
-            ⭐
+            <Sparkle size={24} weight="fill" className="text-yellow-300 drop-shadow-[0_0_8px_rgba(255,200,0,0.8)]" />
           </motion.span>
         ))}
       </motion.div>
@@ -320,10 +328,16 @@ function MindExpansionAnimation() {
           <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-pink-300 uppercase drop-shadow-[0_0_40px_rgba(255,100,255,1)] leading-none" style={{ WebkitTextStroke: "2px #400040" }}>
             200 IQ PLAY<br/>ZONE UNLOCKED
           </h1>
-          <div className="flex justify-center gap-6 mt-6 text-6xl md:text-7xl">
-            <motion.span animate={{ rotate: [0, 25, -25, 0] }} transition={{ duration: 0.35, repeat: Infinity }}>🧠</motion.span>
-            <motion.span animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 0.35, repeat: Infinity }}>✨</motion.span>
-            <motion.span animate={{ rotate: [0, -25, 25, 0] }} transition={{ duration: 0.35, repeat: Infinity }}>👁️</motion.span>
+          <div className="flex justify-center gap-6 mt-6">
+            <motion.span animate={{ rotate: [0, 25, -25, 0] }} transition={{ duration: 0.35, repeat: Infinity }}>
+              <Brain size={48} weight="fill" className="text-pink-300 drop-shadow-[0_0_16px_rgba(255,100,255,0.8)]" />
+            </motion.span>
+            <motion.span animate={{ scale: [1, 1.5, 1] }} transition={{ duration: 0.35, repeat: Infinity }}>
+              <Sparkle size={48} weight="fill" className="text-yellow-300 drop-shadow-[0_0_16px_rgba(255,200,0,0.8)]" />
+            </motion.span>
+            <motion.span animate={{ rotate: [0, -25, 25, 0] }} transition={{ duration: 0.35, repeat: Infinity }}>
+              <Eye size={48} weight="fill" className="text-pink-300 drop-shadow-[0_0_16px_rgba(255,100,255,0.8)]" />
+            </motion.span>
           </div>
         </motion.div>
       </div>
@@ -362,8 +376,11 @@ function FomoPanicAnimation() {
           transition={{ duration: 0.08, repeat: Infinity }}
           className="relative z-10 text-center bg-black/90 p-8 rounded-[2.5rem] border-8 border-red-600"
         >
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-red-500 tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(255,0,0,1)] animate-pulse leading-none">
-            🚨 INSANE DEAL 🚨<br/>UNLOCK
+          <h1 className="flex items-center justify-center gap-4 text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-red-500 tracking-tighter uppercase drop-shadow-[0_0_20px_rgba(255,0,0,1)] animate-pulse leading-none">
+            <Alarm size={56} weight="fill" className="text-red-500 drop-shadow-[0_0_20px_rgba(255,0,0,1)]" />
+            INSANE DEAL
+            <Alarm size={56} weight="fill" className="text-red-500 drop-shadow-[0_0_20px_rgba(255,0,0,1)]" />
+            <br/>UNLOCK
           </h1>
           <p className="text-white mt-4 text-xl sm:text-3xl font-mono uppercase tracking-widest animate-bounce">
             ACT FAST! ACT NOW!

@@ -2,15 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  CaretDown,
-  ListChecks,
-  Compass,
-  Coin,
-  Storefront,
-  Timer,
-  Star,
-} from "@phosphor-icons/react/dist/ssr";
+import { ListChecks, Compass, Coin, Storefront, Timer, Star } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useTaskStore } from "@/stores/taskStore";
@@ -116,12 +108,29 @@ export function TaskPanel() {
             transition={{ duration: 0.6, ease: POP }}
             className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2"
           >
+            {/* Attention-grabbing pulse ring for incomplete quests */}
+            {taskCount > 0 && (
+              <motion.span
+                className="pointer-events-none absolute inset-0 rounded-full bg-[#e6009e]"
+                animate={{
+                  scale: [1, 1.14, 1],
+                  opacity: [0.16, 0, 0.16],
+                }}
+                transition={{
+                  duration: 2.4,
+                  ease: "easeInOut",
+                  repeat: Infinity,
+                  repeatDelay: 0.6,
+                }}
+                aria-hidden="true"
+              />
+            )}
             <button
               onClick={handleToggle}
               aria-expanded={expanded}
               aria-controls="task-panel-content"
               aria-label="Open Quests"
-              className="group flex items-center gap-2.5 rounded-full bg-[#e6009e] px-5 py-3 text-white shadow-[0_6px_0_#b8007e] transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
+              className="group flex items-center gap-2.5 rounded-full bg-[#e6009e] px-5 py-3 text-white shadow-[0_6px_0_#b8007e] transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e] hover:brightness-110"
               data-testid="task-panel-toggle"
             >
               <ListChecks
@@ -168,7 +177,7 @@ export function TaskPanel() {
               className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#ffe600] p-5 shadow-[0_20px_60px_rgba(20,20,20,0.25)] ring-3 ring-[#141414]/10"
             >
               {/* Header */}
-              <div className="mb-5 flex items-center justify-between">
+              <div className="mb-5 flex items-center">
                 <div className="flex items-center gap-3">
                   <h2 className="sticker-heading text-2xl flex items-center gap-2">
                     Active Quests
@@ -182,14 +191,6 @@ export function TaskPanel() {
                     )}
                   </h2>
                 </div>
-                <button
-                  onClick={handleToggle}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#141414] ring-2 ring-[#141414]/10 transition-all duration-200 hover:ring-[#141414]/25 active:scale-95"
-                  aria-label="Close quests"
-                  data-testid="task-panel-toggle"
-                >
-                  <CaretDown size={18} weight="bold" />
-                </button>
               </div>
 
               <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
@@ -205,6 +206,15 @@ export function TaskPanel() {
                   </p>
                 )}
               </div>
+
+              <button
+                onClick={handleToggle}
+                className="mt-4 flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[#141414] ring-2 ring-[#141414]/10 transition-all duration-200 hover:ring-[#141414]/25 active:scale-[0.99]"
+                aria-label="Explore"
+                data-testid="task-panel-toggle"
+              >
+                Explore
+              </button>
             </motion.div>
           </motion.div>
         )}

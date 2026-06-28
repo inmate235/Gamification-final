@@ -322,26 +322,43 @@ function SpinningWheelContent() {
             className="relative mx-auto flex items-center justify-center"
             style={{ width: 340, height: 340 }}
           >
-            {/* Pointer (fixed, at top) — magenta */}
+            {/* Pointer (fixed, at top) — glossy candy pink drop/bean style */}
             <div
-              className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1"
+              className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-2 pointer-events-none"
               data-testid="wheel-pointer"
             >
-              <div
-                className="h-0 w-0"
-                style={{
-                  borderLeft: "12px solid transparent",
-                  borderRight: "12px solid transparent",
-                  borderTop: "20px solid #e6009e",
-                  filter: "drop-shadow(0 2px 4px rgba(184,0,126,0.4))",
-                }}
-              />
+              <svg width="32" height="42" viewBox="0 0 32 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: "drop-shadow(0 4px 6px rgba(184,0,126,0.45))" }}>
+                <path
+                  d="M16 42C16 42 32 24 32 12C32 5.37258 26.6274 0 20 0H12C5.37258 0 0 5.37258 0 12C0 24 16 42 16 42Z"
+                  fill="url(#candyPointerGrad)"
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                />
+                <path
+                  d="M8 4C5.79086 4 4 5.79086 4 8C4 9.5 4.5 11 5 12"
+                  stroke="#ffffff"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  opacity="0.6"
+                />
+                <defs>
+                  <linearGradient id="candyPointerGrad" x1="16" y1="0" x2="16" y2="42" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#ff8cdb" />
+                    <stop offset="0.5" stopColor="#e6009e" />
+                    <stop offset="1" stopColor="#b8007e" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
 
-            {/* Outer ring */}
+            {/* Outer ring — glossy 3D candy pink border */}
             <div
-              className="absolute inset-0 rounded-full ring-4 ring-[#141414]/8"
-              style={{ boxShadow: "0 8px 32px rgba(20,20,20,0.12)" }}
+              className="absolute inset-0 rounded-full border-[10px] border-[#e6009e] shadow-[inset_0_4px_8px_rgba(255,255,255,0.7),inset_0_-4px_8px_rgba(0,0,0,0.5),0_12px_32px_rgba(230,0,158,0.4)]"
+              style={{
+                background: "transparent",
+                zIndex: 10,
+                pointerEvents: "none"
+              }}
             />
 
             {/* Rotating wheel SVG */}
@@ -358,6 +375,19 @@ function SpinningWheelContent() {
               style={{ transformOrigin: "170px 170px" }}
               data-testid="wheel-svg"
             >
+              <defs>
+                <linearGradient id="candyHubGrad" x1={CX} y1={CY - R_INNER} x2={CX} y2={CY + R_INNER} gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#ff8cdb" />
+                  <stop offset="0.6" stopColor="#e6009e" />
+                  <stop offset="1" stopColor="#b8007e" />
+                </linearGradient>
+                <radialGradient id="glossyShine" cx="35%" cy="35%" r="65%" fx="35%" fy="35%">
+                  <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
+                  <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="#000000" stopOpacity="0.35" />
+                </radialGradient>
+              </defs>
+
               {/* Segments */}
               {wedges.map((w) => {
                 const isBigPrize = w.index === BIG_PRIZE_INDEX;
@@ -366,7 +396,7 @@ function SpinningWheelContent() {
                     <path
                       d={w.path}
                       fill={w.color}
-                      fillOpacity={isBigPrize ? 0.85 : 0.65}
+                      fillOpacity={isBigPrize ? 0.95 : 0.85}
                       stroke="#ffffff"
                       strokeOpacity={0.9}
                       strokeWidth={2}
@@ -389,7 +419,10 @@ function SpinningWheelContent() {
                         fill="#ffffff"
                         fontSize={isBigPrize ? 13 : 11}
                         fontWeight={isBigPrize ? 700 : 600}
-                        style={{ userSelect: "none" }}
+                        style={{ 
+                          userSelect: "none",
+                          filter: "drop-shadow(0 1.5px 2px rgba(20,20,20,0.65))"
+                        }}
                       >
                         {w.label}
                       </text>
@@ -398,20 +431,51 @@ function SpinningWheelContent() {
                 );
               })}
 
-              {/* Center hub */}
+              {/* Radial glossy shine layer overlaying the segments */}
+              <circle
+                cx={CX}
+                cy={CY}
+                r={R_OUTER}
+                fill="url(#glossyShine)"
+                pointerEvents="none"
+              />
+
+              {/* Outer decorative candy dots / light sprinkles */}
+              <circle
+                cx={CX}
+                cy={CY}
+                r={R_OUTER - 14}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="4"
+                strokeDasharray="6, 16"
+                strokeLinecap="round"
+                opacity="0.85"
+                pointerEvents="none"
+              />
+
+              {/* Center hub — Glossy 3D Candy Pink */}
               <circle
                 cx={CX}
                 cy={CY}
                 r={R_INNER}
-                fill="#ffffff"
-                stroke="#e6009e"
-                strokeWidth={2}
+                fill="url(#candyHubGrad)"
+                stroke="#ffffff"
+                strokeWidth={2.5}
+                style={{ filter: "drop-shadow(0 3px 6px rgba(184,0,126,0.6))" }}
               />
-              <circle cx={CX} cy={CY} r={R_INNER - 6} fill="#ffe600" />
+              <path
+                d={`M ${CX - 16} ${CY - 16} A 22 22 0 0 1 ${CX + 16} ${CY - 16}`}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth={2}
+                strokeLinecap="round"
+                opacity={0.65}
+              />
             </motion.svg>
             {/* Center icon */}
-            <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-              <Coins size={24} weight="fill" className="text-[#e6009e]" />
+            <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <Coins size={24} weight="fill" className="text-white drop-shadow-[0_2px_4px_rgba(184,0,126,0.6)]" />
             </div>
           </div>
 
