@@ -77,7 +77,7 @@ export function FlashSaleEntryButton() {
       transition={{ duration: 0.7, ease: PREMIUM_EASE }}
       onClick={onOpen}
       aria-label={`Open flash deal (${flashSaleCount} pending)`}
-      className="flex items-center gap-2 rounded-full bg-[#12121a]/80 px-4 py-2.5 ring-1 ring-[#e879a1]/30 backdrop-blur-md transition-all duration-700 hover:bg-[#12121a] active:scale-[0.97]"
+      className="flex items-center gap-2 rounded-full bg-[#e6009e] px-4 py-2.5 ring-2 ring-white shadow-[0_6px_0_#b8007e] transition-all duration-200 active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
       data-testid="flash-sale-entry-button"
     >
       <motion.div
@@ -88,13 +88,13 @@ export function FlashSaleEntryButton() {
           repeat: Infinity,
         }}
       >
-        <Lightning size={16} weight="light" className="text-[#e879a1]" />
+        <Lightning size={16} weight="fill" className="text-white" />
       </motion.div>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a1a1aa]">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
         Deals
       </span>
       <span
-        className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e879a1] px-1.5 text-[10px] font-bold text-black"
+        className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-[#e6009e]"
         data-testid="flash-sale-entry-badge"
       >
         {flashSaleCount}
@@ -229,14 +229,14 @@ export function FlashSale() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: PREMIUM_EASE }}
-          className="fixed inset-0 z-40 flex items-center justify-center px-4 py-20"
+          className="fixed inset-0 z-40 flex items-end sm:items-center justify-center px-0 sm:px-4 pb-0 sm:py-20"
           onClick={handleDismiss}
           data-testid="flash-sale-overlay"
           role="dialog"
           aria-modal="true"
           aria-label="Flash sale"
         >
-          <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
+          <div className="absolute inset-0 backdrop-blur-md bg-[#141414]/40" />
 
           <motion.div
             initial={{ opacity: 0, y: 48, scale: 0.96 }}
@@ -248,34 +248,34 @@ export function FlashSale() {
           >
             <div
               className={cn(
-                "bezel-card transition-all duration-300",
+                "rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-7 ring-2 ring-[#141414]/8 transition-all duration-300",
                 sale.countdownSeconds < 30 ? "animate-deal-pulse" : ""
               )}
               style={{
-                boxShadow: sale.countdownSeconds < 30
-                  ? "0 0 32px rgba(239, 68, 68, 0.4)"
-                  : "0 0 24px rgba(232, 121, 161, 0.18)"
+                boxShadow:
+                  sale.countdownSeconds < 30
+                    ? "0 0 24px rgba(239, 68, 68, 0.25)"
+                    : "0 24px 64px rgba(20, 20, 20, 0.22)",
               }}
             >
-              <div className="bezel-card-inner p-6 sm:p-7">
                 {/* Header */}
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e879a1]/10 ring-1 ring-[#e879a1]/30">
-                      <Tag size={16} weight="light" className="text-[#e879a1]" />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e6009e]/12 ring-1 ring-[#e6009e]/30">
+                      <Tag size={16} weight="fill" className="text-[#e6009e]" />
                     </span>
                     <div>
-                      <span className="inline-block rounded-full bg-[#e879a1]/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] font-medium text-[#e879a1]">
+                      <span className="inline-block rounded-full bg-[#e6009e]/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] font-medium text-[#e6009e]">
                         Flash Sale
                       </span>
                       <h2
-                        className="mt-1 text-lg font-bold tracking-tight text-[#f5f5f7]"
+                        className="mt-1 text-lg font-bold tracking-tight text-[#141414] font-display"
                         data-testid="flash-sale-store-name"
                       >
                         {store?.name ?? "Exclusive Deal"}
                       </h2>
                       {store && (
-                        <span className="text-[10px] uppercase tracking-[0.14em] text-[#71717a]">
+                        <span className="text-[10px] uppercase tracking-[0.14em] text-[#8a8a8a]">
                           {store.category}
                           {sale.personalized ? " · picked for you" : ""}
                         </span>
@@ -285,25 +285,25 @@ export function FlashSale() {
                   <button
                     onClick={handleDismiss}
                     aria-label="Close flash sale"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/10 active:scale-[0.96]"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#141414]/5 ring-1 ring-[#141414]/10 transition-all duration-200 hover:bg-[#141414]/10 active:scale-[0.96]"
                   >
-                    <X size={16} weight="light" className="text-[#a1a1aa]" />
+                    <X size={16} weight="bold" className="text-[#141414]" />
                   </button>
                 </div>
 
                 {/* Discount + item */}
                 <div
-                  className="mb-4 rounded-2xl bg-[#e879a1]/8 p-4 ring-1 ring-[#e879a1]/20"
+                  className="mb-4 rounded-2xl bg-[#ffe600]/35 p-4 ring-1 ring-[#141414]/12"
                   data-testid="flash-sale-deal"
                 >
                   <p
-                    className="font-mono text-2xl font-bold tabular-nums text-[#e879a1]"
+                    className="font-mono text-2xl font-bold tabular-nums text-[#e6009e]"
                     data-testid="flash-sale-discount"
                   >
                     {sale.discount}
                   </p>
                   <p
-                    className="mt-1 text-sm leading-relaxed text-[#a1a1aa]"
+                    className="mt-1 text-sm leading-relaxed text-[#4b4b4b]"
                     data-testid="flash-sale-item"
                   >
                     {sale.itemDescription ?? "A members-only flash deal."}
@@ -313,12 +313,12 @@ export function FlashSale() {
                 {/* Countdown + social proof */}
                 <div className="mb-4 grid grid-cols-2 gap-3">
                   <div
-                    className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10 flex items-center justify-between"
+                    className="rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8 flex items-center justify-between"
                     data-testid="flash-sale-timer"
                   >
                     <div>
-                      <div className="flex items-center gap-1.5 text-[#e879a1]">
-                        <Timer size={14} weight="light" />
+                      <div className="flex items-center gap-1.5 text-[#e6009e]">
+                        <Timer size={14} weight="fill" />
                         <span className="text-[10px] uppercase tracking-[0.12em]">
                           Ends in
                         </span>
@@ -336,7 +336,7 @@ export function FlashSale() {
                           cx="16"
                           cy="16"
                           r="12"
-                          className="stroke-white/10"
+                          className="stroke-[#141414]/10"
                           strokeWidth="2.5"
                           fill="transparent"
                         />
@@ -344,30 +344,30 @@ export function FlashSale() {
                           cx="16"
                           cy="16"
                           r="12"
-                          className={sale.countdownSeconds < 30 ? "stroke-red-500" : "stroke-[#e879a1]"}
+                          className={sale.countdownSeconds < 30 ? "stroke-red-500" : "stroke-[#e6009e]"}
                           strokeWidth="2.5"
                           fill="transparent"
                           strokeDasharray="75.4"
                           strokeDashoffset={75.4 - (75.4 * Math.max(0, sale.countdownSeconds)) / 90}
-                          transition={{ duration: 1, ease: "linear" }}
+                          transition={{ duration: 1, ease: PREMIUM_EASE }}
                         />
                       </svg>
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                  <div className="rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/8">
                     <div className="flex items-center gap-1.5 text-[#4fd1c5]">
-                      <Users size={14} weight="light" />
+                      <Users size={14} weight="fill" />
                       <span className="text-[10px] uppercase tracking-[0.12em]">
                         Viewing
                       </span>
                     </div>
                     <p
-                      className="mt-1 font-mono text-lg font-bold tabular-nums text-[#f5f5f7]"
+                      className="mt-1 font-mono text-lg font-bold tabular-nums text-[#141414]"
                       data-testid="flash-sale-social-proof"
                     >
                       {liveViewers}
                     </p>
-                    <p className="mt-0.5 text-[10px] text-[#71717a]">
+                    <p className="mt-0.5 text-[10px] text-[#8a8a8a]">
                       people viewing this deal
                     </p>
                   </div>
@@ -381,7 +381,7 @@ export function FlashSale() {
                   >
                     <CheckCircle
                       size={18}
-                      weight="light"
+                      weight="fill"
                       className="text-[#4fd1c5]"
                     />
                     <span className="text-sm font-semibold tracking-tight text-[#4fd1c5]">
@@ -389,15 +389,15 @@ export function FlashSale() {
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between rounded-2xl bg-black/30 px-4 py-3 ring-1 ring-white/[0.06]">
+                  <div className="flex items-center justify-between rounded-2xl bg-[#141414]/5 px-4 py-3 ring-1 ring-[#141414]/10">
                     <div>
                       <p
-                        className="font-mono text-xl font-bold tabular-nums text-[#d4af37]"
+                        className="font-mono text-xl font-bold tabular-nums text-[#e6009e]"
                         data-testid="flash-sale-cost"
                       >
                         {sale.tokenCost}
                       </p>
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#71717a]">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
                         Tokens to grab
                       </p>
                     </div>
@@ -406,14 +406,14 @@ export function FlashSale() {
                       disabled={!canAfford}
                       aria-label={`Grab deal for ${sale.tokenCost} tokens`}
                       className={cn(
-                        "flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]",
+                        "flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-200 active:scale-[0.98]",
                         canAfford
-                          ? "bg-gradient-to-r from-[#d4af37] to-[#b8941f] text-black"
-                          : "cursor-not-allowed bg-white/5 text-[#71717a] ring-1 ring-white/10"
+                          ? "btn-magenta"
+                          : "cursor-not-allowed bg-white text-[#71717a] ring-1 ring-[#141414]/10"
                       )}
                       data-testid="flash-sale-grab-button"
                     >
-                      <Eye size={14} weight="light" />
+                      <Eye size={14} weight="fill" />
                       {canAfford ? "Grab Deal" : `${shortfall} more`}
                     </button>
                   </div>
@@ -422,13 +422,12 @@ export function FlashSale() {
                 {!claimed && (
                   <button
                     onClick={handleDismiss}
-                    className="mt-4 w-full rounded-full bg-white/5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#a1a1aa] ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/10 active:scale-[0.98]"
+                    className="mt-4 w-full rounded-full bg-white py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#4b4b4b] ring-1 ring-[#141414]/10 transition-all duration-200 hover:bg-[#f4f4f5] active:scale-[0.98]"
                     data-testid="flash-sale-maybe-later"
                   >
                     Maybe Later
                   </button>
                 )}
-              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -467,7 +466,7 @@ function Countdown({
 
   return (
     <p
-      className="mt-1 font-mono text-lg font-bold tabular-nums text-[#f5f5f7]"
+      className="mt-1 font-mono text-lg font-bold tabular-nums text-[#141414]"
       data-testid="flash-sale-timer-value"
     >
       {formatTime(remaining)}

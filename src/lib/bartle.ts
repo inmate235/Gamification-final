@@ -119,7 +119,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "deals",
         label: "Hunting deals",
-        imageUrl: "/assets/figma/boi 1.png",
+        imageUrl: "/assets/figma/caske 1.png",
         imageGradient:
           "linear-gradient(135deg, #d4af37 0%, #b87333 100%)",
         icon: "Tag",

@@ -175,7 +175,7 @@ export function MallExperience() {
         initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.8, ease: PREMIUM_EASE }}
-        className="flex flex-1 items-center justify-center px-3 pb-44 pt-24 sm:px-6 sm:pb-48 sm:pt-28"
+        className="flex flex-1 items-center justify-center px-2 pb-32 pt-20 sm:px-4 sm:pb-40 sm:pt-24 md:px-6 md:pb-48 md:pt-28"
       >
         <MallMap />
       </motion.div>

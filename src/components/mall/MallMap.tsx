@@ -52,6 +52,14 @@ const ZONE_IMAGES: Record<string, string> = {
   [ZONE_FOOD_COURT]: "/assets/figma/map food court.png",
 };
 
+const ZONE_ICON_LAYOUT: Record<string, { scale: number; dx?: number; dy?: number }> = {
+  [ZONE_ENTRANCE]: { scale: 0.62, dy: 0.04 },
+  [ZONE_EAST_WING]: { scale: 0.7, dx: 0.01 },
+  [ZONE_WEST_WING]: { scale: 0.805, dx: -0.1 },
+  [ZONE_CENTRAL_PLAZA]: { scale: 0.66 },
+  [ZONE_FOOD_COURT]: { scale: 0.58, dy: 0.02 },
+};
+
 /** Compute the bounding box {x, y, width, height} from polygon points. */
 function polygonBBox(points: string): { x: number; y: number; w: number; h: number } {
   const coords = points.split(/\s+/).map((p) => p.split(",").map(Number));
@@ -60,6 +68,15 @@ function polygonBBox(points: string): { x: number; y: number; w: number; h: numb
   const minX = Math.min(...xs);
   const minY = Math.min(...ys);
   return { x: minX, y: minY, w: Math.max(...xs) - minX, h: Math.max(...ys) - minY };
+}
+
+function iconFrame(zoneId: string, bbox: { x: number; y: number; w: number; h: number }) {
+  const layout = ZONE_ICON_LAYOUT[zoneId] ?? { scale: 0.6 };
+  const iw = bbox.w * layout.scale;
+  const ih = bbox.h * layout.scale;
+  const x = bbox.x + (bbox.w - iw) / 2 + bbox.w * (layout.dx ?? 0);
+  const y = bbox.y + (bbox.h - ih) / 2 + bbox.h * (layout.dy ?? 0);
+  return { x, y, w: iw, h: ih };
 }
 
 export function MallMap() {
@@ -72,11 +89,13 @@ export function MallMap() {
 
   const addTokens = usePlayerStore((s) => s.addTokens);
   const awardTokens = usePlayerStore((s) => s.awardTokens);
+  const streakCount = usePlayerStore((s) => s.streak.count);
 
   const showOverlay = useUIStore((s) => s.showOverlay);
   const activeOverlay = useUIStore((s) => s.activeOverlay);
 
   const [failedZoneImages, setFailedZoneImages] = useState<Set<string>>(new Set());
+  const [streakImgError, setStreakImgError] = useState(false);
 
   /* --- Build the set of corridor edges (undirected, de-duplicated) --- */
   const corridorEdges = buildCorridorEdges(zones);
@@ -190,7 +209,7 @@ export function MallMap() {
     >
       {/* Background visual layer — white with scattered doodle decorations */}
       <div
-        className="absolute inset-0 overflow-hidden rounded-3xl bg-white"
+        className="absolute inset-0 overflow-hidden rounded-3xl bg-[#fffbeb]"
         aria-hidden
       >
         {/* Subtle dot grid pattern overlay */}
@@ -229,6 +248,27 @@ export function MallMap() {
             MurkyCorps
           </span>
         </div>
+
+        {/* Day streak badge — bottom left (Figma "1 DAY STREAK" pill) */}
+        <motion.div
+          animate={{ y: [0, -3, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute left-3 bottom-3 z-10 flex items-center gap-1.5 rounded-full bg-[#ffe600] px-2.5 py-1.5 ring-2 ring-[#141414]/10 shadow-[0_4px_12px_rgba(20,20,20,0.12)]"
+        >
+          {!streakImgError ? (
+            <img
+              src="/assets/figma/1 da sreak 1.png"
+              alt=""
+              className="h-5 w-5 object-contain"
+              onError={() => setStreakImgError(true)}
+            />
+          ) : (
+            <Star size={14} weight="fill" className="text-[#e6009e]" />
+          )}
+          <span className="font-display text-[10px] font-bold uppercase tracking-[0.08em] text-[#141414]">
+            {streakCount} Day Streak
+          </span>
+        </motion.div>
       </div>
 
       <svg
@@ -239,12 +279,18 @@ export function MallMap() {
         data-testid="mall-map-svg"
       >
         <defs>
-          {/* Soft white atmospheric gradient for the whole map */}
-          <radialGradient id="map-atmosphere" cx="50%" cy="45%" r="70%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity={1} />
-            <stop offset="70%" stopColor="#fafafa" stopOpacity={1} />
-            <stop offset="100%" stopColor="#f4f4f5" stopOpacity={1} />
+          {/* Warm atmospheric gradient — soft amber/cream center, golden edges */}
+          <radialGradient id="map-atmosphere" cx="50%" cy="45%" r="75%">
+            <stop offset="0%" stopColor="#fffbeb" stopOpacity={1} />
+            <stop offset="50%" stopColor="#fef9e7" stopOpacity={1} />
+            <stop offset="100%" stopColor="#fef3c7" stopOpacity={1} />
           </radialGradient>
+          {/* Subtle vertical tint — warm honey at top, soft amber at bottom */}
+          <linearGradient id="map-tint" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#fde68a" stopOpacity={0.22} />
+            <stop offset="50%" stopColor="#fffbeb" stopOpacity={0} />
+            <stop offset="100%" stopColor="#fcd34d" stopOpacity={0.15} />
+          </linearGradient>
           {/* Soft glow filter for revealed zone edges */}
           <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="4" result="blur" />
@@ -256,13 +302,6 @@ export function MallMap() {
 
           {/* Per-zone fog filters + gradients */}
           <FogFilterDefs zones={zones} />
-
-          {/* Per-zone clip paths for zone illustrations */}
-          {zones.map((zone) => (
-            <clipPath key={`clip-${zone.id}`} id={`clip-${zone.id}`}>
-              <polygon points={zone.polygonPoints} />
-            </clipPath>
-          ))}
         </defs>
 
         {/* Atmospheric backdrop */}
@@ -272,6 +311,15 @@ export function MallMap() {
           width={1000}
           height={1200}
           fill="url(#map-atmosphere)"
+          rx={24}
+        />
+        {/* Subtle color tint overlay for warmth and depth */}
+        <rect
+          x={0}
+          y={0}
+          width={1000}
+          height={1200}
+          fill="url(#map-tint)"
           rx={24}
         />
 
@@ -352,24 +400,25 @@ export function MallMap() {
           })}
         </g>
 
-        {/* Zone illustrations (only in revealed zones, clipped to polygon) */}
+        {/* Zone illustrations (icon-like assets centered per revealed zone) */}
         <g pointerEvents="none">
           {zones.map((zone) => {
             const revealed = fogState[zone.id] === true;
             const imgSrc = ZONE_IMAGES[zone.id];
             if (!revealed || !imgSrc || failedZoneImages.has(zone.id)) return null;
             const bbox = polygonBBox(zone.polygonPoints);
+            const frame = iconFrame(zone.id, bbox);
             return (
               <image
                 key={`img-${zone.id}`}
                 href={imgSrc}
-                x={bbox.x}
-                y={bbox.y}
-                width={bbox.w}
-                height={bbox.h}
-                preserveAspectRatio="xMidYMid slice"
-                clipPath={`url(#clip-${zone.id})`}
-                opacity={0.92}
+                x={frame.x}
+                y={frame.y}
+                width={frame.w}
+                height={frame.h}
+                preserveAspectRatio="xMidYMid meet"
+                opacity={0.98}
+                style={{ filter: "drop-shadow(0 8px 10px rgba(20,20,20,0.12))" }}
                 onError={() =>
                   setFailedZoneImages((prev) => {
                     const next = new Set(prev);

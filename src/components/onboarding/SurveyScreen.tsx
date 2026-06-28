@@ -30,6 +30,11 @@ import { Logo } from "@/components/ui/Logo";
  */
 
 const AUTO_ADVANCE_DELAY = 650; // ms — visual feedback before advancing
+const STEP_BACKGROUNDS = [
+  "radial-gradient(120% 92% at 10% -14%, rgba(232,121,161,0.30) 0%, rgba(232,121,161,0.11) 36%, rgba(232,121,161,0) 70%), radial-gradient(108% 85% at 92% 0%, rgba(79,209,197,0.30) 0%, rgba(79,209,197,0.10) 38%, rgba(79,209,197,0) 72%), linear-gradient(180deg, #fff8fc 0%, #fff 54%, #f8fbff 100%)",
+  "radial-gradient(120% 98% at 0% -10%, rgba(157,127,219,0.28) 0%, rgba(157,127,219,0.09) 40%, rgba(157,127,219,0) 74%), radial-gradient(115% 95% at 95% 5%, rgba(232,121,161,0.25) 0%, rgba(232,121,161,0.08) 36%, rgba(232,121,161,0) 70%), linear-gradient(180deg, #fbf8ff 0%, #fff 56%, #fff8fd 100%)",
+  "radial-gradient(125% 98% at 6% -16%, rgba(212,175,55,0.26) 0%, rgba(212,175,55,0.09) 34%, rgba(212,175,55,0) 70%), radial-gradient(110% 90% at 100% 4%, rgba(79,209,197,0.27) 0%, rgba(79,209,197,0.09) 36%, rgba(79,209,197,0) 72%), linear-gradient(180deg, #fffdf7 0%, #fff 56%, #f7feff 100%)",
+] as const;
 
 /* ============================================================================
    Phosphor icon map (static imports — no dynamic imports in ssr)
@@ -65,7 +70,7 @@ const ICON_MAP: Record<
    ========================================================================== */
 
 const POP = [0.34, 1.56, 0.64, 1] as const;
-const SMOOTH = [0.32, 0.72, 0, 1] as const;
+const SMOOTH = [0.22, 0.61, 0.36, 1] as const;
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -191,14 +196,28 @@ export function SurveyScreen() {
      ========================================================================== */
 
   return (
-    <main className="min-h-[100dvh] bg-white flex flex-col">
+    <main className="relative min-h-[100dvh] overflow-hidden bg-white flex flex-col">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`survey-step-bg-${currentQuestion.id}`}
+          initial={{ opacity: 0.45, scale: 1.02 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.55, ease: SMOOTH }}
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: STEP_BACKGROUNDS[currentIndex] ?? STEP_BACKGROUNDS[0],
+          }}
+        />
+      </AnimatePresence>
+
       <motion.div
         initial={{ opacity: 1, scale: 1 }}
         animate={
           isExiting ? { opacity: 0, scale: 0.97 } : { opacity: 1, scale: 1 }
         }
         transition={{ duration: 0.45, ease: SMOOTH }}
-        className="flex flex-col flex-1 w-full max-w-sm mx-auto px-5 pt-5 pb-8"
+        className="relative z-10 flex flex-col flex-1 w-full max-w-sm sm:max-w-md md:max-w-xl lg:max-w-2xl mx-auto px-4 sm:px-5 md:px-6 pt-4 sm:pt-5 pb-6 sm:pb-8"
       >
         {/* Top bar: right-aligned "Murky" pill logo */}
         <div className="flex justify-end mb-1">
@@ -209,14 +228,16 @@ export function SurveyScreen() {
         <div className="h-px bg-[#141414]/10 mb-4" />
 
         {/* Page subtitle (text node 3:173) */}
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: SMOOTH }}
-          className="mb-5 text-center text-[13px] leading-relaxed text-[#4b4b4b] max-w-[34ch] mx-auto"
+          className="mb-4 sm:mb-5 rounded-2xl border border-[#141414]/10 bg-white/72 backdrop-blur-[2px] px-3.5 sm:px-4 py-3 shadow-[0_8px_24px_rgba(20,20,20,0.06)]"
         >
-          {SURVEY_SUBTITLE}
-        </motion.p>
+          <p className="text-center text-[12px] sm:text-[13px] leading-relaxed text-[#4b4b4b] max-w-[52ch] mx-auto">
+            {SURVEY_SUBTITLE}
+          </p>
+        </motion.div>
 
         {/* Progress dots (retained for test compatibility) */}
         <div className="mb-6 flex items-center justify-center gap-2">
@@ -250,28 +271,27 @@ export function SurveyScreen() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="flex flex-col"
+            className="rounded-[1.65rem] border border-[#141414]/10 bg-white/84 backdrop-blur-[2px] shadow-[0_12px_30px_rgba(20,20,20,0.08)] p-4 sm:p-5 md:p-6 flex flex-col"
           >
-            {/* Per-question eyebrow */}
+            {/* Prompt — sticker heading */}
+            <motion.h2
+              variants={itemVariants}
+              className="mb-2 text-center sticker-heading text-[clamp(1.6rem,6vw,2.15rem)] leading-[1.02]"
+            >
+              {currentQuestion.prompt}
+            </motion.h2>
+            {/* Per-question description */}
             {currentQuestion.subtitle && (
               <motion.p
                 variants={itemVariants}
-                className="mb-2 text-center text-xs font-medium uppercase tracking-[0.14em] text-[#e6009e]"
+                className="mb-6 sm:mb-7 text-center text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] text-[#e6009e]"
               >
                 {currentQuestion.subtitle}
               </motion.p>
             )}
 
-            {/* Prompt — sticker heading */}
-            <motion.h2
-              variants={itemVariants}
-              className="mb-7 text-center sticker-heading text-[2rem] leading-[1.05]"
-            >
-              {currentQuestion.prompt}
-            </motion.h2>
-
             {/* Options — image card grid */}
-            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 sm:gap-3.5">
               {currentQuestion.options.map((option, index) => (
                 <SurveyOptionCard
                   key={option.id}
@@ -353,11 +373,11 @@ function SurveyOptionCard({
       }
       transition={{ duration: 0.4, ease: SMOOTH }}
       className={cn(
-        "group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl bg-white p-4 text-center cursor-pointer",
+        "group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl bg-white p-3.5 sm:p-4 text-center cursor-pointer",
         "border-[3px] outline-none",
         "focus-visible:ring-4 focus-visible:ring-[#e6009e]/25",
         isSelected
-          ? "border-[#e6009e] shadow-[0_6px_0_rgba(184,0,126,0.25)]"
+          ? "border-[#e6009e] shadow-[0_6px_0_rgba(184,0,126,0.22)]"
           : "border-[#141414]/12 hover:border-[#e6009e]/40"
       )}
       style={{ transitionDelay: `${index * 50}ms` }}
@@ -376,10 +396,14 @@ function SurveyOptionCard({
           <img
             src={option.imageUrl}
             alt={option.label}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.22,0.61,0.36,1)] scale-[0.84] group-hover:scale-[0.89]"
+            style={{ objectPosition: "center 22%" }}
             onError={() => setImgError(true)}
           />
         ) : null}
+        {showImage && (
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(20,20,20,0)_52%,rgba(20,20,20,0.22)_100%)]" />
+        )}
 
         {/* Icon fallback — only when no image or image failed */}
         {IconComponent && !showImage && (
@@ -390,7 +414,7 @@ function SurveyOptionCard({
       </div>
 
       {/* Label */}
-      <span className="font-display text-[15px] font-semibold leading-tight text-[#141414]">
+      <span className="font-display text-[14px] sm:text-[15px] font-semibold leading-tight text-[#141414]">
         {option.label}
       </span>
 

@@ -42,6 +42,7 @@ interface TypeStyle {
   icon: React.ReactNode;
   color: string;
   label: string;
+  image: string;
 }
 
 function typeStyle(type: TaskType): TypeStyle {
@@ -51,18 +52,21 @@ function typeStyle(type: TaskType): TypeStyle {
         icon: <Compass size={16} weight="fill" />,
         color: "#14b8a6",
         label: "Explore",
+        image: "/assets/figma/Rectangle 5.png",
       };
     case "find-token":
       return {
         icon: <Coin size={16} weight="fill" />,
         color: "#e6009e",
         label: "Find Token",
+        image: "/assets/figma/Rectangle 8.png",
       };
     case "visit-stores":
       return {
         icon: <Storefront size={16} weight="fill" />,
         color: "#7c3aed",
         label: "Visit Stores",
+        image: "/assets/figma/Rectangle 9.png",
       };
   }
 }
@@ -226,6 +230,7 @@ function TaskCard({
   const gated = task.timeGated && task.gateUntil !== undefined;
   const remaining = gated ? (task.gateUntil ?? 0) - now : 0;
   const ready = gated && remaining <= 0;
+  const [imgError, setImgError] = useState(false);
 
   // Progress calculation: based on chain level (higher = more progress)
   const progressPercent = Math.min(((task.chainLevel + 1) / 5) * 100, 100);
@@ -244,16 +249,22 @@ function TaskCard({
       data-task-id={task.id}
       data-task-type={task.type}
     >
-      {/* Type icon badge */}
+      {/* Quest illustration (Rectangle asset) with colored icon fallback */}
       <span
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-        style={{
-          color: "#ffffff",
-          background: style.color,
-        }}
+        className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+        style={!imgError ? { background: "#f4f4f5" } : { color: "#ffffff", background: style.color }}
         aria-hidden
       >
-        {style.icon}
+        {!imgError ? (
+          <img
+            src={style.image}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          style.icon
+        )}
       </span>
 
       {/* Description + meta */}

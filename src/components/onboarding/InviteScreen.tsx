@@ -47,6 +47,7 @@ type Phase = "input" | "welcome";
 
 const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
 const EXIT_DELAY = isTest ? 0 : 550;
+const SMOOTH = [0.22, 0.61, 0.36, 1] as const;
 
 export function InviteScreen() {
   const router = useRouter();
@@ -146,16 +147,26 @@ export function InviteScreen() {
   const POP = [0.34, 1.56, 0.64, 1] as const;
 
   return (
-    <main className="min-h-[100dvh] bg-white flex flex-col">
+    <main className="relative min-h-[100dvh] overflow-hidden bg-white flex flex-col">
+      <motion.div
+        initial={{ opacity: 0.72, scale: 1.03 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.7, ease: SMOOTH }}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(115% 88% at 8% -12%, rgba(230,0,158,0.18) 0%, rgba(230,0,158,0.06) 36%, rgba(230,0,158,0) 72%), radial-gradient(98% 80% at 95% 4%, rgba(79,209,197,0.16) 0%, rgba(79,209,197,0.05) 42%, rgba(79,209,197,0) 74%), linear-gradient(180deg,#fffaff 0%,#ffffff 62%,#f9fcff 100%)",
+        }}
+      />
       <motion.div
         initial={{ opacity: 1 }}
         animate={isExiting ? { opacity: 0, scale: 0.97 } : { opacity: 1, scale: 1 }}
-        transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
-        className="flex flex-col flex-1 w-full max-w-sm mx-auto px-5 pt-5 pb-8"
+        transition={{ duration: 0.45, ease: SMOOTH }}
+        className="relative z-10 flex flex-col flex-1 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto px-4 sm:px-5 md:px-6 pt-4 sm:pt-5 pb-6 sm:pb-8"
       >
         {/* Top bar: right-aligned "Murky" pill logo */}
-        <div className="flex justify-end mb-1">
-          <Logo size={38} />
+        <div className="flex justify-end mb-2 sm:mb-1">
+          <Logo size={36} />
         </div>
 
         {/* Thin divider */}
@@ -169,7 +180,7 @@ export function InviteScreen() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
-              className="flex flex-col gap-4"
+              className="rounded-[1.65rem] border border-[#141414]/10 bg-white/84 backdrop-blur-[2px] p-4 sm:p-5 md:p-6 shadow-[0_12px_30px_rgba(20,20,20,0.08)] flex flex-col gap-4 sm:gap-5"
             >
               {/* Eyebrow */}
               <div className="flex items-center gap-1.5">
@@ -181,14 +192,19 @@ export function InviteScreen() {
 
               {/* Hero illustration */}
               <div
-                className="relative w-full rounded-2xl overflow-hidden bg-[#f5f5f5]"
-                style={{ aspectRatio: "16/10" }}
+                className="relative w-full rounded-2xl overflow-hidden border border-[#141414]/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]"
+                style={{
+                  aspectRatio: "16/10",
+                  background:
+                    "radial-gradient(112% 100% at 8% -8%, rgba(230,0,158,0.18) 0%, rgba(230,0,158,0.06) 42%, rgba(230,0,158,0) 74%), radial-gradient(100% 86% at 96% 6%, rgba(79,209,197,0.16) 0%, rgba(79,209,197,0.06) 42%, rgba(79,209,197,0) 76%), linear-gradient(180deg,#fff9fe 0%,#fff 68%,#f6fbff 100%)",
+                }}
               >
                 {!heroError ? (
                   <img
                     src="/assets/figma/Start/MurkeyMall.png"
                     alt="MurkyCorps Mall"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain p-2 sm:p-3"
+                    style={{ objectPosition: "center center" }}
                     onError={() => setHeroError(true)}
                   />
                 ) : (
@@ -212,24 +228,30 @@ export function InviteScreen() {
 
               {/* Sticker headline */}
               <h1
-                className="sticker-heading text-[2.6rem] leading-none"
+                className="sticker-heading text-[clamp(2rem,9vw,2.7rem)] leading-[0.95]"
               >
                 You&rsquo;ve been<br />chosen
               </h1>
 
               {/* Social proof pill */}
               <div className="flex">
-                <span className="pill-outline text-[13px]">
-                  <SealCheck size={14} weight="fill" className="text-[#e6009e]" />
+                <span
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-medium text-[#141414] border border-[#141414]/12 shadow-[0_3px_10px_rgba(20,20,20,0.08)]"
+                  style={{
+                    background:
+                      "linear-gradient(135deg,rgba(255,255,255,0.98) 0%,rgba(255,240,250,0.98) 46%,rgba(238,255,252,0.98) 100%)",
+                  }}
+                >
+                  <SealCheck size={14} weight="fill" className="text-[#d10091]" />
                   Invited by {SOCIAL_PROOF.inviterName} · {SOCIAL_PROOF.inviterTier}
                 </span>
               </div>
 
               {/* Body copy */}
               <p className="text-sm leading-relaxed text-[#4b4b4b] max-w-[38ch]">
-                AN Exclusive Invitation to the MurkyCorps Mall. Enter your
-                Invitation code below to unlock a world of rare finds and
-                hidden rewards.
+                Step into MurkyCorps Mall, where limited drops, hidden offers,
+                and members-only rewards are waiting behind your invite. Enter
+                your code to unlock your private shopping experience.
               </p>
 
               {/* Input + button group */}
@@ -292,15 +314,19 @@ export function InviteScreen() {
                 </div>
 
                 {/* Enter Mall button */}
-                <motion.button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  whileTap={{ scale: 0.97 }}
-                  className="btn-magenta w-full cursor-pointer"
-                >
-                  Enter Mall
-                  <ArrowRight size={16} weight="bold" />
-                </motion.button>
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <motion.button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ y: -1 }}
+                    transition={{ duration: 0.25, ease: SMOOTH }}
+                    className="btn-magenta w-full cursor-pointer"
+                  >
+                    Enter Mall
+                    <ArrowRight size={16} weight="bold" />
+                  </motion.button>
+                </div>
               </div>
 
               {/* Scarcity footer */}
@@ -317,20 +343,21 @@ export function InviteScreen() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5, ease: POP }}
-              className="flex flex-col items-center justify-center flex-1 text-center gap-6 cursor-pointer pt-8"
+              className="rounded-[1.8rem] border border-[#141414]/10 bg-white/86 backdrop-blur-[2px] shadow-[0_14px_34px_rgba(20,20,20,0.08)] flex flex-col items-center justify-center flex-1 text-center gap-6 cursor-pointer pt-8 px-5 sm:px-8"
               onClick={skipAnimation}
             >
               <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.7, ease: POP }}
-                className="flex items-center justify-center"
+                className="relative flex items-center justify-center"
               >
+                <div className="pointer-events-none absolute h-36 w-36 sm:h-40 sm:w-40 rounded-full bg-[radial-gradient(circle,rgba(230,0,158,0.22)_0%,rgba(230,0,158,0.08)_45%,rgba(230,0,158,0)_75%)] blur-[2px]" />
                 {!welcomeCharError ? (
                   <img
                     src="/assets/figma/Invatation verefied/happy.character.png"
                     alt="Welcome to MurkyCorps Mall"
-                    className="h-32 w-auto object-contain drop-shadow-[0_8px_16px_rgba(20,20,20,0.15)]"
+                    className="relative z-10 h-40 sm:h-44 w-auto object-contain drop-shadow-[0_14px_28px_rgba(20,20,20,0.24)]"
                     onError={() => setWelcomeCharError(true)}
                   />
                 ) : (
@@ -345,7 +372,7 @@ export function InviteScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.25, ease: POP }}
               >
-                <h1 className="sticker-heading text-[2.8rem]">
+                <h1 className="sticker-heading text-[clamp(2.1rem,9vw,2.9rem)]">
                   You&rsquo;re in!
                 </h1>
                 <p className="mt-3 text-sm text-[#4b4b4b]">

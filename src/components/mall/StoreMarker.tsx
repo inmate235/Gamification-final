@@ -27,6 +27,22 @@ const CATEGORY_COLORS: Record<StoreCategory, string> = {
   accessories: "#84cc16",
 };
 
+const STORE_VISUAL_LAYOUT: Record<
+  string,
+  { dx: number; dy: number; labelDy?: number }
+> = {
+  "store-bloom": { dx: -30, dy: -20, labelDy: 24 },
+  "store-pulse": { dx: 30, dy: -20, labelDy: 24 },
+  "store-technova": { dx: -60, dy: -90, labelDy: 24 },
+  "store-chrome": { dx: 60, dy: -130, labelDy: 24 },
+  "store-prism": { dx: 5, dy: 70, labelDy: 24 },
+  "store-lumiere": { dx: -70, dy: -100, labelDy: 24 },
+  "store-maison": { dx: 50, dy: 80, labelDy: 24 },
+  "store-cafe-nuit": { dx: -50, dy: 0, labelDy: 24 },
+  "store-sushi-yuki": { dx: 0, dy: -60, labelDy: 24 },
+  "store-burger-hex": { dx: 50, dy: 20, labelDy: 24 },
+};
+
 /* ============================================================================
    StoreIcon — module-scope component that renders the right Phosphor icon.
    Declared outside render so component identity is stable.
@@ -39,7 +55,7 @@ const PHOSPHOR = Phosphor as unknown as Record<
 
 function StoreIcon({ name, color }: { name: string; color: string }) {
   const Cmp = PHOSPHOR[name] ?? Phosphor.Storefront;
-  return <Cmp size={16} weight="fill" color={color} />;
+  return <Cmp size={18} weight="fill" color={color} />;
 }
 
 /* ============================================================================
@@ -54,6 +70,10 @@ interface StoreMarkerProps {
 export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
   const color = CATEGORY_COLORS[store.category];
   const isHot = store.visitorCount > 50;
+  const visual = STORE_VISUAL_LAYOUT[store.id] ?? { dx: 0, dy: 0, labelDy: 22 };
+  const x = store.position.x + visual.dx;
+  const y = store.position.y + visual.dy;
+  const labelY = (visual.labelDy ?? 22) + y;
 
   return (
     <motion.g
@@ -82,9 +102,9 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
     >
       {/* Pulsing color halo */}
       <motion.circle
-        cx={store.position.x}
-        cy={store.position.y}
-        r={20}
+        cx={x}
+        cy={y}
+        r={24}
         fill={color}
         animate={{
           scale: [1, 1.18, 1],
@@ -96,16 +116,16 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
           ease: "easeInOut",
         }}
         style={{
-          transformOrigin: `${store.position.x}px ${store.position.y}px`,
+          transformOrigin: `${x}px ${y}px`,
           transformBox: "fill-box",
         }}
       />
 
       {/* Marker body — solid colored circle with white ring */}
       <circle
-        cx={store.position.x}
-        cy={store.position.y}
-        r={16}
+        cx={x}
+        cy={y}
+        r={19}
         fill={color}
         stroke="#ffffff"
         strokeWidth={3}
@@ -113,15 +133,15 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
 
       {/* Category icon (rendered via foreignObject so Phosphor SVG renders) */}
       <foreignObject
-        x={store.position.x - 12}
-        y={store.position.y - 12}
-        width={24}
-        height={24}
+        x={x - 14}
+        y={y - 14}
+        width={28}
+        height={28}
       >
         <div
           style={{
-            width: 24,
-            height: 24,
+            width: 28,
+            height: 28,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -134,15 +154,15 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
 
       {/* Store name label — white backing pill, Geist Sans, #141414 */}
       <foreignObject
-        x={store.position.x - 52}
-        y={store.position.y + 20}
-        width={104}
-        height={20}
+        x={x - 56}
+        y={labelY}
+        width={112}
+        height={22}
       >
         <div
           style={{
-            width: 104,
-            height: 20,
+            width: 112,
+            height: 22,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -150,8 +170,8 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
             background: "rgba(255,255,255,0.92)",
             boxShadow: "0 1px 2px rgba(20,20,20,0.12)",
             fontFamily: "var(--font-sans), sans-serif",
-            fontSize: 10,
-            fontWeight: 600,
+            fontSize: 11,
+            fontWeight: 700,
             color: "#141414",
             letterSpacing: "0.04em",
             textTransform: "uppercase",
@@ -172,20 +192,20 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
           animate={{ y: [0, -3, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           style={{
-            transformOrigin: `${store.position.x + 14}px ${store.position.y - 14}px`,
+            transformOrigin: `${x + 14}px ${y - 14}px`,
           }}
         >
           <circle
-            cx={store.position.x + 14}
-            cy={store.position.y - 14}
+            cx={x + 14}
+            cy={y - 14}
             r={8}
             fill="#e6009e"
             stroke="#ffffff"
             strokeWidth={2}
           />
           <text
-            x={store.position.x + 14}
-            y={store.position.y - 10.5}
+            x={x + 14}
+            y={y - 10.5}
             fill="#ffffff"
             fontSize="9px"
             fontWeight="bold"
@@ -202,12 +222,12 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
           animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           style={{
-            transformOrigin: `${store.position.x - 14}px ${store.position.y - 14}px`,
+            transformOrigin: `${x - 14}px ${y - 14}px`,
           }}
         >
           <foreignObject
-            x={store.position.x - 22}
-            y={store.position.y - 22}
+            x={x - 22}
+            y={y - 22}
             width={16}
             height={16}
           >

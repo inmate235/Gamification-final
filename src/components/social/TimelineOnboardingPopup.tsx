@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, PlayCircle, Sparkle, Star, ArrowRight } from "@phosphor-icons/react";
+import { PlayCircle, Sparkle, Star, ArrowRight } from "@phosphor-icons/react";
 import { useUIStore } from "@/stores/uiStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { showTokenFeedback } from "@/engine/tokenEconomy";
@@ -34,7 +34,6 @@ export function TimelineOnboardingPopup() {
   const awardTokens = usePlayerStore((s) => s.awardTokens);
 
   const [isVisible, setIsVisible] = useState(false);
-  const [phoneError, setPhoneError] = useState(false);
 
   useEffect(() => {
     if (!hasSeenTimelineOnboarding) {
@@ -68,15 +67,6 @@ export function TimelineOnboardingPopup() {
             transition={{ duration: 0.55, ease: POP }}
             className="relative w-full max-w-sm flex flex-col items-center gap-4"
           >
-            {/* Close button */}
-            <button
-              onClick={handleDismiss}
-              aria-label="Close"
-              className="absolute -top-2 right-0 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#141414] ring-2 ring-[#141414]/10 transition-all duration-200 hover:ring-[#141414]/25 active:scale-95"
-            >
-              <X size={16} weight="bold" />
-            </button>
-
             {/* Yellow card — main content */}
             <div className="relative w-full overflow-hidden rounded-3xl bg-[#ffe600] p-6 shadow-[0_16px_48px_rgba(20,20,20,0.22)] ring-[3px] ring-[#141414]/10">
               {/* Sparkle decorations */}
@@ -108,8 +98,9 @@ export function TimelineOnboardingPopup() {
 
                 {/* Body copy */}
                 <p className="text-sm leading-relaxed text-[#141414] max-w-[34ch]">
-                  Swipe through our new AI-generated, highly curated video feed
-                  to discover exclusive products and flash sales.
+                  Swipe through an endless stream of the hottest deals and flash
+                  sales. Keep watching so you don't miss out — new drops land
+                  every swipe.
                 </p>
 
                 {/* Reward pill — magenta outline, white bg */}
@@ -129,51 +120,6 @@ export function TimelineOnboardingPopup() {
                   <ArrowRight size={16} weight="bold" />
                 </motion.button>
               </div>
-            </div>
-
-            {/* 3D phone illustration below the yellow card */}
-            <div className="relative h-28 w-full flex items-center justify-center">
-              {!phoneError ? (
-                <img
-                  src="/assets/figma/feed-phone.png"
-                  alt="MurkyCorps trending feed phone"
-                  className="h-full w-auto object-contain drop-shadow-[0_12px_24px_rgba(20,20,20,0.18)]"
-                  onError={() => setPhoneError(true)}
-                />
-              ) : (
-                <div
-                  className="flex h-full w-32 items-center justify-center rounded-2xl"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,#ffeefa 0%,#ffe600 50%,#d0f0c0 100%)",
-                  }}
-                >
-                  <PlayCircle
-                    size={40}
-                    weight="fill"
-                    className="text-[#e6009e]"
-                  />
-                </div>
-              )}
-              <motion.div
-                animate={{ y: [0, -6, 0], rotate: [0, 8, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -right-1 top-0"
-              >
-                <Sparkle size={20} weight="fill" className="text-[#e6009e]" />
-              </motion.div>
-              <motion.div
-                animate={{ y: [0, 5, 0], rotate: [0, -6, 0] }}
-                transition={{
-                  duration: 3.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 0.4,
-                }}
-                className="absolute left-2 bottom-0"
-              >
-                <Star size={16} weight="fill" className="text-[#14b8a6]" />
-              </motion.div>
             </div>
           </motion.div>
         </motion.div>

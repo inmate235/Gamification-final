@@ -38,7 +38,15 @@ interface ZoneLabelProps {
 }
 
 export function ZoneLabel({ zone, revealed }: ZoneLabelProps) {
+  const hiddenOnIcon = new Set([
+    ZONE_WEST_WING,
+    ZONE_EAST_WING,
+    ZONE_CENTRAL_PLAZA,
+  ]);
+
   if (!revealed) return null;
+  if (hiddenOnIcon.has(zone.id)) return null;
+  const visuallyHidden = zone.id === ZONE_ENTRANCE;
 
   const color = zoneColor(zone.id);
   const labelWidth = 124;
@@ -63,6 +71,7 @@ export function ZoneLabel({ zone, revealed }: ZoneLabelProps) {
         height={labelHeight}
         rx={labelHeight / 2}
         fill={color}
+        opacity={visuallyHidden ? 0 : 1}
       />
       <text
         x={zone.center.x}
@@ -74,6 +83,7 @@ export function ZoneLabel({ zone, revealed }: ZoneLabelProps) {
         fill="#ffffff"
         letterSpacing="0.08em"
         style={{ textTransform: "uppercase" }}
+        opacity={visuallyHidden ? 0 : 1}
       >
         {zone.name}
       </text>

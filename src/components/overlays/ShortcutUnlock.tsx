@@ -48,15 +48,15 @@ export function ShortcutEntryButton() {
       transition={{ duration: 0.7, ease: PREMIUM_EASE }}
       onClick={open}
       aria-label={`Unlock shortcuts from ${liveDeficitPrice} tokens`}
-      className="flex items-center gap-2 rounded-full bg-[#12121a]/80 px-4 py-2.5 ring-1 ring-[#9d7fdb]/30 backdrop-blur-md transition-all duration-700 hover:bg-[#12121a] active:scale-[0.97]"
+      className="flex items-center gap-2 rounded-full bg-[#e6009e] px-4 py-2.5 ring-2 ring-white shadow-[0_6px_0_#b8007e] transition-all duration-200 active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
       data-testid="shortcut-entry-button"
     >
-      <Lightning size={16} weight="light" className="text-[#9d7fdb]" />
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#a1a1aa]">
+      <Lightning size={16} weight="fill" className="text-white" />
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
         Shortcuts
       </span>
       <span
-        className="font-mono text-xs font-bold tabular-nums text-[#d4af37]"
+        className="font-mono text-xs font-bold tabular-nums text-white"
         data-testid="shortcut-entry-price"
       >
         {liveDeficitPrice}
@@ -102,14 +102,14 @@ export function ShortcutUnlock() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: PREMIUM_EASE }}
-          className="fixed inset-0 z-40 flex items-center justify-center px-4 py-20"
+          className="fixed inset-0 z-40 flex items-end sm:items-center justify-center px-0 sm:px-4 pb-0 sm:py-20"
           onClick={handleClose}
           data-testid="shortcut-overlay"
           role="dialog"
           aria-modal="true"
           aria-label="Unlock shortcuts"
         >
-          <div className="absolute inset-0 backdrop-blur-2xl bg-black/60" />
+          <div className="absolute inset-0 backdrop-blur-md bg-[#141414]/40" />
 
           <motion.div
             initial={{ opacity: 0, y: 48, scale: 0.96 }}
@@ -119,19 +119,18 @@ export function ShortcutUnlock() {
             className="relative w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bezel-card glow-amethyst">
-              <div className="bezel-card-inner p-6 sm:p-7">
+            <div className="rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-7 ring-2 ring-[#141414]/8 shadow-[0_24px_64px_rgba(20,20,20,0.22)]">
                 {/* Header */}
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div className="flex items-center gap-2.5">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#9d7fdb]/10 ring-1 ring-[#9d7fdb]/30">
-                      <Lightning size={16} weight="light" className="text-[#9d7fdb]" />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#7c3aed]/12 ring-1 ring-[#7c3aed]/30">
+                      <Lightning size={16} weight="fill" className="text-[#7c3aed]" />
                     </span>
                     <div>
-                      <h2 className="text-lg font-bold tracking-tight text-[#f5f5f7]">
+                      <h2 className="text-lg font-bold tracking-tight text-[#141414] font-display">
                         Secret Shortcuts
                       </h2>
-                      <p className="text-[11px] uppercase tracking-[0.14em] text-[#71717a]">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a8a8a]">
                         Faster routes through the mall
                       </p>
                     </div>
@@ -139,9 +138,9 @@ export function ShortcutUnlock() {
                   <button
                     onClick={handleClose}
                     aria-label="Close shortcuts"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/10 active:scale-[0.96]"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#141414]/5 ring-1 ring-[#141414]/10 transition-all duration-200 hover:bg-[#141414]/10 active:scale-[0.96]"
                   >
-                    <X size={16} weight="light" className="text-[#a1a1aa]" />
+                    <X size={16} weight="bold" className="text-[#141414]" />
                   </button>
                 </div>
 
@@ -153,7 +152,7 @@ export function ShortcutUnlock() {
                     tokens={tokens}
                   />
                 ) : (
-                  <p className="rounded-2xl bg-white/5 p-4 text-center text-sm text-[#a1a1aa] ring-1 ring-white/10">
+                  <p className="rounded-2xl bg-[#f4f4f5] p-4 text-center text-sm text-[#4b4b4b] ring-1 ring-[#141414]/10">
                     All shortcuts unlocked. You know every hidden path.
                   </p>
                 )}
@@ -161,28 +160,28 @@ export function ShortcutUnlock() {
                 {/* Next-up live deficit teaser (the "always short" anchor) */}
                 {nextUp && (
                   <div
-                    className="mt-3 flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06]"
+                    className="mt-3 flex items-center justify-between rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/10"
                     data-testid="shortcut-nextup"
                   >
                     <div className="flex items-center gap-2.5">
-                      <Lock size={14} weight="light" className="text-[#71717a]" />
+                      <Lock size={14} weight="fill" className="text-[#8a8a8a]" />
                       <div>
-                        <p className="text-xs font-medium text-[#a1a1aa]">
+                        <p className="text-xs font-medium text-[#4b4b4b]">
                           {nextUp.name}
                         </p>
-                        <p className="text-[10px] uppercase tracking-[0.12em] text-[#71717a]">
+                        <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
                           Next up
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p
-                        className="font-mono text-sm font-bold tabular-nums text-[#a1a1aa]"
+                        className="font-mono text-sm font-bold tabular-nums text-[#141414]"
                         data-testid="shortcut-nextup-price"
                       >
                         {liveDeficitPrice}
                       </p>
-                      <p className="text-[10px] text-[#71717a]">
+                      <p className="text-[10px] text-[#8a8a8a]">
                         {Math.max(0, liveDeficitPrice - tokens)} more to unlock
                       </p>
                     </div>
@@ -192,7 +191,7 @@ export function ShortcutUnlock() {
                 {/* Unlocked routes */}
                 {unlocked.length > 0 && (
                   <div className="mt-4 space-y-2" data-testid="shortcut-unlocked-list">
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#71717a]">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#8a8a8a]">
                       Unlocked routes
                     </p>
                     {unlocked.map((s) => (
@@ -204,7 +203,7 @@ export function ShortcutUnlock() {
                         <span className="text-xs font-medium text-[#4fd1c5]">
                           {zoneLabel(s.fromZoneId)} ↔ {zoneLabel(s.toZoneId)}
                         </span>
-                        <span className="ml-auto text-[10px] uppercase tracking-[0.12em] text-[#71717a]">
+                        <span className="ml-auto text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
                           {s.name}
                         </span>
                       </div>
@@ -214,11 +213,10 @@ export function ShortcutUnlock() {
 
                 <button
                   onClick={handleClose}
-                  className="mt-5 w-full rounded-full bg-white/5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#a1a1aa] ring-1 ring-white/10 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/10 active:scale-[0.98]"
+                  className="mt-5 w-full rounded-full bg-white py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#4b4b4b] ring-1 ring-[#141414]/10 transition-all duration-200 hover:bg-[#f4f4f5] active:scale-[0.98]"
                 >
                   Maybe Later
                 </button>
-              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -248,33 +246,33 @@ function ActiveShortcutCard({
 
   return (
     <div
-      className="rounded-2xl bg-[#9d7fdb]/8 p-4 ring-1 ring-[#9d7fdb]/25"
+      className="rounded-2xl bg-[#7c3aed]/8 p-4 ring-1 ring-[#7c3aed]/25"
       data-testid="shortcut-active-card"
     >
       <div className="mb-2 flex items-center gap-2">
-        <Path size={16} weight="light" className="text-[#9d7fdb]" />
-        <span className="text-sm font-bold text-[#f5f5f7]">{shortcut.name}</span>
+        <Path size={16} weight="fill" className="text-[#7c3aed]" />
+        <span className="text-sm font-bold text-[#141414]">{shortcut.name}</span>
       </div>
-      <p className="mb-3 text-xs leading-relaxed text-[#a1a1aa]">
+      <p className="mb-3 text-xs leading-relaxed text-[#4b4b4b]">
         {shortcut.description}
       </p>
-      <div className="mb-3 flex items-center justify-between rounded-xl bg-black/30 px-3 py-2 ring-1 ring-white/[0.06]">
-        <span className="text-[11px] uppercase tracking-[0.14em] text-[#71717a]">
+      <div className="mb-3 flex items-center justify-between rounded-xl bg-[#141414]/5 px-3 py-2 ring-1 ring-[#141414]/10">
+        <span className="text-[11px] uppercase tracking-[0.14em] text-[#8a8a8a]">
           Route
         </span>
-        <span className="font-mono text-xs font-semibold text-[#f5f5f7]">
+        <span className="font-mono text-xs font-semibold text-[#141414]">
           {zoneLabel(shortcut.fromZoneId)} ↔ {zoneLabel(shortcut.toZoneId)}
         </span>
       </div>
       <div className="flex items-center justify-between">
         <div>
           <p
-            className="font-mono text-xl font-bold tabular-nums text-[#d4af37]"
+            className="font-mono text-xl font-bold tabular-nums text-[#e6009e]"
             data-testid="shortcut-active-cost"
           >
             {shortcut.tokenCost}
           </p>
-          <p className="text-[10px] uppercase tracking-[0.12em] text-[#71717a]">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
             Tokens to unlock
           </p>
         </div>
@@ -283,10 +281,10 @@ function ActiveShortcutCard({
           disabled={!canAfford}
           aria-label={`Unlock ${shortcut.name} for ${shortcut.tokenCost} tokens`}
           className={cn(
-            "rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]",
+            "rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all duration-200 active:scale-[0.98]",
             canAfford
-              ? "bg-gradient-to-r from-[#d4af37] to-[#b8941f] text-black"
-              : "cursor-not-allowed bg-white/5 text-[#71717a] ring-1 ring-white/10"
+              ? "btn-magenta"
+              : "cursor-not-allowed bg-white text-[#71717a] ring-1 ring-[#141414]/10"
           )}
           data-testid="shortcut-unlock-button"
         >
