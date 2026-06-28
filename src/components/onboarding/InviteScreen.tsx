@@ -3,28 +3,23 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Sparkle,
-  ArrowRight,
-  Key,
-  WarningCircle,
-  SealCheck,
-} from "@phosphor-icons/react/dist/ssr";
+import { Star, ArrowRight, SealCheck } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
-import { ParticleField } from "./ParticleField";
+import { Logo } from "@/components/ui/Logo";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 
 /**
  * InviteScreen — the entry gate at `/`.
  *
- * Features:
- *  - Invite code input with validation (empty + invalid code error states)
- *  - "You've been chosen" welcome animation with particle effects + social proof
- *  - ENTER MALL button (triggers welcome animation then navigates to /survey)
- *  - Exclusivity / scarcity messaging
- *  - Mystic premium aesthetic (glassmorphism, double-bezel, gold accents)
- *  - Single forward flow — no back navigation
- *  - Idempotent submission (rapid double-click safe)
+ * Faithful to the Figma "Gamification" invite frame: white background,
+ * black "Murky" pill logo, magenta star eyebrow, 3D mall illustration hero,
+ * chunky black-outlined sticker headline, magenta-bordered code input and a
+ * solid magenta "Enter Mall" button.
+ *
+ * Behaviour preserved from the original:
+ *  - Invite code validation (empty + invalid format error states)
+ *  - "You've been chosen" welcome phase with tap-to-continue
+ *  - Single forward flow, idempotent submission, Enter-key support
  */
 
 /* ============================================================================
@@ -62,7 +57,7 @@ export function InviteScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [shakeTrigger, setShakeTrigger] = useState(0);
-  const [isFocused, setIsFocused] = useState(false);
+  const [heroError, setHeroError] = useState(false);
   const welcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* --- Validation --- */
@@ -146,240 +141,206 @@ export function InviteScreen() {
      Render
      ========================================================================== */
 
-  return (
-    <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center px-6 py-16 overflow-hidden">
-      {/* Continuous Particle Field */}
-      <ParticleField count={phase === "input" ? 16 : 36} color="#d4af37" className="absolute inset-0 z-0" />
+  const POP = [0.34, 1.56, 0.64, 1] as const;
 
+  return (
+    <main className="min-h-[100dvh] bg-white flex flex-col">
       <motion.div
-        initial={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
-        animate={isExiting ? { opacity: 0, filter: "blur(12px)", scale: 0.96 } : { opacity: 1, filter: "blur(0px)", scale: 1 }}
-        transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
-        className="w-full flex flex-col items-center justify-center z-10"
+        initial={{ opacity: 1 }}
+        animate={isExiting ? { opacity: 0, scale: 0.97 } : { opacity: 1, scale: 1 }}
+        transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
+        className="flex flex-col flex-1 w-full max-w-sm mx-auto px-5 pt-5 pb-8"
       >
+        {/* Top bar: right-aligned "Murky" pill logo */}
+        <div className="flex justify-end mb-1">
+          <Logo size={38} />
+        </div>
+
+        {/* Thin divider */}
+        <div className="h-px bg-[#141414]/10 mb-4" />
+
         <AnimatePresence mode="wait">
           {phase === "input" ? (
             <motion.div
               key="input-phase"
-              initial={{ opacity: 0, y: 48, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -32, filter: "blur(8px)" }}
-              transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
-              className="w-full max-w-md z-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
+              className="flex flex-col gap-4"
             >
-              {/* Eyebrow — exclusivity tag */}
-              <div className="mb-8 flex justify-center">
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
-                  <Sparkle size={12} weight="light" className="text-[#d4af37]" />
+              {/* Eyebrow */}
+              <div className="flex items-center gap-1.5">
+                <Star size={14} weight="fill" className="text-[#e6009e]" />
+                <span className="text-sm font-medium text-[#141414]">
                   Invite Only · Members Exclusive
                 </span>
               </div>
 
-              {/* Double-bezel card with shake animation */}
-              <motion.div
-                animate={shakeTrigger > 0 ? { x: [0, -10, 8, -8, 6, -4, 2, 0] } : { x: 0 }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                onAnimationComplete={() => setShakeTrigger(0)}
-                className="bezel-card glow-gold"
+              {/* Hero illustration */}
+              <div
+                className="relative w-full rounded-2xl overflow-hidden bg-[#f5f5f5]"
+                style={{ aspectRatio: "16/10" }}
               >
-                <div className="bezel-card-inner flex flex-col items-center text-center">
-                  <h1 className="text-gradient-gold text-4xl font-bold tracking-tight sm:text-5xl">
-                    You&rsquo;ve Been Chosen
-                  </h1>
-                  <p className="mt-4 text-sm leading-relaxed text-[#a1a1aa]">
-                    An exclusive invitation to the MurkyCorps Mall. Enter your
-                    invite code below to unlock a world of rare finds and hidden
-                    rewards.
-                  </p>
-
-                  {/* Social proof teaser */}
-                  <div className="mt-6 flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs text-[#a1a1aa] ring-1 ring-white/10">
-                    <SealCheck
-                      size={14}
-                      weight="light"
-                      className="text-[#d4af37]"
-                    />
-                    Invited by {SOCIAL_PROOF.inviterName},{" "}
-                    {SOCIAL_PROOF.inviterTier}
-                  </div>
-
-                  {/* Input + button group */}
-                  <div className="mt-8 w-full">
-                    <label
-                      htmlFor="invite-code"
-                      className="mb-2 block text-left text-[10px] uppercase tracking-[0.2em] font-medium text-[#71717a]"
+                {!heroError ? (
+                  <img
+                    src="/assets/figma/invite-hero.png"
+                    alt="MurkyCorps Mall"
+                    className="w-full h-full object-cover"
+                    onError={() => setHeroError(true)}
+                  />
+                ) : (
+                  /* Gradient fallback until real asset is provided */
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{
+                      background:
+                        "linear-gradient(135deg,#ffeefa 0%,#ffe600 50%,#d0f0c0 100%)",
+                    }}
+                  >
+                    <span
+                      className="font-display font-bold text-[#141414] opacity-30"
+                      style={{ fontSize: 32 }}
                     >
-                      Invite Code
-                    </label>
-                    <div
+                      Murky Mall
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sticker headline */}
+              <h1
+                className="sticker-heading text-[2.6rem] leading-none"
+              >
+                You&rsquo;ve been<br />chosen
+              </h1>
+
+              {/* Social proof pill */}
+              <div className="flex">
+                <span className="pill-outline text-[13px]">
+                  <SealCheck size={14} weight="fill" className="text-[#e6009e]" />
+                  Invited by {SOCIAL_PROOF.inviterName} · {SOCIAL_PROOF.inviterTier}
+                </span>
+              </div>
+
+              {/* Body copy */}
+              <p className="text-sm leading-relaxed text-[#4b4b4b] max-w-[38ch]">
+                AN Exclusive Invitation to the MurkyCorps Mall. Enter your
+                Invitation code below to unlock a world of rare finds and
+                hidden rewards.
+              </p>
+
+              {/* Input + button group */}
+              <div className="flex flex-col gap-3 mt-1">
+                <div>
+                  <label htmlFor="invite-code" className="sr-only">
+                    Invite code
+                  </label>
+                  <motion.div
+                    animate={
+                      shakeTrigger > 0
+                        ? { x: [0, -8, 7, -6, 5, -3, 2, 0] }
+                        : { x: 0 }
+                    }
+                    transition={{ duration: 0.45, ease: "easeInOut" }}
+                    onAnimationComplete={() => setShakeTrigger(0)}
+                  >
+                    <input
+                      id="invite-code"
+                      type="text"
+                      value={code}
+                      onChange={handleChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder="xxxx-xxxx-xxxx"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-label="Invite code"
+                      aria-invalid={error ? true : undefined}
                       className={cn(
-                        "flex items-center gap-3 rounded-2xl bg-white/5 px-4 py-3.5 ring-1 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]",
-                        error
-                          ? "ring-[#ef4444]/60"
-                          : "ring-white/10 focus-within:ring-[#d4af37]/40"
+                        "input-pill",
+                        error && "border-[#ef4444] shadow-[0_0_0_4px_rgba(239,68,68,0.16)]"
                       )}
-                    >
-                      <motion.div
-                        animate={isFocused ? { rotate: [0, -15, 10, 0] } : { rotate: 0 }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                    />
+                  </motion.div>
+
+                  <AnimatePresence>
+                    {error && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-2 text-center text-xs text-[#ef4444]"
+                        role="alert"
                       >
-                        <Key
-                          size={20}
-                          weight="light"
-                          className="shrink-0 text-[#d4af37]"
-                        />
-                      </motion.div>
-                      <input
-                        id="invite-code"
-                        type="text"
-                        value={code}
-                        onChange={handleChange}
-                        onKeyDown={handleKeyDown}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={() => setIsFocused(false)}
-                        placeholder="XXXX-XXXX-XXX"
-                        autoComplete="off"
-                        spellCheck={false}
-                        aria-label="Invite code"
-                        aria-invalid={error ? true : undefined}
-                        className="w-full bg-transparent text-sm font-mono tracking-wider text-[#f5f5f7] placeholder:text-[#71717a] focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Error message */}
-                    <AnimatePresence>
-                      {error && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                          transition={{
-                            duration: 0.4,
-                            ease: [0.32, 0.72, 0, 1],
-                          }}
-                          className="mt-3 flex items-center gap-2 text-left text-xs text-[#ef4444]"
-                          role="alert"
-                        >
-                          <WarningCircle size={14} weight="light" />
-                          {error}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* ENTER MALL button with hover states */}
-                    <motion.button
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                      whileHover={{ scale: 1.02, boxShadow: "0 0 28px rgba(212,175,55,0.3)" }}
-                      whileTap={{ scale: 0.98 }}
-                      className="group mt-6 flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#d4af37] to-[#b8941f] px-6 py-3.5 text-sm font-semibold text-black shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] disabled:pointer-events-none cursor-pointer"
-                    >
-                      <span>ENTER MALL</span>
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/10 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1">
-                        <ArrowRight size={14} weight="light" />
-                      </span>
-                    </motion.button>
-                  </div>
-
-                  {/* Scarcity footer */}
-                  <p className="mt-6 text-[10px] uppercase tracking-[0.15em] text-[#71717a]">
-                    {SOCIAL_PROOF.memberCount} members · Limited spots remaining
-                  </p>
+                        {error}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </motion.div>
+
+                {/* Enter Mall button */}
+                <motion.button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  whileTap={{ scale: 0.97 }}
+                  className="btn-magenta w-full cursor-pointer"
+                >
+                  Enter Mall
+                  <ArrowRight size={16} weight="bold" />
+                </motion.button>
+              </div>
+
+              {/* Scarcity footer */}
+              <p className="text-[12px] text-[#4b4b4b]">
+                {SOCIAL_PROOF.memberCount} Members &ndash;{" "}
+                <strong>Limited spots remaining</strong>
+              </p>
             </motion.div>
           ) : (
-            /* --- Welcome animation phase --- */
+            /* Welcome phase */
             <motion.div
               key="welcome-phase"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-              className="relative flex min-h-[60dvh] w-full max-w-lg flex-col items-center justify-center text-center z-10 cursor-pointer"
+              transition={{ duration: 0.5, ease: POP }}
+              className="flex flex-col items-center justify-center flex-1 text-center gap-6 cursor-pointer pt-8"
               onClick={skipAnimation}
             >
-              {/* Pulsing glow ring */}
               <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{
-                  duration: 1.2,
-                  ease: [0.32, 0.72, 0, 1],
-                }}
-                className="relative mb-8 flex h-24 w-24 items-center justify-center"
+                transition={{ duration: 0.7, ease: POP }}
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e6009e]"
               >
-                <div className="absolute inset-0 rounded-full bg-[#d4af37]/20 blur-2xl" />
-                <motion.div
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: [0.8, 1.1, 1] }}
-                  transition={{
-                    duration: 1.5,
-                    ease: [0.32, 0.72, 0, 1],
-                    repeat: Infinity,
-                    repeatType: "reverse",
-                  }}
-                  className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8941f] shadow-[0_0_24px_rgba(212,175,55,0.4)]"
-                >
-                  <Sparkle size={32} weight="light" className="text-black" />
-                </motion.div>
+                <SealCheck size={40} weight="bold" className="text-white" />
               </motion.div>
 
-              {/* Headline — staggered reveal */}
-              <motion.h1
-                initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                transition={{
-                  duration: 0.9,
-                  delay: 0.3,
-                  ease: [0.32, 0.72, 0, 1],
-                }}
-                className="text-gradient-gold text-4xl font-bold tracking-tight sm:text-5xl"
-              >
-                You&rsquo;ve Been Chosen
-              </motion.h1>
-
-              {/* Social proof — staggered */}
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.8,
-                  delay: 0.7,
-                  ease: [0.32, 0.72, 0, 1],
-                }}
-                className="mt-4 text-base text-[#f5f5f7]"
+                transition={{ duration: 0.6, delay: 0.25, ease: POP }}
               >
-                Invited by {SOCIAL_PROOF.inviterName},{" "}
-                <span className="text-[#d4af37]">
-                  {SOCIAL_PROOF.inviterTier}
-                </span>
-              </motion.p>
+                <h1 className="sticker-heading text-[2.8rem]">
+                  You&rsquo;re in!
+                </h1>
+                <p className="mt-3 text-sm text-[#4b4b4b]">
+                  Invited by {SOCIAL_PROOF.inviterName} ·{" "}
+                  <span className="font-semibold text-[#e6009e]">
+                    {SOCIAL_PROOF.inviterTier}
+                  </span>
+                </p>
+                <p className="mt-1 text-sm text-[#8a8a8a]">
+                  Your private mall experience awaits
+                </p>
+              </motion.div>
 
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.8,
-                  delay: 1.0,
-                  ease: [0.32, 0.72, 0, 1],
-                }}
-                className="mt-2 text-sm text-[#a1a1aa]"
-              >
-                Your private mall experience awaits
-              </motion.p>
-
-              {/* Tap to continue hint */}
               <motion.p
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.6, 0] }}
-                transition={{
-                  duration: 2,
-                  delay: 1.8,
-                  repeat: Infinity,
-                  ease: [0.32, 0.72, 0, 1],
-                }}
-                className="mt-10 text-[10px] uppercase tracking-[0.2em] text-[#71717a]"
+                animate={{ opacity: [0, 0.5, 0] }}
+                transition={{ duration: 2, delay: 1.6, repeat: Infinity }}
+                className="text-[11px] uppercase tracking-widest text-[#8a8a8a]"
               >
                 Tap to continue
               </motion.p>

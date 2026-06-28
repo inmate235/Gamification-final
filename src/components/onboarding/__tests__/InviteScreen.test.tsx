@@ -65,6 +65,21 @@ vi.mock("@/components/onboarding/ParticleField", () => ({
   ParticleField: () => null,
 }));
 
+/* --- Mock MagneticButton to avoid framer-motion hook dependencies --- */
+vi.mock("@/components/ui/MagneticButton", () => ({
+  MagneticButton: ({ children, onClick, disabled, ...rest }: Record<string, unknown>) =>
+    React.createElement(
+      "button",
+      { onClick, disabled, ...(rest as Record<string, unknown>) },
+      children as React.ReactNode
+    ),
+}));
+
+/* --- Mock Logo to keep test output clean --- */
+vi.mock("@/components/ui/Logo", () => ({
+  Logo: () => null,
+}));
+
 import { InviteScreen } from "@/components/onboarding/InviteScreen";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 

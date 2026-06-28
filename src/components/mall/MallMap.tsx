@@ -20,6 +20,7 @@ import { ZoneLabel } from "./ZoneLabel";
 import { StoreMarker } from "./StoreMarker";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PhantomAvatars } from "./PhantomAvatars";
+import { ShoppingBag } from "@phosphor-icons/react/dist/ssr";
 
 /**
  * MallMap — the SVG-based 2D floor plan at the heart of `/mall`.
@@ -168,6 +169,34 @@ export function MallMap() {
       className="relative mx-auto w-full max-w-4xl"
       data-testid="mall-map"
     >
+      {/* Background visual layer — atmospheric gradient behind the SVG.
+          Swap with next/image when Figma map background is downloaded. */}
+      <div
+        className="absolute inset-0 overflow-hidden rounded-3xl"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #12121a 50%, #0a0a0f 100%)",
+        }}
+        aria-hidden
+      >
+        {/* Subtle grid pattern overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+        {/* Decorative bag sticker — top left, Figma-inspired (node 66:74) */}
+        <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1.5 ring-1 ring-white/10 backdrop-blur-sm animate-ambient-float">
+          <ShoppingBag size={14} weight="light" className="text-[#d4af37]" />
+          <span className="text-[9px] font-medium uppercase tracking-[0.1em] text-[#a1a1aa]">
+            MurkyCorps
+          </span>
+        </div>
+      </div>
+
       <svg
         viewBox="0 0 1000 1200"
         className="h-auto w-full select-none"

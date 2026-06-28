@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Coin, Fire, MapPin, Lightning } from "@phosphor-icons/react/dist/ssr";
+import { Fire, MapPin, Lightning, Star } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -109,13 +109,13 @@ export function StatusBar() {
             "flex items-center gap-2 sm:gap-3"
           )}
         >
-          {/* Tokens */}
+          {/* Tokens — with star accent (Figma node 11:53) */}
           <div
             className="flex items-center gap-1.5 relative"
             data-testid="status-tokens"
             aria-label="Tokens"
           >
-            <Coin size={16} weight="light" className="text-[#d4af37]" />
+            <Star size={13} weight="fill" className="text-[#d4af37]" />
             <motion.span
               key={pulseKey}
               initial={{

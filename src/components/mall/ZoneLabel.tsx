@@ -23,35 +23,36 @@ export function ZoneLabel({ zone, revealed }: ZoneLabelProps) {
       data-testid={`zone-label-${zone.id}`}
       aria-label={zone.name}
     >
-      {/* Backing pill for legibility */}
+      {/* Compact backing pill for legibility (Figma-inspired smaller labels) */}
       <rect
-        x={zone.center.x - 70}
-        y={zone.center.y - 14}
-        width={140}
-        height={28}
-        rx={14}
+        x={zone.center.x - 55}
+        y={zone.center.y - 11}
+        width={110}
+        height={22}
+        rx={11}
         fill="#0a0a0f"
-        opacity={0.7}
+        opacity={0.75}
       />
       <rect
-        x={zone.center.x - 70}
-        y={zone.center.y - 14}
-        width={140}
-        height={28}
-        rx={14}
+        x={zone.center.x - 55}
+        y={zone.center.y - 11}
+        width={110}
+        height={22}
+        rx={11}
         fill="none"
-        stroke="rgba(255,255,255,0.08)"
+        stroke="rgba(255,255,255,0.06)"
         strokeWidth={1}
       />
       <text
         x={zone.center.x}
-        y={zone.center.y + 5}
+        y={zone.center.y + 4}
         textAnchor="middle"
         fontFamily="var(--font-geist-sans), sans-serif"
-        fontSize={15}
-        fontWeight={600}
-        fill="#f5f5f7"
-        letterSpacing="0.04em"
+        fontSize={12}
+        fontWeight={500}
+        fill="#a1a1aa"
+        letterSpacing="0.08em"
+        style={{ textTransform: "uppercase" }}
       >
         {zone.name}
       </text>

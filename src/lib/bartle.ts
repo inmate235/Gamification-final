@@ -28,6 +28,8 @@ export interface SurveyQuestion {
 export interface SurveyOption {
   id: string;
   label: string;
+  /** Optional image URL for image-card style questions (Figma assets). */
+  imageUrl?: string;
   /** Optional image URL or gradient token for image-card style questions. */
   imageGradient?: string;
   /** Icon name from Phosphor light set, rendered by the survey component. */
@@ -49,6 +51,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "bold",
         label: "Bold & Avant-Garde",
+        imageUrl: "/assets/figma/survey-style-bold.jpg",
         imageGradient:
           "linear-gradient(135deg, #e879a1 0%, #9d7fdb 50%, #4fd1c5 100%)",
         icon: "Lightning",
@@ -57,6 +60,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "classic",
         label: "Classic & Refined",
+        imageUrl: "/assets/figma/survey-style-classic.jpg",
         imageGradient:
           "linear-gradient(135deg, #d4af37 0%, #b8941f 50%, #1a1a25 100%)",
         icon: "Diamond",
@@ -65,6 +69,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "trendy",
         label: "Trendy & Fresh",
+        imageUrl: "/assets/figma/survey-style-trendy.jpg",
         imageGradient:
           "linear-gradient(135deg, #4fd1c5 0%, #9d7fdb 50%, #e879a1 100%)",
         icon: "Sparkle",
@@ -73,6 +78,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "cozy",
         label: "Cozy & Casual",
+        imageUrl: "/assets/figma/survey-style-cozy.jpg",
         imageGradient:
           "linear-gradient(135deg, #b87333 0%, #d4af37 50%, #1a1a25 100%)",
         icon: "Heart",
@@ -88,12 +94,18 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "friends",
         label: "With friends",
+        imageUrl: "/assets/figma/survey-social-friends.jpg",
+        imageGradient:
+          "linear-gradient(135deg, #9d7fdb 0%, #e879a1 100%)",
         icon: "Users",
         scores: { socializer: 3, killer: 1 },
       },
       {
         id: "solo",
         label: "Solo adventure",
+        imageUrl: "/assets/figma/survey-social-solo.jpg",
+        imageGradient:
+          "linear-gradient(135deg, #4fd1c5 0%, #1a1a25 100%)",
         icon: "User",
         scores: { achiever: 2, explorer: 2 },
       },
@@ -107,12 +119,18 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
       {
         id: "deals",
         label: "Hunting deals",
+        imageUrl: "/assets/figma/survey-motivation-deals.jpg",
+        imageGradient:
+          "linear-gradient(135deg, #d4af37 0%, #b87333 100%)",
         icon: "Tag",
         scores: { achiever: 3, killer: 1 },
       },
       {
         id: "discovery",
         label: "Discovering new things",
+        imageUrl: "/assets/figma/survey-motivation-discovery.jpg",
+        imageGradient:
+          "linear-gradient(135deg, #4fd1c5 0%, #9d7fdb 100%)",
         icon: "Compass",
         scores: { explorer: 3, socializer: 1 },
       },

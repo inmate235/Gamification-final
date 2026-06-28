@@ -138,6 +138,22 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
         </div>
       </foreignObject>
 
+      {/* Store name label — uppercase text below marker (Figma-inspired) */}
+      <text
+        x={store.position.x}
+        y={store.position.y + 28}
+        textAnchor="middle"
+        fontFamily="var(--font-geist-sans), sans-serif"
+        fontSize={10}
+        fontWeight={600}
+        fill={color}
+        letterSpacing="0.06em"
+        opacity={0.9}
+        style={{ textTransform: "uppercase", pointerEvents: "none" }}
+      >
+        {store.name}
+      </text>
+
       {/* Bobbing deal badge (%) */}
       {store.dealInfo && (
         <motion.g

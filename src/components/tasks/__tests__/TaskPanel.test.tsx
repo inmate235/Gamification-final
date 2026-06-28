@@ -60,6 +60,7 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Coin: make("Coin"),
     Storefront: make("Storefront"),
     Timer: make("Timer"),
+    Star: make("Star"),
   };
 });
 

@@ -9,18 +9,30 @@ import { getStoreById } from "@/data/mallData";
 import { DealCard } from "@/components/mall/DealCard";
 import { calculateDeficitPrice } from "@/stores/economyStore";
 import { showTokenFeedback } from "@/engine/tokenEconomy";
-import type { Store } from "@/types";
+import type { Store, StoreCategory } from "@/types";
 import { cn } from "@/lib/utils";
 
 /**
  * StoreDetail — the glass overlay shown when a store marker is tapped.
  *
- * Displays the store's name, category, fake 5-star reviews,
+ * Displays the store's name, category badge (color-coded), fake 5-star reviews,
  * amplified visitor count framed as "now browsing", and any current deal info.
  * Supports store resolution from feed data payload.
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
+
+/* ============================================================================
+   Category colors — matching StoreMarker palette
+   ========================================================================== */
+
+const CATEGORY_COLORS: Record<StoreCategory, string> = {
+  fashion: "#e879a1",
+  tech: "#4fd1c5",
+  lifestyle: "#d4af37",
+  food: "#f59e0b",
+  accessories: "#9d7fdb",
+};
 
 /* ============================================================================
    CountingTicker — micro-animated visitor counter
@@ -153,11 +165,19 @@ export function StoreDetail() {
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
                     <div className="flex gap-2 flex-wrap items-center">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] font-medium text-[#a1a1aa] ring-1 ring-white/10">
+                      {/* Category badge — color-coded per category (Figma-inspired) */}
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] font-semibold ring-1"
+                        style={{
+                          color: CATEGORY_COLORS[store.category],
+                          background: `${CATEGORY_COLORS[store.category]}14`,
+                          borderColor: `${CATEGORY_COLORS[store.category]}33`,
+                        }}
+                      >
                         {capitalize(store.category)}
                       </span>
                       {fromFeed && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold text-blue-400 ring-1 ring-blue-500/30">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#4fd1c5]/10 px-2 py-0.5 text-[10px] uppercase tracking-wider font-semibold text-[#4fd1c5] ring-1 ring-[#4fd1c5]/30">
                           From your feed
                         </span>
                       )}

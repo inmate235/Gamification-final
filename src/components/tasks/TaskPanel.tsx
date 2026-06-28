@@ -9,6 +9,7 @@ import {
   Coin,
   Storefront,
   Timer,
+  Star,
 } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
@@ -19,10 +20,11 @@ import type { Task, TaskType } from "@/types";
  * TaskPanel — the bottom chrome of `/mall`.
  *
  * Renders the breadcrumb task list: a never-empty set of active tasks (2-4 at
- * once) shown as double-bezel cards. Each card shows the task type icon, a
- * human-readable description referencing a real map location, and the token
- * reward. Time-gated tasks display a live countdown. The panel is
- * expandable/collapsible via `uiStore.toggleBottomPanel`.
+ * once) shown as quest cards with star reward indicators and progress bars.
+ * Each card shows the task type icon, a human-readable description referencing
+ * a real map location, and the token reward with a star badge. Time-gated
+ * tasks display a live countdown. The panel is expandable/collapsible via
+ * `uiStore.toggleBottomPanel`.
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
@@ -153,6 +155,15 @@ export function TaskPanel() {
               transition={{ duration: 0.5, ease: PREMIUM_EASE }}
               className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#12121a]/90 p-1 ring-1 ring-white/10 shadow-[0_0_40px_rgba(157,127,219,0.15)]"
             >
+              {/* Rainbow accent element — top border gradient (Figma node 66:75) */}
+              <div
+                className="absolute inset-x-0 top-0 h-[2px] opacity-60"
+                style={{
+                  background:
+                    "linear-gradient(90deg, #d4af37 0%, #e879a1 25%, #9d7fdb 50%, #4fd1c5 75%, #d4af37 100%)",
+                }}
+              />
+
               <div className="rounded-[calc(1.5rem-4px)] bg-[#1a1a24]/90 p-5">
                 <div className="mb-6 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -183,8 +194,8 @@ export function TaskPanel() {
 
                 <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
                   <AnimatePresence initial={false}>
-                    {activeTasks.map((task) => (
-                      <TaskCard key={task.id} task={task} now={now} />
+                    {activeTasks.map((task, index) => (
+                      <TaskCard key={task.id} task={task} now={now} index={index} />
                     ))}
                   </AnimatePresence>
                   
@@ -204,14 +215,17 @@ export function TaskPanel() {
 }
 
 /* ============================================================================
-   TaskCard
+   TaskCard — enhanced with star reward and progress bar (Figma-inspired)
    ========================================================================== */
 
-function TaskCard({ task, now }: { task: Task; now: number }) {
+function TaskCard({ task, now, index = 0 }: { task: Task; now: number; index?: number }) {
   const style = typeStyle(task.type);
   const gated = task.timeGated && task.gateUntil !== undefined;
   const remaining = gated ? (task.gateUntil ?? 0) - now : 0;
   const ready = gated && remaining <= 0;
+
+  // Progress calculation: based on chain level (higher = more progress)
+  const progressPercent = Math.min(((task.chainLevel + 1) / 5) * 100, 100);
 
   return (
     <motion.div
@@ -219,9 +233,9 @@ function TaskCard({ task, now }: { task: Task; now: number }) {
       initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.25 } }}
-      transition={{ duration: 0.5, ease: PREMIUM_EASE }}
+      transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: index * 0.06 }}
       className={cn(
-        "flex items-center gap-3 rounded-2xl bg-white/[0.03] p-2.5 ring-1 ring-white/10",
+        "relative flex items-center gap-3 overflow-hidden rounded-2xl bg-white/[0.03] p-2.5 ring-1 ring-white/10",
         "transition-shadow duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
       )}
       style={{ boxShadow: `0 0 16px ${style.color}14` }}
@@ -275,14 +289,25 @@ function TaskCard({ task, now }: { task: Task; now: number }) {
             </span>
           )}
         </div>
+
+        {/* Progress bar — thin bar at the bottom (Figma nodes 70:80, 70:81) */}
+        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
+          <div
+            className="h-full rounded-full transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            style={{
+              width: `${progressPercent}%`,
+              background: `linear-gradient(90deg, ${style.color} 0%, ${style.color}99 100%)`,
+            }}
+          />
+        </div>
       </div>
 
-      {/* Reward */}
+      {/* Reward — star badge (Figma nodes 7:21, 11:15, 11:21) */}
       <span
         className="flex shrink-0 items-center gap-1 rounded-full bg-[#d4af37]/10 px-2.5 py-1 text-xs font-semibold text-[#d4af37] ring-1 ring-[#d4af37]/25"
         data-testid="task-card-reward"
       >
-        <Coin size={12} weight="fill" />
+        <Star size={11} weight="fill" className="text-[#d4af37]" />
         <span className="font-mono tabular-nums">+{task.reward}</span>
       </span>
     </motion.div>
