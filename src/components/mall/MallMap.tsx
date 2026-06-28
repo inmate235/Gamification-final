@@ -54,7 +54,7 @@ const ZONE_IMAGES: Record<string, string> = {
 
 const ZONE_ICON_LAYOUT: Record<string, { scale: number; dx?: number; dy?: number }> = {
   [ZONE_ENTRANCE]: { scale: 0.62, dy: 0.04 },
-  [ZONE_EAST_WING]: { scale: 0.7, dx: 0.01 },
+  [ZONE_EAST_WING]: { scale: 0.84, dx: -0.08 },
   [ZONE_WEST_WING]: { scale: 0.805, dx: -0.1 },
   [ZONE_CENTRAL_PLAZA]: { scale: 0.66 },
   [ZONE_FOOD_COURT]: { scale: 0.58, dy: 0.02 },

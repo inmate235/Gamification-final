@@ -129,8 +129,13 @@ export function TierPerksPanel() {
             className="relative w-full max-w-lg max-h-[85dvh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bezel-card">
-              <div className="bezel-card-inner">
+            <div 
+              className="relative overflow-hidden rounded-[2.5rem] bg-white/95 backdrop-blur-2xl ring-1 ring-[#141414]/10 p-1.5"
+              style={{
+                boxShadow: `0 32px 64px -12px rgba(20,20,20,0.15), 0 16px 32px -8px rgba(0,0,0,0.1)`
+              }}
+            >
+              <div className="relative rounded-[2.25rem] bg-gradient-to-b from-white to-[#fafafa] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,1)]">
                 {/* Header */}
                 <div className="mb-6 flex items-start justify-between">
                   <div>

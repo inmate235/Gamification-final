@@ -23,47 +23,7 @@ import type { Shortcut } from "@/types";
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
-/* ============================================================================
-   Floating entry button (always visible - the persistent spend opportunity)
-   ========================================================================== */
 
-export function ShortcutEntryButton() {
-  const showOverlay = useUIStore((s) => s.showOverlay);
-  const liveDeficitPrice = useEconomyStore((s) => s.liveDeficitPrice);
-  const active = useEconomyStore((s) =>
-    s.shortcuts.find((sc) => !sc.unlocked)
-  );
-  const activeOverlay = useUIStore((s) => s.activeOverlay);
-
-  // Hidden while another overlay is open (avoid stacking).
-  const open = useCallback(() => showOverlay("shortcut-unlock"), [showOverlay]);
-
-  if (activeOverlay !== "none" && activeOverlay !== "shortcut-unlock") return null;
-  if (!active) return null;
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.7, ease: PREMIUM_EASE }}
-      onClick={open}
-      aria-label={`Unlock shortcuts from ${liveDeficitPrice} tokens`}
-      className="flex items-center gap-2 rounded-full bg-[#e6009e] px-4 py-2.5 ring-2 ring-white shadow-[0_6px_0_#b8007e] transition-all duration-200 active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
-      data-testid="shortcut-entry-button"
-    >
-      <Lightning size={16} weight="fill" className="text-white" />
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-        Shortcuts
-      </span>
-      <span
-        className="font-mono text-xs font-bold tabular-nums text-white"
-        data-testid="shortcut-entry-price"
-      >
-        {liveDeficitPrice}
-      </span>
-    </motion.button>
-  );
-}
 
 /* ============================================================================
    Overlay

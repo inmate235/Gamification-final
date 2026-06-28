@@ -8,7 +8,6 @@ import {
   Timer,
   Users,
   Eye,
-  Lightning,
   CheckCircle,
 } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
@@ -18,7 +17,6 @@ import { claimFlashSale, showTokenFeedback } from "@/engine/tokenEconomy";
 import {
   dismissFlashSale,
   expireFlashSale,
-  activeFlashSales,
 } from "@/engine/flashSaleEngine";
 import { getStoreById } from "@/data/mallData";
 import { cn } from "@/lib/utils";
@@ -44,64 +42,7 @@ import type { FlashSale as FlashSaleType } from "@/types";
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
-/* ============================================================================
-   Floating entry button ("Deal Radar")
-   ========================================================================== */
 
-/**
- * Surfaces any pending proximity-triggered flash sale that wasn't shown
- * immediately (e.g. it triggered while another overlay was open). Shows a
- * badge with the pending count. On tap, opens the first pending sale.
- */
-export function FlashSaleEntryButton() {
-  const showOverlay = useUIStore((s) => s.showOverlay);
-  const activeOverlay = useUIStore((s) => s.activeOverlay);
-  const flashSaleCount = useEconomyStore((s) => s.flashSales.length);
-
-  const onOpen = useCallback(() => {
-    const pending = activeFlashSales();
-    const sale = pending[0];
-    if (sale) showOverlay("flash-sale", sale);
-  }, [showOverlay]);
-
-  // Hide while another (non-flash-sale) overlay is capturing the screen.
-  if (activeOverlay !== "none" && activeOverlay !== "flash-sale") return null;
-  // Only show when there is a pending sale to surface.
-  if (flashSaleCount === 0) return null;
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.85 }}
-      transition={{ duration: 0.7, ease: PREMIUM_EASE }}
-      onClick={onOpen}
-      aria-label={`Open flash deal (${flashSaleCount} pending)`}
-      className="flex items-center gap-2 rounded-full bg-[#e6009e] px-4 py-2.5 ring-2 ring-white shadow-[0_6px_0_#b8007e] transition-all duration-200 active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
-      data-testid="flash-sale-entry-button"
-    >
-      <motion.div
-        animate={{ scale: [1, 1.18, 1] }}
-        transition={{
-          duration: 1.6,
-          ease: PREMIUM_EASE,
-          repeat: Infinity,
-        }}
-      >
-        <Lightning size={16} weight="fill" className="text-white" />
-      </motion.div>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
-        Deals
-      </span>
-      <span
-        className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-[#e6009e]"
-        data-testid="flash-sale-entry-badge"
-      >
-        {flashSaleCount}
-      </span>
-    </motion.button>
-  );
-}
 
 /* ============================================================================
    Overlay
@@ -143,12 +84,11 @@ export function FlashSale() {
   }
 
   const [liveViewers, setLiveViewers] = useState(sale?.socialProof ?? 23);
-
-  useEffect(() => {
-    if (sale) {
-      setLiveViewers(sale.socialProof ?? 23);
-    }
-  }, [sale?.id]);
+  const [prevSaleIdForViewers, setPrevSaleIdForViewers] = useState<string | undefined>(sale?.id);
+  if (sale?.id !== prevSaleIdForViewers) {
+    setPrevSaleIdForViewers(sale?.id);
+    setLiveViewers(sale?.socialProof ?? 23);
+  }
 
   useEffect(() => {
     if (!isOpen) return;

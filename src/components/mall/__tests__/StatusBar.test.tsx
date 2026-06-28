@@ -13,6 +13,7 @@ vi.mock("framer-motion", () => {
       whileInView,
       variants,
       layout,
+      custom,
       ...rest
     } = props;
     void initial;
@@ -23,6 +24,7 @@ vi.mock("framer-motion", () => {
     void whileInView;
     void variants;
     void layout;
+    void custom;
     return rest;
   };
   const mk = (tag: string) => {
@@ -38,7 +40,7 @@ vi.mock("framer-motion", () => {
     return comp;
   };
   return {
-    motion: { div: mk("div"), span: mk("span") },
+    motion: { div: mk("div"), span: mk("span"), button: mk("button") },
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
   };

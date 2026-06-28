@@ -192,12 +192,9 @@ export class EventScheduler {
         const sale = triggerProximityFlashSale();
         if (sale) {
           this.handlers.onFlashSaleTriggered?.(sale);
-          // If nothing is capturing the screen, surface the sale directly so
-          // the user is made aware of it (VAL-SALE-018). The handler may also
-          // choose to show it (e.g. the mall layout wires a handler).
-          if (useUIStore.getState().activeOverlay === "none") {
-            ui.showOverlay("flash-sale", sale);
-          }
+          // Flash sales no longer auto-popup on proximity. They will trigger 
+          // silently and add a notification badge to the Shop icon.
+          // The Shop icon will handle the subtle nudge/animation.
         }
       }
     }

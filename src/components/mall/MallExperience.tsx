@@ -14,8 +14,9 @@ import { MallMap } from "./MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { StoreDetail } from "@/components/overlays/StoreDetail";
 import { Celebration } from "@/components/overlays/Celebration";
-import { ShortcutUnlock, ShortcutEntryButton } from "@/components/overlays/ShortcutUnlock";
-import { FlashSale, FlashSaleEntryButton } from "@/components/overlays/FlashSale";
+import { ShortcutUnlock } from "@/components/overlays/ShortcutUnlock";
+import { FlashSale } from "@/components/overlays/FlashSale";
+import { ShopOverlay, ShopEntryButton } from "@/components/overlays/ShopOverlay";
 import { SpinningWheel, SpinningWheelEntryButton } from "@/components/overlays/SpinningWheel";
 import { TierUpgrade } from "@/components/overlays/TierUpgrade";
 import { TierPerksPanel } from "@/components/overlays/TierPerksPanel";
@@ -212,10 +213,7 @@ export function MallExperience() {
               <LeaderboardEntryButton />
             </motion.div>
             <motion.div variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: PREMIUM_EASE } } }}>
-              <ShortcutEntryButton />
-            </motion.div>
-            <motion.div variants={{ hidden: { opacity: 0, x: 24 }, visible: { opacity: 1, x: 0, transition: { duration: 0.5, ease: PREMIUM_EASE } } }}>
-              <FlashSaleEntryButton />
+              <ShopEntryButton />
             </motion.div>
           </motion.div>
 
@@ -233,6 +231,7 @@ export function MallExperience() {
 
           {/* Overlays */}
           <StoreDetail />
+          <ShopOverlay />
           <ShortcutUnlock />
           <FlashSale />
           <SpinningWheel />

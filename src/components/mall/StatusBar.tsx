@@ -12,15 +12,18 @@ import type { Tier } from "@/types";
 /**
  * StatusBar — the persistent top chrome of the `/mall` route.
  *
- * Light + playful pill bar showing four reactive values:
- *   - Token count (magenta star)
- *   - Tier badge (tier-colored pill using --color-tier-*)
- *   - Streak counter
- *   - Exploration progress bar (magenta fill on a light track)
+ * Redesigned for visual distinctiveness and psychological engagement:
+ *   - Staggered spring entrance cascade
+ *   - Prominent tier badge with breathing color halo
+ *   - Token pulse + floating reward bursts
+ *   - Streak counter with reactive fire icon
+ *   - Exploration progress bar with shimmer sweep on value change
  *
- * All values are read directly from the playerStore / mapStore so they update
- * reactively whenever the underlying state changes.
+ * All values read directly from playerStore / mapStore.
  */
+
+const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
+const POP = [0.34, 1.56, 0.64, 1] as const;
 
 /* ============================================================================
    Tier styling
@@ -40,6 +43,20 @@ const TIER_STYLES: Record<
    Component
    ========================================================================== */
 
+const statVariants = {
+  hidden: { opacity: 0, y: -12, scale: 0.92 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.55,
+      ease: POP,
+      delay: 0.05 + i * 0.07,
+    },
+  }),
+};
+
 export function StatusBar() {
   const tokens = usePlayerStore((s) => s.tokens);
   const tier = usePlayerStore((s) => s.tier);
@@ -54,7 +71,9 @@ export function StatusBar() {
 
   /* --- Pulse the token count and show float up indicators --- */
   const prevTokensRef = useRef(tokens);
+  const prevExplorationRef = useRef(explorationPercent);
   const [isEarn, setIsEarn] = useState(true);
+  const [explorationChanged, setExplorationChanged] = useState(false);
   const [floatRewards, setFloatRewards] = useState<
     { id: number; amount: string; isEarn: boolean }[]
   >([]);
@@ -81,23 +100,47 @@ export function StatusBar() {
     }
   }, [tokens]);
 
+  useEffect(() => {
+    if (explorationPercent !== prevExplorationRef.current) {
+      setExplorationChanged(true);
+      const t = setTimeout(() => setExplorationChanged(false), 1200);
+      prevExplorationRef.current = explorationPercent;
+      return () => clearTimeout(t);
+    }
+  }, [explorationPercent]);
+
   const pulseKey = tokens;
 
   return (
-    <header
+    <motion.div
+      initial="hidden"
+      animate="visible"
       className="fixed inset-x-0 top-0 z-30 px-3 pt-3 sm:px-4 sm:pt-4"
+      role="banner"
       aria-label="Status bar"
       data-testid="status-bar"
     >
-      {/* Light pill bar */}
-      <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-full border border-[#141414]/10 bg-white/95 px-3 py-2 shadow-[0_4px_16px_rgba(20,20,20,0.08)] backdrop-blur-sm sm:gap-3 sm:px-4">
-        {/* Tokens — magenta star accent (Figma node 11:53) */}
-        <div
+      {/* Light pill bar with subtle warm gradient */}
+      <div className="mx-auto flex w-full max-w-md items-center gap-2 rounded-full px-3 py-2.5 shadow-[0_4px_18px_rgba(20,20,20,0.1),0_1px_0_rgba(20,20,20,0.06)] sm:gap-3 sm:px-4 sm:py-3"
+        style={{
+          background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,246,250,0.96) 100%)",
+          border: "1px solid rgba(20,20,20,0.08)",
+        }}
+      >
+        {/* ─── Tokens ─── */}
+        <motion.div
+          custom={0}
+          variants={statVariants}
           className="flex items-center gap-1.5 relative"
           data-testid="status-tokens"
           aria-label="Tokens"
         >
-          <Star size={13} weight="fill" className="text-[#e6009e]" />
+          <motion.span
+            animate={{ rotate: [0, -8, 8, 0] }}
+            transition={{ duration: 1.8, ease: PREMIUM_EASE, repeat: Infinity, repeatDelay: 4 }}
+          >
+            <Star size={14} weight="fill" className="text-[#e6009e]" />
+          </motion.span>
           <motion.span
             key={pulseKey}
             initial={{
@@ -106,40 +149,41 @@ export function StatusBar() {
               color: isEarn ? "#f30aac" : "#ef4444",
             }}
             animate={{ opacity: 1, scale: 1, color: "#141414" }}
-            transition={{ duration: 0.45, ease: [0.34, 1.56, 0.64, 1] }}
+            transition={{ duration: 0.45, ease: POP }}
             className="font-mono text-sm font-semibold tabular-nums sm:text-base"
             data-testid="status-tokens-value"
           >
             {tokens}
           </motion.span>
 
-          {/* Floating Reward Burst */}
           <AnimatePresence>
             {floatRewards.map((r) => (
               <motion.span
                 key={r.id}
                 className={cn(
-                  "absolute font-mono text-xs font-bold pointer-events-none left-4 top-[-20px] drop-shadow-md",
+                  "absolute font-mono text-xs font-bold pointer-events-none left-4 top-[-22px]",
                   r.isEarn ? "text-[#e6009e]" : "text-[#ef4444]"
                 )}
                 initial={{ y: 0, opacity: 1, scale: 0.8 }}
-                animate={{ y: -25, opacity: 0, scale: 1.2 }}
+                animate={{ y: -28, opacity: 0, scale: 1.2 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+                transition={{ duration: 0.85, ease: PREMIUM_EASE }}
               >
                 {r.amount}
               </motion.span>
             ))}
           </AnimatePresence>
-        </div>
+        </motion.div>
 
-        <Divider />
+        <AnimatedDivider />
 
-        {/* Tier badge — tap to open the perks panel (VAL-TIER-003, -004, -009) */}
-        <button
+        {/* ─── Tier badge ─── */}
+        <motion.button
+          custom={1}
+          variants={statVariants}
           type="button"
           onClick={() => showOverlay("tier-perks")}
-          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] sm:text-xs"
+          className="relative flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold active:scale-[0.97] sm:text-xs"
           style={{
             color: tierStyle.color,
             border: `1.5px solid ${tierStyle.color}55`,
@@ -148,31 +192,44 @@ export function StatusBar() {
           data-testid="status-tier"
           aria-label={`Tier: ${tierStyle.label}. View perks.`}
         >
+          {/* Breathing tier halo */}
+          <motion.span
+            className="pointer-events-none absolute inset-0 rounded-full"
+            animate={{ opacity: [0, 0.24, 0] }}
+            transition={{ duration: 3, ease: PREMIUM_EASE, repeat: Infinity }}
+            style={{ background: tierStyle.color }}
+            aria-hidden="true"
+          />
           <span
             className="h-1.5 w-1.5 rounded-full"
             style={{ background: tierStyle.color }}
             data-testid="status-tier-indicator"
           />
           {tierStyle.label}
-        </button>
+        </motion.button>
 
-        <Divider />
+        <AnimatedDivider />
 
-        {/* Streak */}
-        <div
+        {/* ─── Streak ─── */}
+        <motion.div
+          custom={2}
+          variants={statVariants}
           className="flex items-center gap-1.5"
           data-testid="status-streak"
           aria-label="Day Streak"
         >
           <motion.div
             key={streakCount}
-            animate={{ scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            animate={{ scale: [1, 1.3, 1], rotate: [0, 12, -12, 0] }}
+            transition={{ duration: 0.55, ease: POP }}
           >
             <Fire
-              size={16}
+              size={15}
               weight="fill"
-              className={cn("text-[#f59e0b]", streakBroken && "opacity-50")}
+              className={cn(
+                "text-[#f59e0b]",
+                streakBroken && "opacity-50"
+              )}
             />
           </motion.div>
           <span className="font-mono text-sm font-semibold tabular-nums text-[#141414] sm:text-base">
@@ -182,7 +239,7 @@ export function StatusBar() {
             <motion.span
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+              transition={{ duration: 0.5, ease: POP }}
               className="flex items-center gap-0.5 rounded-full bg-[#e6009e]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#e6009e]"
               data-testid="status-comeback-bonus"
             >
@@ -190,31 +247,50 @@ export function StatusBar() {
               2x
             </motion.span>
           )}
-        </div>
+        </motion.div>
 
-        {/* Exploration progress — fills remaining width */}
-        <div
-          className="ml-1 flex min-w-0 flex-1 items-center gap-2 sm:ml-2"
+        <AnimatedDivider />
+
+        {/* ─── Exploration ─── */}
+        <motion.div
+          custom={3}
+          variants={statVariants}
+          className="ml-1 flex min-w-0 flex-1 items-center gap-1.5 sm:ml-2 sm:gap-2"
           data-testid="status-exploration"
         >
-          <MapPin size={14} weight="fill" className="shrink-0 text-[#7c3aed]" />
-          <div className="relative h-2 min-w-[60px] flex-1 overflow-hidden rounded-full bg-[#141414]/8">
+          <MapPin size={13} weight="fill" className="shrink-0 text-[#7c3aed]" />
+          <div className="relative h-2 min-w-[52px] flex-1 overflow-hidden rounded-full bg-[#141414]/7">
+            {/* Shimmer sweep on progress change */}
+            {explorationChanged && (
+              <motion.div
+                className="absolute inset-y-0 w-10 rounded-full bg-white/60"
+                initial={{ x: "-100%" }}
+                animate={{ x: "500%" }}
+                transition={{ duration: 0.9, ease: PREMIUM_EASE }}
+                aria-hidden="true"
+              />
+            )}
             <motion.div
               className="absolute inset-y-0 left-0 rounded-full bg-[#e6009e]"
               initial={false}
               animate={{ width: `${explorationPercent}%` }}
               transition={{
                 duration: 0.8,
-                ease: [0.32, 0.72, 0, 1],
+                ease: PREMIUM_EASE,
               }}
             />
           </div>
-          <span className="shrink-0 font-mono text-[11px] tabular-nums text-[#7c3aed] sm:text-xs">
+          <motion.span
+            key={explorationPercent}
+            animate={{ scale: [1, 1.15, 1] }}
+            transition={{ duration: 0.35, ease: POP }}
+            className="shrink-0 font-mono text-[11px] tabular-nums text-[#7c3aed] sm:text-xs"
+          >
             {explorationPercent}%
-          </span>
-        </div>
+          </motion.span>
+        </motion.div>
       </div>
-    </header>
+    </motion.div>
   );
 }
 
@@ -222,8 +298,14 @@ export function StatusBar() {
    Sub-components
    ========================================================================== */
 
-function Divider() {
-  return <span className="h-5 w-px shrink-0 bg-[#141414]/10" />;
+function AnimatedDivider() {
+  return (
+    <motion.span
+      className="h-5 w-px shrink-0 bg-[#141414]/10"
+      animate={{ opacity: [0.4, 1, 0.4] }}
+      transition={{ duration: 4, ease: PREMIUM_EASE, repeat: Infinity }}
+    />
+  );
 }
 
 export default StatusBar;

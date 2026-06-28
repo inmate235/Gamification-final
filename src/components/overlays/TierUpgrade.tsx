@@ -89,21 +89,37 @@ export function TierUpgrade() {
             className="relative w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bezel-card">
-              <div className="bezel-card-inner flex flex-col items-center text-center">
+            {/* Premium Card Container */}
+            <div 
+              className="relative overflow-hidden rounded-[2.5rem] bg-white/80 backdrop-blur-2xl ring-1 ring-white/60 p-1.5"
+              style={{
+                boxShadow: `0 32px 64px -12px ${visual.color}40, inset 0 0 0 1px ${visual.color}20, 0 16px 32px -8px rgba(0,0,0,0.1)`
+              }}
+            >
+              {/* Inner ambient glow */}
+              <div 
+                className="absolute -top-24 -left-24 h-64 w-64 rounded-full blur-3xl opacity-30 pointer-events-none"
+                style={{ background: visual.color }}
+              />
+              <div 
+                className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full blur-3xl opacity-20 pointer-events-none"
+                style={{ background: visual.color }}
+              />
+
+              <div className="relative rounded-[2.25rem] bg-gradient-to-b from-white/95 to-white/70 p-8 flex flex-col items-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                 {/* Eyebrow — staggered reveal #1 */}
                 <motion.div
                   initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.15 }}
-                  className="mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em] font-medium ring-1"
+                  className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[10px] uppercase tracking-[0.25em] font-bold shadow-sm"
                   style={{
                     color: visual.color,
-                    borderColor: `${visual.color}55`,
-                    background: `${visual.color}14`,
+                    background: `linear-gradient(135deg, white 0%, ${visual.color}0a 100%)`,
+                    boxShadow: `0 2px 10px ${visual.color}15, inset 0 0 0 1px ${visual.color}30`,
                   }}
                 >
-                  <Sparkle size={12} weight="fill" style={{ color: visual.color }} />
+                  <Sparkle size={14} weight="fill" style={{ color: visual.color }} />
                   Membership Upgrade
                 </motion.div>
 
@@ -112,19 +128,27 @@ export function TierUpgrade() {
                   initial={{ scale: 0, opacity: 0, rotate: -12 }}
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   transition={{ type: "spring", stiffness: 200, damping: 18, delay: 0.25 }}
-                  className="mb-5 flex h-24 w-24 items-center justify-center rounded-full ring-2"
+                  className="mb-6 flex h-28 w-28 items-center justify-center rounded-full"
                   style={{
-                    borderColor: visual.color,
-                    boxShadow: `0 0 40px ${visual.color}66, inset 0 0 24px ${visual.color}22`,
-                    background: `radial-gradient(circle at center, ${visual.color}26, transparent 70%)`,
+                    background: `linear-gradient(135deg, #ffffff 0%, ${visual.color}1a 100%)`,
+                    boxShadow: `0 20px 40px -10px ${visual.color}50, inset 0 2px 4px rgba(255,255,255,1), inset 0 0 0 2px ${visual.color}30`,
                   }}
                   data-testid="tier-upgrade-badge"
                 >
-                  <Medal
-                    size={48}
-                    weight="fill"
-                    style={{ color: visual.color }}
-                  />
+                  <div 
+                    className="flex h-20 w-20 items-center justify-center rounded-full"
+                    style={{
+                      background: `linear-gradient(135deg, ${visual.color} 0%, ${visual.color}cc 100%)`,
+                      boxShadow: `inset 0 2px 4px rgba(255,255,255,0.4), 0 8px 16px -4px ${visual.color}60`
+                    }}
+                  >
+                    <Medal
+                      size={42}
+                      weight="fill"
+                      className="text-white"
+                      style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }}
+                    />
+                  </div>
                 </motion.div>
 
                 {/* "You are now {Tier}!" — staggered reveal #3 */}
@@ -132,8 +156,11 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   transition={{ duration: 0.7, ease: PREMIUM_EASE, delay: 0.45 }}
-                  className="font-display text-3xl font-bold tracking-tight sm:text-4xl"
-                  style={{ color: visual.color }}
+                  className="font-display text-4xl font-bold tracking-tight sm:text-5xl drop-shadow-sm"
+                  style={{ 
+                    color: visual.color,
+                    textShadow: `0 2px 12px ${visual.color}30`
+                  }}
                   data-testid="tier-upgrade-title"
                 >
                   You are now {visual.label}!
@@ -144,7 +171,7 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.6 }}
-                  className="mt-3 text-sm text-[#4b4b4b]"
+                  className="mt-3 text-[15px] font-medium text-[#4b4b4b] opacity-90"
                 >
                   {visual.tagline}
                 </motion.p>
@@ -154,7 +181,7 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.78 }}
-                  className="mt-7 w-full space-y-2 text-left"
+                  className="mt-8 w-full space-y-3 text-left relative z-10"
                   data-testid="tier-upgrade-perks"
                 >
                   <PerkRow label="Flash sales" value={perks.flashSaleFrequency} color={visual.color} />
@@ -168,12 +195,16 @@ export function TierUpgrade() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.95 }}
                   onClick={hideOverlay}
-                  className="btn-magenta group mt-8"
+                  className="group mt-10 relative flex w-full items-center justify-center gap-3 rounded-full py-4 text-base font-bold text-white shadow-[0_8px_24px_-8px_rgba(0,0,0,0.3)] transition-all hover:scale-[1.02] active:scale-95"
+                  style={{
+                    background: `linear-gradient(135deg, ${visual.color} 0%, ${visual.color}dd 100%)`,
+                    boxShadow: `0 12px 24px -8px ${visual.color}60, inset 0 2px 4px rgba(255,255,255,0.3)`
+                  }}
                   data-testid="tier-upgrade-cta"
                 >
-                  Explore my perks
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/15 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5">
-                    <ArrowRight size={14} weight="bold" />
+                  <span>Explore my perks</span>
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 backdrop-blur-sm">
+                    <ArrowRight size={16} weight="bold" />
                   </span>
                 </motion.button>
               </div>
@@ -199,11 +230,18 @@ function PerkRow({
   color: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-xl bg-[#f4f4f5] px-3 py-2 ring-1 ring-[#141414]/8">
-      <span className="text-xs uppercase tracking-[0.12em] text-[#8a8a8a]">
+    <div 
+      className="flex items-center justify-between rounded-[1.25rem] px-5 py-3.5 shadow-sm transition-transform hover:scale-[1.01]"
+      style={{
+        background: `linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 100%)`,
+        boxShadow: `0 2px 12px rgba(0,0,0,0.03), inset 0 0 0 1px rgba(255,255,255,0.5)`,
+        borderLeft: `4px solid ${color}`
+      }}
+    >
+      <span className="text-xs uppercase tracking-[0.15em] font-bold text-[#8a8a8a]">
         {label}
       </span>
-      <span className="text-sm font-medium" style={{ color }}>
+      <span className="text-[15px] font-bold tracking-tight" style={{ color }}>
         {value}
       </span>
     </div>

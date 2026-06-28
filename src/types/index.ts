@@ -445,7 +445,8 @@ export type OverlayType =
   | "exit-friction"
   | "celebration"
   | "shortcut-unlock"
-  | "leaderboard";
+  | "leaderboard"
+  | "shop";
 
 /**
  * Payload for the celebration / token-feedback overlay.
