@@ -58,6 +58,8 @@ export function InviteScreen() {
   const [isExiting, setIsExiting] = useState(false);
   const [shakeTrigger, setShakeTrigger] = useState(0);
   const [heroError, setHeroError] = useState(false);
+  const [welcomeCharError, setWelcomeCharError] = useState(false);
+  const [sadCharError, setSadCharError] = useState(false);
   const welcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* --- Validation --- */
@@ -184,7 +186,7 @@ export function InviteScreen() {
               >
                 {!heroError ? (
                   <img
-                    src="/assets/figma/invite-hero.png"
+                    src="/assets/figma/Start/MurkeyMall.png"
                     alt="MurkyCorps Mall"
                     className="w-full h-full object-cover"
                     onError={() => setHeroError(true)}
@@ -265,16 +267,26 @@ export function InviteScreen() {
 
                   <AnimatePresence>
                     {error && (
-                      <motion.p
+                      <motion.div
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
                         transition={{ duration: 0.3 }}
-                        className="mt-2 text-center text-xs text-[#ef4444]"
+                        className="mt-2 flex flex-col items-center gap-1.5"
                         role="alert"
                       >
-                        {error}
-                      </motion.p>
+                        {!sadCharError && (
+                          <img
+                            src="/assets/figma/Invatation/Not_found/Sad.png"
+                            alt=""
+                            className="h-16 w-auto object-contain"
+                            onError={() => setSadCharError(true)}
+                          />
+                        )}
+                        <p className="text-center text-xs text-[#ef4444]">
+                          {error}
+                        </p>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
@@ -312,9 +324,20 @@ export function InviteScreen() {
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.7, ease: POP }}
-                className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e6009e]"
+                className="flex items-center justify-center"
               >
-                <SealCheck size={40} weight="bold" className="text-white" />
+                {!welcomeCharError ? (
+                  <img
+                    src="/assets/figma/Invatation verefied/happy.character.png"
+                    alt="Welcome to MurkyCorps Mall"
+                    className="h-32 w-auto object-contain drop-shadow-[0_8px_16px_rgba(20,20,20,0.15)]"
+                    onError={() => setWelcomeCharError(true)}
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e6009e]">
+                    <SealCheck size={40} weight="bold" className="text-white" />
+                  </div>
+                )}
               </motion.div>
 
               <motion.div

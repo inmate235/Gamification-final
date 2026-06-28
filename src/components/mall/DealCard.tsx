@@ -32,7 +32,6 @@ export function DealCard({
   const [showConfetti, setShowConfetti] = useState(false);
   const maxTime = deal.countdownSeconds || 300;
 
-  // Track viewers simulation
   useEffect(() => {
     const interval = setInterval(() => {
       setViewers((prev) => {
@@ -44,7 +43,6 @@ export function DealCard({
     return () => clearInterval(interval);
   }, []);
 
-  // Timer simulation
   useEffect(() => {
     if (isClaimed) return;
     const interval = setInterval(() => {
@@ -53,7 +51,6 @@ export function DealCard({
     return () => clearInterval(interval);
   }, [isClaimed]);
 
-  // Trigger confetti burst on claimed
   useEffect(() => {
     if (isClaimed) {
       setShowConfetti(true);
@@ -64,20 +61,18 @@ export function DealCard({
 
   const percentage = (secondsLeft / maxTime) * 100;
   const strokeDashoffset = 113 - (113 * percentage) / 100;
-  const isUrgent = secondsLeft < 120; // less than 2 minutes
+  const isUrgent = secondsLeft < 120;
 
-  // Format time (m:ss)
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const timeString = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
-  // Confetti particles generator
   const confettiParticles = Array.from({ length: 15 }).map((_, i) => ({
     id: i,
     x: Math.random() * 200 - 100,
     y: Math.random() * -150 - 50,
     scale: Math.random() * 0.6 + 0.4,
-    color: ["#d4af37", "#9d7fdb", "#4fd1c5", "#e879a1", "#ffffff"][i % 5],
+    color: ["#e6009e", "#14b8a6", "#ffe600", "#7c3aed", "#ffffff"][i % 5],
   }));
 
   return (
@@ -108,20 +103,22 @@ export function DealCard({
         className="w-full h-full duration-700 transform-style-3d relative"
         animate={{ rotateY: isClaimed ? 180 : 0 }}
       >
-        {/* FRONT SIDE */}
-        <div className="absolute inset-0 backface-hidden w-full h-full rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15 p-4 sm:p-5 flex flex-col justify-between overflow-hidden shadow-xl backdrop-blur-md group">
+        {/* FRONT SIDE — white playful card */}
+        <div className="absolute inset-0 backface-hidden w-full h-full rounded-2xl bg-white border-2 border-[#e6009e]/20 p-4 sm:p-5 flex flex-col justify-between overflow-hidden shadow-[0_8px_24px_rgba(20,20,20,0.1)] group">
           {/* Holographic sweep light overlay on hover */}
-          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none group-hover:animate-shimmer" />
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[#e6009e]/8 to-transparent pointer-events-none group-hover:animate-shimmer" />
 
           {/* Header */}
           <div className="flex justify-between items-start">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#a1a1aa] flex items-center gap-1">
-                <Tag size={12} className="text-yellow-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#e6009e] flex items-center gap-1">
+                <Tag size={12} weight="fill" className="text-[#e6009e]" />
                 Exclusive Deal
               </span>
-              <h4 className="text-base font-bold text-white mt-0.5 line-clamp-1">{deal.title}</h4>
-              <span className="text-[11px] text-white/50">{storeName}</span>
+              <h4 className="text-base font-bold text-[#141414] mt-0.5 line-clamp-1 font-display">
+                {deal.title}
+              </h4>
+              <span className="text-[11px] text-[#8a8a8a]">{storeName}</span>
             </div>
 
             {/* Countdown Ring */}
@@ -131,7 +128,7 @@ export function DealCard({
                   cx="22"
                   cy="22"
                   r="18"
-                  className="stroke-white/10"
+                  className="stroke-[#141414]/8"
                   strokeWidth="3.5"
                   fill="transparent"
                 />
@@ -140,7 +137,7 @@ export function DealCard({
                   cy="22"
                   r="18"
                   className={cn(
-                    isUrgent ? "stroke-red-500" : "stroke-[#d4af37]"
+                    isUrgent ? "stroke-[#ef4444]" : "stroke-[#e6009e]"
                   )}
                   strokeWidth="3.5"
                   fill="transparent"
@@ -150,37 +147,46 @@ export function DealCard({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={cn(
-                  "font-mono text-[9px] font-bold tracking-tight",
-                  isUrgent ? "text-red-400 animate-pulse" : "text-white/80"
-                )}>
+                <span
+                  className={cn(
+                    "font-mono text-[9px] font-bold tracking-tight",
+                    isUrgent ? "text-[#ef4444] animate-pulse" : "text-[#141414]"
+                  )}
+                >
                   {timeString}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Deal Promo Info & Spark */}
-          <div className="flex justify-between items-center bg-black/40 rounded-xl p-3 border border-white/5 relative">
+          {/* Deal Promo Info */}
+          <div className="flex justify-between items-center bg-[#ffe600]/30 rounded-xl p-3 border border-[#141414]/8 relative">
             <div className="flex flex-col">
-              <span className={cn(
-                "font-mono text-2xl font-black tracking-tight",
-                isUrgent ? "text-red-500 animate-deal-pulse" : "text-gradient-gold"
-              )}>
+              <span
+                className={cn(
+                  "font-mono text-2xl font-black tracking-tight font-display",
+                  isUrgent ? "text-[#ef4444] animate-deal-pulse" : "text-[#e6009e]"
+                )}
+              >
                 {deal.discount}
               </span>
-              <span className="text-[10px] text-white/60">Limited member offer</span>
+              <span className="text-[10px] text-[#4b4b4b]">
+                Limited member offer
+              </span>
             </div>
 
-            {/* Micro-sparkles & Live viewers indicator */}
+            {/* Live viewers indicator */}
             <div className="flex flex-col items-end gap-1">
-              <span className="text-[10px] text-white/70 bg-white/10 px-2 py-0.5 rounded-full flex items-center gap-1 ring-1 ring-white/10">
-                <Users size={12} className="text-[#4fd1c5]" />
-                <span className="font-mono font-bold text-[#4fd1c5]">{viewers}</span> viewing
+              <span className="text-[10px] text-[#141414] bg-white px-2 py-0.5 rounded-full flex items-center gap-1 ring-1 ring-[#141414]/10">
+                <Users size={12} weight="fill" className="text-[#14b8a6]" />
+                <span className="font-mono font-bold text-[#14b8a6]">
+                  {viewers}
+                </span>{" "}
+                viewing
               </span>
               {isUrgent && (
-                <span className="text-[9px] text-red-400 font-bold flex items-center gap-0.5">
-                  <Flame size={10} weight="fill" className="text-red-500 animate-bounce" />
+                <span className="text-[9px] text-[#ef4444] font-bold flex items-center gap-0.5">
+                  <Flame size={10} weight="fill" className="text-[#ef4444] animate-bounce" />
                   High demand!
                 </span>
               )}
@@ -190,10 +196,14 @@ export function DealCard({
           {/* Action CTA */}
           <div className="flex items-center justify-between gap-3 mt-1">
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-white/40">Token cost</span>
-              <span className="font-mono text-base font-bold text-yellow-500">{deal.tokenCost} Tokens</span>
+              <span className="text-[9px] uppercase tracking-wider text-[#8a8a8a]">
+                Token cost
+              </span>
+              <span className="font-mono text-base font-bold text-[#e6009e]">
+                {deal.tokenCost} Tokens
+              </span>
             </div>
-            
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -201,15 +211,15 @@ export function DealCard({
               }}
               disabled={!canAfford}
               className={cn(
-                "flex-1 py-2 px-4 rounded-xl text-xs font-bold uppercase tracking-wider text-center relative overflow-hidden transition-all active:scale-[0.97]",
+                "flex-1 py-2.5 px-4 rounded-full text-xs font-bold uppercase tracking-wider text-center relative overflow-hidden transition-all active:translate-y-[2px]",
                 canAfford
-                  ? "bg-gradient-to-r from-yellow-500 via-[#d4af37] to-yellow-600 text-black shadow-lg shadow-yellow-500/20 animate-pulse-subtle"
-                  : "bg-white/5 text-[#71717a] ring-1 ring-white/10 cursor-not-allowed"
+                  ? "btn-magenta"
+                  : "bg-[#141414]/5 text-[#8a8a8a] ring-1 ring-[#141414]/10 cursor-not-allowed"
               )}
             >
               {canAfford ? (
                 <span className="flex items-center justify-center gap-1.5">
-                  <Sparkle size={14} weight="fill" className="animate-spin-slow" />
+                  <Sparkle size={14} weight="fill" className="text-white" />
                   Grab Deal
                 </span>
               ) : (
@@ -219,20 +229,22 @@ export function DealCard({
           </div>
         </div>
 
-        {/* BACK SIDE (CLAIMED STATE) */}
-        <div className="absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl bg-gradient-to-br from-green-950/40 to-black/90 border border-green-500/30 p-5 flex flex-col items-center justify-center gap-3 shadow-xl backdrop-blur-md">
-          <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/40">
+        {/* BACK SIDE (CLAIMED STATE) — yellow celebratory */}
+        <div className="absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-2xl bg-[#ffe600] border-2 border-[#141414]/10 p-5 flex flex-col items-center justify-center gap-3 shadow-[0_8px_24px_rgba(20,20,20,0.15)]">
+          <div className="w-14 h-14 rounded-full bg-[#e6009e] flex items-center justify-center ring-4 ring-white">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: isClaimed ? 1 : 0 }}
               transition={{ type: "spring", damping: 10, stiffness: 100, delay: 0.2 }}
             >
-              <CheckCircle size={36} weight="fill" className="text-green-400" />
+              <CheckCircle size={36} weight="fill" className="text-white" />
             </motion.div>
           </div>
           <div className="text-center">
-            <h4 className="text-lg font-bold text-green-400">Deal Claimed!</h4>
-            <p className="text-xs text-white/60 mt-1 max-w-[80%] mx-auto">
+            <h4 className="text-lg font-bold text-[#141414] font-display">
+              Deal Claimed!
+            </h4>
+            <p className="text-xs text-[#141414]/70 mt-1 max-w-[80%] mx-auto">
               Discount voucher added to your account wallet.
             </p>
           </div>

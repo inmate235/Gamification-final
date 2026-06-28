@@ -31,18 +31,18 @@ export function FogOverlay({ zone, revealed }: FogOverlayProps) {
       data-testid={`fog-${zone.id}`}
       aria-hidden={revealed ? true : undefined}
     >
-      {/* Misty dark fill with turbulence displacement */}
+      {/* Misty light cloud fill with turbulence displacement */}
       <polygon
         points={zone.polygonPoints}
         fill={`url(#${filterId}-grad)`}
         filter={`url(#${filterId}-mist)`}
-        opacity={0.92}
+        opacity={0.96}
       />
-      {/* Extra darkening veil so unexplored zones read as obscured */}
+      {/* Extra white veil so unexplored zones read as obscured */}
       <polygon
         points={zone.polygonPoints}
-        fill="#05050a"
-        opacity={0.55}
+        fill="#ffffff"
+        opacity={0.7}
       />
     </motion.g>
   );
@@ -60,11 +60,11 @@ export function FogFilterDefs({ zones }: { zones: Zone[] }) {
         const filterId = `fog-${zone.id}-mist`;
         return (
           <g key={zone.id}>
-            {/* Radial dark gradient centered on the zone for depth */}
+            {/* Radial light gradient centered on the zone for cloud depth */}
             <radialGradient id={gradId} cx="50%" cy="50%" r="65%">
-              <stop offset="0%" stopColor="#1a1a2e" stopOpacity={0.9} />
-              <stop offset="60%" stopColor="#0d0d16" stopOpacity={0.95} />
-              <stop offset="100%" stopColor="#05050a" stopOpacity={1} />
+              <stop offset="0%" stopColor="#f4f4f5" stopOpacity={0.95} />
+              <stop offset="60%" stopColor="#e4e4e7" stopOpacity={0.97} />
+              <stop offset="100%" stopColor="#d4d4d8" stopOpacity={1} />
             </radialGradient>
             {/* Misty turbulence filter */}
             <filter id={filterId} x="-10%" y="-10%" width="120%" height="120%">

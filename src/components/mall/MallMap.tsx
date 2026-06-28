@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -10,29 +10,28 @@ import {
   FIRST_TOKEN_BONUS,
   FOOD_COURT_SECRET_REWARD,
   ZONE_ENTRANCE,
+  ZONE_EAST_WING,
+  ZONE_WEST_WING,
+  ZONE_CENTRAL_PLAZA,
   ZONE_FOOD_COURT,
   getZoneById,
 } from "@/data/mallData";
 import { onPlayerEnterZone, onZoneRevealed, onStoreVisited } from "@/engine/taskEngine";
 import type { Store, Zone } from "@/types";
 import { FogFilterDefs, FogOverlay } from "./FogOverlay";
-import { ZoneLabel } from "./ZoneLabel";
+import { ZoneLabel, zoneColor } from "./ZoneLabel";
 import { StoreMarker } from "./StoreMarker";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { PhantomAvatars } from "./PhantomAvatars";
-import { ShoppingBag } from "@phosphor-icons/react/dist/ssr";
+import { Star, MapPin } from "@phosphor-icons/react/dist/ssr";
 
 /**
  * MallMap — the SVG-based 2D floor plan at the heart of `/mall`.
  *
- * Renders:
- *   - 5 zones as SVG polygons (Entrance, East Wing, West Wing, Central Plaza,
- *     Food Court) with the documented spatial arrangement.
- *   - Corridor lines connecting adjacent zones.
- *   - Store markers (only within revealed zones).
- *   - Zone labels (only on revealed zones).
- *   - Fog-of-war mist overlay on unexplored zones (SVG feTurbulence).
- *   - The player avatar (pulsing gold dot) animating along corridors.
+ * Playful Figma direction: white background with scattered doodle decorations,
+ * 5 zones as light SVG polygons with zone-colored strokes, corridor lines,
+ * store markers (only within revealed zones), zone labels, fog-of-war mist
+ * overlay on unexplored zones, and the player avatar.
  *
  * Navigation is click-to-move and restricted to adjacent zones. Moving into a
  * fogged zone reveals it, awards exploration tokens, and updates the progress
@@ -44,6 +43,24 @@ const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 /* ============================================================================
    Component
    ========================================================================== */
+
+const ZONE_IMAGES: Record<string, string> = {
+  [ZONE_ENTRANCE]: "/assets/figma/map entrance PAGE 8.png",
+  [ZONE_EAST_WING]: "/assets/figma/maps EASt WING.png",
+  [ZONE_WEST_WING]: "/assets/figma/map west wing.png",
+  [ZONE_CENTRAL_PLAZA]: "/assets/figma/map central plaza.png",
+  [ZONE_FOOD_COURT]: "/assets/figma/map food court.png",
+};
+
+/** Compute the bounding box {x, y, width, height} from polygon points. */
+function polygonBBox(points: string): { x: number; y: number; w: number; h: number } {
+  const coords = points.split(/\s+/).map((p) => p.split(",").map(Number));
+  const xs = coords.map((c) => c[0]);
+  const ys = coords.map((c) => c[1]);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  return { x: minX, y: minY, w: Math.max(...xs) - minX, h: Math.max(...ys) - minY };
+}
 
 export function MallMap() {
   const zones = useMapStore((s) => s.zones);
@@ -58,6 +75,8 @@ export function MallMap() {
 
   const showOverlay = useUIStore((s) => s.showOverlay);
   const activeOverlay = useUIStore((s) => s.activeOverlay);
+
+  const [failedZoneImages, setFailedZoneImages] = useState<Set<string>>(new Set());
 
   /* --- Build the set of corridor edges (undirected, de-duplicated) --- */
   const corridorEdges = buildCorridorEdges(zones);
@@ -169,29 +188,44 @@ export function MallMap() {
       className="relative mx-auto w-full max-w-4xl"
       data-testid="mall-map"
     >
-      {/* Background visual layer — atmospheric gradient behind the SVG.
-          Swap with next/image when Figma map background is downloaded. */}
+      {/* Background visual layer — white with scattered doodle decorations */}
       <div
-        className="absolute inset-0 overflow-hidden rounded-3xl"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #12121a 50%, #0a0a0f 100%)",
-        }}
+        className="absolute inset-0 overflow-hidden rounded-3xl bg-white"
         aria-hidden
       >
-        {/* Subtle grid pattern overlay */}
+        {/* Subtle dot grid pattern overlay */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.5]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
+              "radial-gradient(rgba(20,20,20,0.08) 1.5px, transparent 1.5px)",
+            backgroundSize: "28px 28px",
           }}
         />
-        {/* Decorative bag sticker — top left, Figma-inspired (node 66:74) */}
-        <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1.5 ring-1 ring-white/10 backdrop-blur-sm animate-ambient-float">
-          <ShoppingBag size={14} weight="light" className="text-[#d4af37]" />
-          <span className="text-[9px] font-medium uppercase tracking-[0.1em] text-[#a1a1aa]">
+        {/* Scattered doodle decorations — Figma-inspired scribbles/stars/dots */}
+        <Doodle className="absolute left-[6%] top-[12%] text-[#e6009e]" rotate={-12}>
+          <Star size={26} weight="fill" />
+        </Doodle>
+        <Doodle className="absolute right-[8%] top-[20%] text-[#14b8a6]" rotate={18}>
+          <Star size={22} weight="fill" />
+        </Doodle>
+        <Doodle className="absolute left-[12%] top-[48%] text-[#7c3aed]" rotate={8}>
+          <Star size={18} weight="fill" />
+        </Doodle>
+        <Doodle className="absolute right-[10%] top-[55%] text-[#f59e0b]" rotate={-20}>
+          <Star size={20} weight="fill" />
+        </Doodle>
+        <Doodle className="absolute left-[40%] top-[8%] text-[#84cc16]" rotate={15}>
+          <Star size={16} weight="fill" />
+        </Doodle>
+        <Doodle className="absolute right-[22%] top-[78%] text-[#e6009e]" rotate={-8}>
+          <Star size={24} weight="fill" />
+        </Doodle>
+
+        {/* MurkyCorps sticker — top left */}
+        <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-[#141414] px-2.5 py-1.5">
+          <MapPin size={14} weight="fill" className="text-[#ffe600]" />
+          <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white font-display">
             MurkyCorps
           </span>
         </div>
@@ -199,21 +233,21 @@ export function MallMap() {
 
       <svg
         viewBox="0 0 1000 1200"
-        className="h-auto w-full select-none"
+        className="relative h-auto w-full select-none"
         role="img"
         aria-label="Mall floor plan"
         data-testid="mall-map-svg"
       >
         <defs>
-          {/* Atmospheric radial gradient lighting for the whole map */}
+          {/* Soft white atmospheric gradient for the whole map */}
           <radialGradient id="map-atmosphere" cx="50%" cy="45%" r="70%">
-            <stop offset="0%" stopColor="#1a1a2e" stopOpacity={1} />
-            <stop offset="60%" stopColor="#101019" stopOpacity={1} />
-            <stop offset="100%" stopColor="#0a0a0f" stopOpacity={1} />
+            <stop offset="0%" stopColor="#ffffff" stopOpacity={1} />
+            <stop offset="70%" stopColor="#fafafa" stopOpacity={1} />
+            <stop offset="100%" stopColor="#f4f4f5" stopOpacity={1} />
           </radialGradient>
-          {/* Glow filter for revealed zone edges */}
+          {/* Soft glow filter for revealed zone edges */}
           <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feGaussianBlur stdDeviation="4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -222,6 +256,13 @@ export function MallMap() {
 
           {/* Per-zone fog filters + gradients */}
           <FogFilterDefs zones={zones} />
+
+          {/* Per-zone clip paths for zone illustrations */}
+          {zones.map((zone) => (
+            <clipPath key={`clip-${zone.id}`} id={`clip-${zone.id}`}>
+              <polygon points={zone.polygonPoints} />
+            </clipPath>
+          ))}
         </defs>
 
         {/* Atmospheric backdrop */}
@@ -243,8 +284,8 @@ export function MallMap() {
               y1={edge.y1}
               x2={edge.x2}
               y2={edge.y2}
-              stroke="rgba(255,255,255,0.06)"
-              strokeWidth={6}
+              stroke="rgba(20,20,20,0.14)"
+              strokeWidth={5}
               strokeDasharray="4 10"
               strokeLinecap="round"
             />
@@ -258,22 +299,21 @@ export function MallMap() {
             const current = playerPosition.zoneId === zone.id;
             const reachable =
               isAdjacent(playerPosition.zoneId, zone.id) && !current;
+            const stroke = zoneColor(zone.id);
             return (
               <g key={zone.id}>
                 <polygon
                   points={zone.polygonPoints}
-                  fill="#1a1a25"
+                  fill={revealed ? "#ffffff" : "#f4f4f5"}
                   stroke={
-                    revealed
-                      ? "rgba(79,209,197,0.35)"
-                      : "rgba(255,255,255,0.06)"
+                    revealed ? stroke : "rgba(20,20,20,0.1)"
                   }
-                  strokeWidth={revealed ? 2 : 1.5}
+                  strokeWidth={revealed ? 3 : 1.5}
                   filter={revealed ? "url(#edge-glow)" : undefined}
                   style={{
                     cursor: reachable ? "pointer" : "default",
                     transition:
-                      "stroke 700ms cubic-bezier(0.32,0.72,0,1)",
+                      "stroke 700ms cubic-bezier(0.32,0.72,0,1), fill 700ms cubic-bezier(0.32,0.72,0,1)",
                   }}
                   onClick={() => handleZoneClick(zone)}
                   data-testid={`zone-${zone.id}`}
@@ -286,9 +326,9 @@ export function MallMap() {
                 {reachable && (
                   <motion.polygon
                     points={zone.polygonPoints}
-                    fill="#d4af37"
+                    fill={stroke}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.04, 0.12, 0.04] }}
+                    animate={{ opacity: [0.06, 0.16, 0.06] }}
                     transition={{
                       duration: 2.4,
                       ease: PREMIUM_EASE,
@@ -302,12 +342,42 @@ export function MallMap() {
                 {current && (
                   <polygon
                     points={zone.polygonPoints}
-                    fill="#d4af37"
-                    opacity={0.06}
+                    fill={stroke}
+                    opacity={0.1}
                     pointerEvents="none"
                   />
                 )}
               </g>
+            );
+          })}
+        </g>
+
+        {/* Zone illustrations (only in revealed zones, clipped to polygon) */}
+        <g pointerEvents="none">
+          {zones.map((zone) => {
+            const revealed = fogState[zone.id] === true;
+            const imgSrc = ZONE_IMAGES[zone.id];
+            if (!revealed || !imgSrc || failedZoneImages.has(zone.id)) return null;
+            const bbox = polygonBBox(zone.polygonPoints);
+            return (
+              <image
+                key={`img-${zone.id}`}
+                href={imgSrc}
+                x={bbox.x}
+                y={bbox.y}
+                width={bbox.w}
+                height={bbox.h}
+                preserveAspectRatio="xMidYMid slice"
+                clipPath={`url(#clip-${zone.id})`}
+                opacity={0.92}
+                onError={() =>
+                  setFailedZoneImages((prev) => {
+                    const next = new Set(prev);
+                    next.add(zone.id);
+                    return next;
+                  })
+                }
+              />
             );
           })}
         </g>
@@ -357,6 +427,31 @@ export function MallMap() {
         <PlayerAvatar />
       </svg>
     </div>
+  );
+}
+
+/* ============================================================================
+   Doodle decoration wrapper
+   ========================================================================== */
+
+function Doodle({
+  children,
+  className,
+  rotate = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  rotate?: number;
+}) {
+  return (
+    <motion.div
+      className={className}
+      animate={{ y: [0, -5, 0], rotate: [rotate, rotate + 4, rotate] }}
+      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+      style={{ rotate }}
+    >
+      {children}
+    </motion.div>
   );
 }
 

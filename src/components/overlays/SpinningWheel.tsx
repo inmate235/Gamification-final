@@ -24,17 +24,20 @@ import { buySpins } from "@/engine/tokenEconomy";
  * SpinningWheel — the variable-reward spinning wheel overlay with near-miss
  * bias (VAL-WHEEL-001..017).
  *
- * The wheel appears periodically (gated by economyStore.spinningWheel.available
- * + cooldown). When available, a floating entry button invites the user to
- * spin. The overlay shows 7 prize segments (1, 3, 5, 10 tokens, map reveal,
- * flash sale access, nothing). Tapping SPIN triggers a dramatic 3-second
- * deceleration animation (custom cubic-bezier). 40% of spins are near-misses
- * that land adjacent to the big prize — the wheel visibly slows at the big
- * prize then clicks past it. Token prizes are credited with the tier
- * multiplier. Neodymium tier gets a higher win rate.
+ * Playful Figma direction: white card with a bright colored wheel, magenta
+ * pointer, magenta "SPIN!" button, light "Buy More Spins" panel, and
+ * celebratory result badges. Segment colors come from the engine data.
+ *
+ * Behaviour preserved from the original:
+ *  - Gated by economyStore.spinningWheel.available + cooldown
+ *  - 7 prize segments, 3-second deceleration, 40% near-miss bias
+ *  - Token prizes credited with tier multiplier
+ *  - Mid-spin close prevention (reward preserved)
+ *  - Buy-spins panel with near-miss discounted offer
  */
 
-const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
+const SMOOTH = [0.32, 0.72, 0, 1] as const;
+const POP = [0.34, 1.56, 0.64, 1] as const;
 const SPIN_DURATION_S = 3; // dramatic 3-second deceleration (VAL-WHEEL-004)
 
 /* ============================================================================
@@ -47,12 +50,10 @@ const R_OUTER = 150;
 const R_INNER = 28;
 const R_LABEL = 104;
 
-/** SVG angle (deg) for the centre of segment i, with segment 0 at the top. */
 function segmentCenterAngle(index: number): number {
   return -90 + index * SEGMENT_ANGLE;
 }
 
-/** Build an SVG path string for a wedge (donut slice). */
 function describeWedge(startAngle: number, endAngle: number): string {
   const sRad = (startAngle * Math.PI) / 180;
   const eRad = (endAngle * Math.PI) / 180;
@@ -79,14 +80,13 @@ function describeWedge(startAngle: number, endAngle: number): string {
   ].join(" ");
 }
 
-/** Label position for a segment. */
 function labelPos(index: number): { x: number; y: number; rotate: number } {
   const angle = segmentCenterAngle(index);
   const rad = (angle * Math.PI) / 180;
   return {
     x: CX + R_LABEL * Math.cos(rad),
     y: CY + R_LABEL * Math.sin(rad),
-    rotate: angle + 90, // keep text upright relative to the wedge
+    rotate: angle + 90,
   };
 }
 
@@ -125,7 +125,7 @@ export function SpinningWheelEntryButton() {
       transition={{ type: "spring", stiffness: 300, damping: 15 }}
       onClick={onOpen}
       aria-label="Spin the wheel for a reward"
-      className="relative flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#ff0055]/90 via-[#aa00ff]/90 to-[#0055ff]/90 px-5 py-3 ring-2 ring-white/50 backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 shadow-[0_0_25px_rgba(255,0,255,0.8)] overflow-hidden origin-top-right"
+      className="relative flex items-center gap-2.5 rounded-full bg-[#e6009e] px-5 py-3 text-white shadow-[0_6px_0_#b8007e] ring-2 ring-white transition-all duration-200 hover:scale-105 active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e] overflow-hidden origin-top-right"
       data-testid="wheel-entry-button"
     >
       <motion.div
@@ -138,21 +138,23 @@ export function SpinningWheelEntryButton() {
         transition={{ duration: 1.2, ease: "easeInOut", repeat: Infinity }}
         className="relative z-10 shrink-0"
       >
-        <div style={{
-          width: 22,
-          height: 22,
-          borderRadius: "50%",
-          background: "conic-gradient(#ff0055 0deg 60deg, #ffaa00 60deg 120deg, #00ff55 120deg 180deg, #00ffff 180deg 240deg, #0055ff 240deg 300deg, #aa00ff 300deg 360deg)",
-          border: "2px solid rgba(255,255,255,0.9)",
-          boxShadow: "0 0 10px rgba(255,255,255,0.6)"
-        }} />
+        <div
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            background:
+              "conic-gradient(#e6009e 0deg 60deg, #ffe600 60deg 120deg, #14b8a6 120deg 180deg, #7c3aed 180deg 240deg, #84cc16 240deg 300deg, #f59e0b 300deg 360deg)",
+            border: "2px solid rgba(255,255,255,0.9)",
+          }}
+        />
       </motion.div>
-      <span className="relative z-10 text-[12px] font-black uppercase tracking-[0.1em] text-white drop-shadow-md">
+      <span className="relative z-10 font-display text-[12px] font-bold uppercase tracking-[0.1em] text-white">
         {labelText}
       </span>
       {showPulsingDot && (
         <motion.span
-          className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-[#00ff55] shadow-[0_0_10px_#00ff55]"
+          className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-[#ffe600] ring-2 ring-white"
           animate={{ opacity: [1, 0.4, 1], scale: [1, 1.4, 1] }}
           transition={{ duration: 0.8, ease: "easeInOut", repeat: Infinity }}
         />
@@ -193,7 +195,6 @@ function SpinningWheelContent() {
   const tier = usePlayerStore((s) => s.tier);
   const playerTokens = usePlayerStore((s) => s.tokens);
 
-  // Fresh state on every mount (no useEffect reset needed).
   const [phase, setPhase] = useState<Phase>("idle");
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState<SpinResult | null>(null);
@@ -202,7 +203,6 @@ function SpinningWheelContent() {
 
   const rotationRef = useRef(0);
 
-  /* --- Spin handler --- */
   const handleSpin = useCallback(() => {
     if (phase !== "idle" || (!wheelAvailable && extraSpins <= 0)) return;
 
@@ -211,15 +211,16 @@ function SpinningWheelContent() {
     setPhase("spinning");
     setHighlightBigPrize(false);
 
-    // Start cooldown or decrement extra spin.
     spinWheelStore();
 
-    const target = computeTargetRotation(rotationRef.current, spinResult.segmentIndex);
+    const target = computeTargetRotation(
+      rotationRef.current,
+      spinResult.segmentIndex
+    );
     rotationRef.current = target;
     setRotation(target);
   }, [phase, wheelAvailable, extraSpins, tier, spinWheelStore]);
 
-  /* --- Animation complete: apply reward + show result --- */
   const onAnimationComplete = useCallback(() => {
     if (phase !== "spinning" || !result) return;
 
@@ -227,31 +228,22 @@ function SpinningWheelContent() {
     setOutcome(rewardOutcome);
     setPhase("result");
 
-    // Persist near-miss state in store
     setLastSpinNearMiss(result.nearMiss);
 
-    // Near-miss: pulse the big prize to emphasise "so close!"
     if (result.nearMiss) {
       setHighlightBigPrize(true);
     }
   }, [phase, result, setLastSpinNearMiss]);
 
-  /* --- Buy spins handler --- */
   const handleBuySpins = useCallback((amount: number, cost: number) => {
     buySpins(amount, cost);
   }, []);
 
-  /* --- Close handler ---
-     Prevent closing the overlay mid-spin (option (a) preferred fix). The
-     reward is applied on animation completion, so closing mid-spin would
-     consume the cooldown without granting the reward. The close button is
-     disabled and backdrop clicks are ignored while `phase === "spinning"`. */
   const handleClose = useCallback(() => {
     if (phase === "spinning") return;
     hideOverlay();
   }, [hideOverlay, phase]);
 
-  /* --- Pre-compute wedge paths --- */
   const wedges = useMemo(
     () =>
       WHEEL_SEGMENTS.map((seg) => {
@@ -272,7 +264,7 @@ function SpinningWheelContent() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.4, ease: PREMIUM_EASE }}
+      transition={{ duration: 0.35, ease: SMOOTH }}
       className="fixed inset-0 z-40 flex items-center justify-center p-4"
       data-testid="spinning-wheel-overlay"
       role="dialog"
@@ -281,7 +273,7 @@ function SpinningWheelContent() {
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 backdrop-blur-2xl bg-black/60"
+        className="absolute inset-0 backdrop-blur-md bg-[#141414]/40"
         onClick={handleClose}
         data-testid="wheel-backdrop"
       />
@@ -290,16 +282,16 @@ function SpinningWheelContent() {
         <BrainRotCelebration result={result} onClose={() => setPhase("idle")} />
       )}
 
-      {/* Double-bezel glass card */}
+      {/* White playful card */}
       <motion.div
-        initial={{ opacity: 0, y: 48, scale: 0.92, filter: "blur(8px)" }}
-        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-        exit={{ opacity: 0, y: 24, scale: 0.95, filter: "blur(4px)" }}
-        transition={{ duration: 0.7, ease: PREMIUM_EASE }}
-        className="relative rounded-[2rem] bg-white/5 ring-1 ring-white/10 p-1.5"
+        initial={{ opacity: 0, y: 48, scale: 0.92 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.95 }}
+        transition={{ duration: 0.6, ease: POP }}
+        className="relative w-full max-w-sm rounded-3xl bg-white shadow-[0_24px_64px_rgba(20,20,20,0.22)] ring-2 ring-[#141414]/8"
         data-testid="wheel-card"
       >
-        <div className="relative rounded-[calc(2rem-0.375rem)] bg-[#12121a] p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] sm:p-8">
+        <div className="relative p-6 sm:p-8">
           {/* Close button */}
           <button
             onClick={handleClose}
@@ -307,20 +299,20 @@ function SpinningWheelContent() {
             aria-label="Close spinning wheel"
             aria-disabled={phase === "spinning"}
             className={cn(
-              "absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 text-[#a1a1aa] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] hover:text-white",
-              phase === "spinning" && "cursor-not-allowed opacity-40 hover:text-[#a1a1aa]"
+              "absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-[#141414]/5 text-[#141414] ring-1 ring-[#141414]/10 transition-all duration-200 active:scale-95 hover:bg-[#141414]/10",
+              phase === "spinning" && "cursor-not-allowed opacity-40"
             )}
             data-testid="wheel-close-button"
           >
-            <X size={16} weight="light" />
+            <X size={16} weight="bold" />
           </button>
 
           {/* Title */}
           <div className="mb-4 text-center">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#71717a]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e6009e]">
               Mystic Wheel
             </p>
-            <h2 className="mt-1 text-xl font-bold text-[#f5f5f7] sm:text-2xl">
+            <h2 className="mt-1 font-display text-xl font-bold text-[#141414] sm:text-2xl">
               Spin for Rewards
             </h2>
           </div>
@@ -330,7 +322,7 @@ function SpinningWheelContent() {
             className="relative mx-auto flex items-center justify-center"
             style={{ width: 340, height: 340 }}
           >
-            {/* Pointer (fixed, at top) */}
+            {/* Pointer (fixed, at top) — magenta */}
             <div
               className="absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1"
               data-testid="wheel-pointer"
@@ -340,16 +332,16 @@ function SpinningWheelContent() {
                 style={{
                   borderLeft: "12px solid transparent",
                   borderRight: "12px solid transparent",
-                  borderTop: "20px solid #d4af37",
-                  filter: "drop-shadow(0 0 6px rgba(212,175,55,0.6))",
+                  borderTop: "20px solid #e6009e",
+                  filter: "drop-shadow(0 2px 4px rgba(184,0,126,0.4))",
                 }}
               />
             </div>
 
-            {/* Outer glow ring */}
+            {/* Outer ring */}
             <div
-              className="absolute inset-0 rounded-full"
-              style={{ boxShadow: "0 0 32px rgba(212,175,55,0.12)" }}
+              className="absolute inset-0 rounded-full ring-4 ring-[#141414]/8"
+              style={{ boxShadow: "0 8px 32px rgba(20,20,20,0.12)" }}
             />
 
             {/* Rotating wheel SVG */}
@@ -360,7 +352,7 @@ function SpinningWheelContent() {
               animate={{ rotate: rotation }}
               transition={{
                 duration: SPIN_DURATION_S,
-                ease: PREMIUM_EASE,
+                ease: SMOOTH,
               }}
               onAnimationComplete={onAnimationComplete}
               style={{ transformOrigin: "170px 170px" }}
@@ -374,10 +366,10 @@ function SpinningWheelContent() {
                     <path
                       d={w.path}
                       fill={w.color}
-                      fillOpacity={isBigPrize ? 0.22 : 0.14}
-                      stroke={w.color}
-                      strokeOpacity={isBigPrize ? 0.6 : 0.35}
-                      strokeWidth={1.5}
+                      fillOpacity={isBigPrize ? 0.85 : 0.65}
+                      stroke="#ffffff"
+                      strokeOpacity={0.9}
+                      strokeWidth={2}
                       className={cn(
                         isBigPrize && highlightBigPrize && "animate-pulse"
                       )}
@@ -394,7 +386,7 @@ function SpinningWheelContent() {
                       <text
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fill={w.color}
+                        fill="#ffffff"
                         fontSize={isBigPrize ? 13 : 11}
                         fontWeight={isBigPrize ? 700 : 600}
                         style={{ userSelect: "none" }}
@@ -411,15 +403,15 @@ function SpinningWheelContent() {
                 cx={CX}
                 cy={CY}
                 r={R_INNER}
-                fill="#12121a"
-                stroke="rgba(255,255,255,0.1)"
-                strokeWidth={1.5}
+                fill="#ffffff"
+                stroke="#e6009e"
+                strokeWidth={2}
               />
-              <circle cx={CX} cy={CY} r={R_INNER - 6} fill="#1a1a25" />
+              <circle cx={CX} cy={CY} r={R_INNER - 6} fill="#ffe600" />
             </motion.svg>
             {/* Center icon */}
             <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-              <Coins size={24} weight="light" className="text-[#d4af37]" />
+              <Coins size={24} weight="fill" className="text-[#e6009e]" />
             </div>
           </div>
 
@@ -434,14 +426,16 @@ function SpinningWheelContent() {
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -12 }}
-                      transition={{ duration: 0.4, ease: PREMIUM_EASE }}
+                      transition={{ duration: 0.4, ease: SMOOTH }}
                       onClick={handleSpin}
-                      className="flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#d4af37] to-[#b8941f] px-8 py-3.5 text-sm font-bold text-black transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
-                      style={{ boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}
+                      whileTap={{ scale: 0.97 }}
+                      className="btn-magenta w-full max-w-xs"
                       data-testid="wheel-spin-button"
                     >
                       <Sparkle size={16} weight="fill" />
-                      {wheelAvailable ? "SPIN THE WHEEL (FREE)" : `SPIN WHEEL (${extraSpins} SPINS LEFT)`}
+                      {wheelAvailable
+                        ? "SPIN THE WHEEL (FREE)"
+                        : `SPIN WHEEL (${extraSpins} SPINS LEFT)`}
                     </motion.button>
                   ) : (
                     <button
@@ -455,13 +449,14 @@ function SpinningWheelContent() {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="w-full max-w-sm rounded-2xl bg-white/5 ring-1 ring-white/10 p-4 flex flex-col gap-3 backdrop-blur-md"
+                      className="w-full max-w-sm rounded-2xl bg-[#f4f4f5] ring-1 ring-[#141414]/8 p-4 flex flex-col gap-3"
                     >
-                      <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a1a1aa] flex items-center gap-1.5">
-                          <Coins size={14} className="text-[#d4af37]" /> Buy More Spins
+                      <div className="flex justify-between items-center border-b border-[#141414]/10 pb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#141414] flex items-center gap-1.5">
+                          <Coins size={14} weight="fill" className="text-[#e6009e]" />{" "}
+                          Buy More Spins
                         </span>
-                        <span className="text-[10px] text-[#71717a] font-mono">
+                        <span className="text-[10px] text-[#8a8a8a] font-mono">
                           Balance: {playerTokens} tokens
                         </span>
                       </div>
@@ -470,19 +465,29 @@ function SpinningWheelContent() {
                         <motion.button
                           onClick={() => handleBuySpins(1, 2)}
                           disabled={playerTokens < 2}
-                          className="relative flex items-center justify-between rounded-xl bg-[#d4af37]/10 ring-1 ring-[#d4af37]/45 px-4 py-3 text-left transition-all duration-700 hover:bg-[#d4af37]/20 active:scale-[0.98] disabled:opacity-50 overflow-hidden"
-                          animate={{ boxShadow: ["0 0 0px rgba(212,175,55,0)", "0 0 8px rgba(212,175,55,0.2)", "0 0 0px rgba(212,175,55,0)"] }}
+                          className="relative flex items-center justify-between rounded-xl bg-[#e6009e]/8 ring-1.5 ring-[#e6009e]/45 px-4 py-3 text-left transition-all duration-200 hover:bg-[#e6009e]/15 active:scale-[0.98] disabled:opacity-50 overflow-hidden"
+                          animate={{
+                            boxShadow: [
+                              "0 0 0px rgba(230,0,158,0)",
+                              "0 0 8px rgba(230,0,158,0.25)",
+                              "0 0 0px rgba(230,0,158,0)",
+                            ],
+                          }}
                           transition={{ duration: 2, repeat: Infinity }}
                         >
-                          <div className="absolute right-0 top-0 bg-[#d4af37] text-black text-[8px] font-bold px-2 py-0.5 uppercase rounded-bl-lg tracking-wider">
+                          <div className="absolute right-0 top-0 bg-[#e6009e] text-white text-[8px] font-bold px-2 py-0.5 uppercase rounded-bl-lg tracking-wider">
                             Near-Miss Offer
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-[#d4af37] uppercase tracking-wider">1 Discounted Spin</div>
-                            <div className="text-[10px] text-[#a1a1aa] mt-0.5">So close! Get right back in!</div>
+                            <div className="text-xs font-bold text-[#e6009e] uppercase tracking-wider">
+                              1 Discounted Spin
+                            </div>
+                            <div className="text-[10px] text-[#4b4b4b] mt-0.5">
+                              So close! Get right back in!
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 font-mono text-sm font-bold text-[#d4af37]">
-                            <Coins size={14} /> 2
+                          <div className="flex items-center gap-1 font-mono text-sm font-bold text-[#e6009e]">
+                            <Coins size={14} weight="fill" /> 2
                           </div>
                         </motion.button>
                       )}
@@ -491,42 +496,54 @@ function SpinningWheelContent() {
                         <button
                           onClick={() => handleBuySpins(1, 3)}
                           disabled={playerTokens < 3}
-                          className="flex items-center justify-between rounded-xl bg-white/5 ring-1 ring-white/10 px-4 py-2.5 text-left transition-all duration-700 hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
+                          className="flex items-center justify-between rounded-xl bg-white ring-1 ring-[#141414]/10 px-4 py-2.5 text-left transition-all duration-200 hover:ring-[#141414]/25 active:scale-[0.98] disabled:opacity-50"
                         >
                           <div>
-                            <div className="text-xs font-bold text-[#f5f5f7]">1 Spin</div>
-                            <div className="text-[10px] text-[#71717a]">Instant action</div>
+                            <div className="text-xs font-bold text-[#141414]">
+                              1 Spin
+                            </div>
+                            <div className="text-[10px] text-[#8a8a8a]">
+                              Instant action
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-[#a1a1aa]">
-                            <Coins size={12} /> 3
+                          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-[#141414]">
+                            <Coins size={12} weight="fill" /> 3
                           </div>
                         </button>
 
                         <button
                           onClick={() => handleBuySpins(3, 7)}
                           disabled={playerTokens < 7}
-                          className="flex items-center justify-between rounded-xl bg-white/5 ring-1 ring-white/10 px-4 py-2.5 text-left transition-all duration-700 hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
+                          className="flex items-center justify-between rounded-xl bg-white ring-1 ring-[#141414]/10 px-4 py-2.5 text-left transition-all duration-200 hover:ring-[#141414]/25 active:scale-[0.98] disabled:opacity-50"
                         >
                           <div>
-                            <div className="text-xs font-bold text-[#f5f5f7]">Duo Pack (3 Spins)</div>
-                            <div className="text-[10px] text-[#4fd1c5] font-semibold">Save 2 tokens!</div>
+                            <div className="text-xs font-bold text-[#141414]">
+                              Duo Pack (3 Spins)
+                            </div>
+                            <div className="text-[10px] text-[#14b8a6] font-semibold">
+                              Save 2 tokens!
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-[#a1a1aa]">
-                            <Coins size={12} /> 7
+                          <div className="flex items-center gap-1 font-mono text-xs font-semibold text-[#141414]">
+                            <Coins size={12} weight="fill" /> 7
                           </div>
                         </button>
 
                         <button
                           onClick={() => handleBuySpins(5, 10)}
                           disabled={playerTokens < 10}
-                          className="flex items-center justify-between rounded-xl bg-gradient-to-r from-[#d4af37]/10 to-[#b8941f]/10 ring-1 ring-[#d4af37]/30 px-4 py-2.5 text-left transition-all duration-700 hover:from-[#d4af37]/20 hover:to-[#b8941f]/20 active:scale-[0.98] disabled:opacity-50"
+                          className="flex items-center justify-between rounded-xl bg-[#ffe600] ring-1 ring-[#141414]/10 px-4 py-2.5 text-left transition-all duration-200 hover:brightness-95 active:scale-[0.98] disabled:opacity-50"
                         >
                           <div>
-                            <div className="text-xs font-bold text-[#d4af37]">Jackpot Bundle (5 Spins)</div>
-                            <div className="text-[10px] text-[#d4af37]/80 font-bold uppercase tracking-wide">Best Value! Save 5</div>
+                            <div className="text-xs font-bold text-[#141414]">
+                              Jackpot Bundle (5 Spins)
+                            </div>
+                            <div className="text-[10px] text-[#141414]/70 font-bold uppercase tracking-wide">
+                              Best Value! Save 5
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 font-mono text-xs font-bold text-[#d4af37]">
-                            <Coins size={12} /> 10
+                          <div className="flex items-center gap-1 font-mono text-xs font-bold text-[#141414]">
+                            <Coins size={12} weight="fill" /> 10
                           </div>
                         </button>
                       </div>
@@ -541,8 +558,8 @@ function SpinningWheelContent() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3, ease: PREMIUM_EASE }}
-                  className="text-sm font-medium tracking-wide text-[#a1a1aa]"
+                  transition={{ duration: 0.3, ease: SMOOTH }}
+                  className="text-sm font-medium tracking-wide text-[#8a8a8a]"
                   data-testid="wheel-spinning-label"
                 >
                   Spinning…
@@ -555,7 +572,7 @@ function SpinningWheelContent() {
                   initial={{ opacity: 0, y: 16, scale: 0.85 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -16 }}
-                  transition={{ duration: 0.6, ease: PREMIUM_EASE }}
+                  transition={{ duration: 0.6, ease: POP }}
                   className="flex flex-col items-center gap-3"
                   data-testid="wheel-result"
                 >
@@ -567,8 +584,8 @@ function SpinningWheelContent() {
                     <motion.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4, duration: 0.6, ease: PREMIUM_EASE }}
-                      className="text-[11px] uppercase tracking-[0.16em] text-[#d4af37]/70"
+                      transition={{ delay: 0.4, duration: 0.6, ease: SMOOTH }}
+                      className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#e6009e]/70"
                       data-testid="wheel-nearmiss-message"
                     >
                       So close to 10 tokens!
@@ -576,7 +593,7 @@ function SpinningWheelContent() {
                   )}
                   <button
                     onClick={handleClose}
-                    className="rounded-full bg-white/5 ring-1 ring-white/10 px-6 py-2.5 text-sm font-medium text-[#f5f5f7] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98]"
+                    className="rounded-full bg-[#141414]/5 ring-1 ring-[#141414]/10 px-6 py-2.5 text-sm font-medium text-[#141414] transition-all duration-200 hover:bg-[#141414]/10 active:scale-95"
                     data-testid="wheel-dismiss-button"
                   >
                     {outcome.type === "nothing" ? "Maybe next time" : "Collect & Close"}
@@ -588,7 +605,7 @@ function SpinningWheelContent() {
             {/* Cooldown hint */}
             {phase === "idle" && !wheelAvailable && (
               <p
-                className="text-[11px] text-[#71717a]"
+                className="text-[11px] text-[#8a8a8a]"
                 data-testid="wheel-cooldown-hint"
               >
                 Wheel on cooldown — check back shortly.
@@ -614,12 +631,12 @@ function ResultBadge({
 }) {
   const accent =
     outcome.type === "tokens"
-      ? "#d4af37"
+      ? "#e6009e"
       : outcome.type === "map-reveal"
-        ? "#9d7fdb"
+        ? "#7c3aed"
         : outcome.type === "flash-sale"
-          ? "#e879a1"
-          : "#71717a";
+          ? "#f59e0b"
+          : "#8a8a8a";
 
   const Icon =
     outcome.type === "map-reveal"
@@ -632,14 +649,13 @@ function ResultBadge({
 
   return (
     <div
-      className="flex items-center gap-3 rounded-full px-5 py-2.5 ring-1"
+      className="flex items-center gap-3 rounded-full px-5 py-2.5 ring-1.5"
       style={{
         backgroundColor: `${accent}14`,
         ["--tw-ring-color" as string]: `${accent}40`,
-        boxShadow: `0 0 16px ${accent}22`,
       }}
     >
-      <Icon size={18} weight="light" style={{ color: accent }} />
+      <Icon size={18} weight="fill" style={{ color: accent }} />
       <span
         className="font-mono text-sm font-bold tracking-tight"
         style={{ color: accent }}

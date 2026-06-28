@@ -19,15 +19,20 @@ import type { Task, TaskType } from "@/types";
 /**
  * TaskPanel — the bottom chrome of `/mall`.
  *
- * Renders the breadcrumb task list: a never-empty set of active tasks (2-4 at
- * once) shown as quest cards with star reward indicators and progress bars.
- * Each card shows the task type icon, a human-readable description referencing
- * a real map location, and the token reward with a star badge. Time-gated
- * tasks display a live countdown. The panel is expandable/collapsible via
- * `uiStore.toggleBottomPanel`.
+ * Playful Figma direction: magenta floating "Quests" pill, yellow (#ffe600)
+ * expanded panel with a sticker "Active Quests" heading, white quest cards
+ * with colored type icons, magenta star reward badges and magenta pill
+ * progress bars.
+ *
+ * Behaviour preserved from the original:
+ *  - Bottom panel expand/collapse via uiStore.toggleBottomPanel
+ *  - Never-empty breadcrumb task list (2-4 active tasks)
+ *  - Star reward indicators + progress bars
+ *  - Time-gated countdowns with live ticking
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
+const POP = [0.34, 1.56, 0.64, 1] as const;
 
 /* ============================================================================
    Task type presentation
@@ -43,20 +48,20 @@ function typeStyle(type: TaskType): TypeStyle {
   switch (type) {
     case "explore-zone":
       return {
-        icon: <Compass size={15} weight="light" />,
-        color: "#4fd1c5",
+        icon: <Compass size={16} weight="fill" />,
+        color: "#14b8a6",
         label: "Explore",
       };
     case "find-token":
       return {
-        icon: <Coin size={15} weight="light" />,
-        color: "#d4af37",
+        icon: <Coin size={16} weight="fill" />,
+        color: "#e6009e",
         label: "Find Token",
       };
     case "visit-stores":
       return {
-        icon: <Storefront size={15} weight="light" />,
-        color: "#9d7fdb",
+        icon: <Storefront size={16} weight="fill" />,
+        color: "#7c3aed",
         label: "Visit Stores",
       };
   }
@@ -97,14 +102,14 @@ export function TaskPanel() {
 
   return (
     <div data-testid="task-panel">
-      {/* Floating Entry Orb */}
+      {/* Floating Entry Pill — magenta */}
       <AnimatePresence>
         {!expanded && (
           <motion.div
             initial={{ opacity: 0, y: 24, scale: 0.85 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.85 }}
-            transition={{ duration: 0.7, ease: PREMIUM_EASE }}
+            transition={{ duration: 0.6, ease: POP }}
             className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2"
           >
             <button
@@ -112,17 +117,20 @@ export function TaskPanel() {
               aria-expanded={expanded}
               aria-controls="task-panel-content"
               aria-label="Open Quests"
-              className="group flex items-center gap-3 rounded-full bg-[#12121a]/80 px-5 py-3 ring-1 ring-[#9d7fdb]/40 backdrop-blur-md transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#12121a] hover:ring-[#9d7fdb]/60 active:scale-[0.97]"
-              style={{ boxShadow: "0 0 24px rgba(157,127,219,0.2)" }}
+              className="group flex items-center gap-2.5 rounded-full bg-[#e6009e] px-5 py-3 text-white shadow-[0_6px_0_#b8007e] transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] active:translate-y-[3px] active:shadow-[0_3px_0_#b8007e]"
               data-testid="task-panel-toggle"
             >
-              <ListChecks size={18} weight="light" className="text-[#9d7fdb] transition-transform duration-500 group-hover:scale-110" />
-              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f5f5f7]">
+              <ListChecks
+                size={18}
+                weight="fill"
+                className="text-white transition-transform duration-300 group-hover:scale-110"
+              />
+              <span className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-white">
                 Quests
               </span>
               {taskCount > 0 && (
                 <span
-                  className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#9d7fdb] px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(157,127,219,0.5)]"
+                  className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-[#e6009e]"
                   data-testid="task-panel-count"
                 >
                   {taskCount}
@@ -138,73 +146,60 @@ export function TaskPanel() {
         {expanded && (
           <motion.div
             id="task-panel-content"
-            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-            animate={{ opacity: 1, backdropFilter: "blur(16px)" }}
-            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-            transition={{ duration: 0.5, ease: PREMIUM_EASE }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: PREMIUM_EASE }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#141414]/40 px-4 backdrop-blur-sm"
             data-testid="task-panel-content"
           >
             {/* Click-away backdrop */}
             <div className="absolute inset-0" onClick={handleToggle} />
 
             <motion.div
-              initial={{ scale: 0.95, y: 20 }}
+              initial={{ scale: 0.95, y: 24 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              transition={{ duration: 0.5, ease: PREMIUM_EASE }}
-              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#12121a]/90 p-1 ring-1 ring-white/10 shadow-[0_0_40px_rgba(157,127,219,0.15)]"
+              exit={{ scale: 0.95, y: 24 }}
+              transition={{ duration: 0.5, ease: POP }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-[#ffe600] p-5 shadow-[0_20px_60px_rgba(20,20,20,0.25)] ring-3 ring-[#141414]/10"
             >
-              {/* Rainbow accent element — top border gradient (Figma node 66:75) */}
-              <div
-                className="absolute inset-x-0 top-0 h-[2px] opacity-60"
-                style={{
-                  background:
-                    "linear-gradient(90deg, #d4af37 0%, #e879a1 25%, #9d7fdb 50%, #4fd1c5 75%, #d4af37 100%)",
-                }}
-              />
-
-              <div className="rounded-[calc(1.5rem-4px)] bg-[#1a1a24]/90 p-5">
-                <div className="mb-6 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#9d7fdb]/10 ring-1 ring-[#9d7fdb]/30">
-                      <ListChecks size={20} weight="light" className="text-[#9d7fdb]" />
-                    </div>
-                    <h2 className="text-lg font-semibold uppercase tracking-widest text-white flex items-center gap-2">
-                      Active Quests
-                      {taskCount > 0 && (
-                        <span
-                          className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#9d7fdb] px-1.5 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(157,127,219,0.5)]"
-                          data-testid="task-panel-count"
-                        >
-                          {taskCount}
-                        </span>
-                      )}
-                    </h2>
-                  </div>
-                  <button
-                    onClick={handleToggle}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10 transition-colors hover:bg-white/10"
-                    aria-label="Close quests"
-                    data-testid="task-panel-toggle"
-                  >
-                    <CaretDown size={16} weight="light" className="text-[#a1a1aa]" />
-                  </button>
+              {/* Header */}
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h2 className="sticker-heading text-2xl flex items-center gap-2">
+                    Active Quests
+                    {taskCount > 0 && (
+                      <span
+                        className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#e6009e] px-1.5 text-[11px] font-bold text-white ring-2 ring-white"
+                        data-testid="task-panel-count"
+                      >
+                        {taskCount}
+                      </span>
+                    )}
+                  </h2>
                 </div>
+                <button
+                  onClick={handleToggle}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#141414] ring-2 ring-[#141414]/10 transition-all duration-200 hover:ring-[#141414]/25 active:scale-95"
+                  aria-label="Close quests"
+                  data-testid="task-panel-toggle"
+                >
+                  <CaretDown size={18} weight="bold" />
+                </button>
+              </div>
 
-                <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
-                  <AnimatePresence initial={false}>
-                    {activeTasks.map((task, index) => (
-                      <TaskCard key={task.id} task={task} now={now} index={index} />
-                    ))}
-                  </AnimatePresence>
-                  
-                  {hasGated && (
-                    <p className="mt-2 text-center text-[10px] uppercase tracking-[0.15em] text-[#71717a]">
-                      Timed quests unlock after the countdown
-                    </p>
-                  )}
-                </div>
+              <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+                <AnimatePresence initial={false}>
+                  {activeTasks.map((task, index) => (
+                    <TaskCard key={task.id} task={task} now={now} index={index} />
+                  ))}
+                </AnimatePresence>
+
+                {hasGated && (
+                  <p className="mt-1 text-center text-[10px] font-medium uppercase tracking-[0.15em] text-[#141414]/55">
+                    Timed quests unlock after the countdown
+                  </p>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -215,10 +210,18 @@ export function TaskPanel() {
 }
 
 /* ============================================================================
-   TaskCard — enhanced with star reward and progress bar (Figma-inspired)
+   TaskCard — white quest card on the yellow panel
    ========================================================================== */
 
-function TaskCard({ task, now, index = 0 }: { task: Task; now: number; index?: number }) {
+function TaskCard({
+  task,
+  now,
+  index = 0,
+}: {
+  task: Task;
+  now: number;
+  index?: number;
+}) {
   const style = typeStyle(task.type);
   const gated = task.timeGated && task.gateUntil !== undefined;
   const remaining = gated ? (task.gateUntil ?? 0) - now : 0;
@@ -235,21 +238,18 @@ function TaskCard({ task, now, index = 0 }: { task: Task; now: number; index?: n
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.25 } }}
       transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: index * 0.06 }}
       className={cn(
-        "relative flex items-center gap-3 overflow-hidden rounded-2xl bg-white/[0.03] p-2.5 ring-1 ring-white/10",
-        "transition-shadow duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        "relative flex items-center gap-3 overflow-hidden rounded-2xl bg-white p-3 ring-1 ring-[#141414]/8"
       )}
-      style={{ boxShadow: `0 0 16px ${style.color}14` }}
       data-testid="task-card"
       data-task-id={task.id}
       data-task-type={task.type}
     >
       {/* Type icon badge */}
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
         style={{
-          color: style.color,
-          background: `${style.color}12`,
-          ["--tw-ring-color" as string]: `${style.color}33`,
+          color: "#ffffff",
+          background: style.color,
         }}
         aria-hidden
       >
@@ -259,14 +259,14 @@ function TaskCard({ task, now, index = 0 }: { task: Task; now: number; index?: n
       {/* Description + meta */}
       <div className="min-w-0 flex-1">
         <p
-          className="truncate text-sm font-medium text-[#f5f5f7]"
+          className="truncate text-sm font-semibold text-[#141414]"
           data-testid="task-card-description"
         >
           {task.description}
         </p>
         <div className="mt-0.5 flex items-center gap-2">
           <span
-            className="text-[10px] font-medium uppercase tracking-[0.12em]"
+            className="text-[10px] font-bold uppercase tracking-[0.12em]"
             style={{ color: style.color }}
           >
             {style.label}
@@ -275,39 +275,36 @@ function TaskCard({ task, now, index = 0 }: { task: Task; now: number; index?: n
             <span
               className={cn(
                 "flex items-center gap-1 text-[10px] font-mono tabular-nums",
-                ready ? "text-[#4fd1c5]" : "text-[#e879a1]"
+                ready ? "text-[#14b8a6]" : "text-[#ef4444]"
               )}
               data-testid="task-card-timer"
             >
-              <Timer size={11} weight="light" />
+              <Timer size={11} weight="fill" />
               {ready ? "Ready" : formatRemaining(remaining)}
             </span>
           )}
           {!gated && (
-            <span className="text-[10px] uppercase tracking-[0.12em] text-[#71717a]">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">
               Lv {task.chainLevel + 1}
             </span>
           )}
         </div>
 
-        {/* Progress bar — thin bar at the bottom (Figma nodes 70:80, 70:81) */}
-        <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
+        {/* Progress bar — magenta pill (Figma nodes 70:80, 70:81) */}
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#141414]/8">
           <div
-            className="h-full rounded-full transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
-            style={{
-              width: `${progressPercent}%`,
-              background: `linear-gradient(90deg, ${style.color} 0%, ${style.color}99 100%)`,
-            }}
+            className="h-full rounded-full bg-[#e6009e] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+            style={{ width: `${progressPercent}%` }}
           />
         </div>
       </div>
 
-      {/* Reward — star badge (Figma nodes 7:21, 11:15, 11:21) */}
+      {/* Reward — magenta star badge (Figma nodes 7:21, 11:15, 11:21) */}
       <span
-        className="flex shrink-0 items-center gap-1 rounded-full bg-[#d4af37]/10 px-2.5 py-1 text-xs font-semibold text-[#d4af37] ring-1 ring-[#d4af37]/25"
+        className="flex shrink-0 items-center gap-1 rounded-full bg-[#e6009e]/10 px-2.5 py-1 text-xs font-bold text-[#e6009e] ring-1.5 ring-[#e6009e]/30"
         data-testid="task-card-reward"
       >
-        <Star size={11} weight="fill" className="text-[#d4af37]" />
+        <Star size={11} weight="fill" className="text-[#e6009e]" />
         <span className="font-mono tabular-nums">+{task.reward}</span>
       </span>
     </motion.div>
