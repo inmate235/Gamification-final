@@ -9,6 +9,7 @@ import {
   checkStreakOnVisit,
   processMissedDayPenalties,
 } from "@/engine/streakEngine";
+import { startBackgroundMusic, stopBackgroundMusic } from "@/lib/sound";
 import { StatusBar } from "@/components/mall/StatusBar";
 import { MallMap } from "@/components/mall/MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
@@ -120,6 +121,9 @@ export function MallExperience() {
     // tick fires).
     useSocialStore.getState().updateLeaderboard();
 
+    // Start the ambient background music (fades in over ~800ms, loops).
+    startBackgroundMusic();
+
     // Swipe right to open timeline
     let touchStartX = 0;
     const handleTouchStart = (e: TouchEvent) => {
@@ -139,8 +143,14 @@ export function MallExperience() {
       resetEventSchedulerSingleton();
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchend", handleTouchEnd);
+      stopBackgroundMusic();
     };
   }, [grantOnboardingTrialPerks]);
+
+  /* --- Stop background music when the user exits the mall --- */
+  useEffect(() => {
+    if (exited) stopBackgroundMusic();
+  }, [exited]);
 
   return (
     <AnimatePresence mode="wait">

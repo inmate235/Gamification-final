@@ -58,6 +58,8 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     MapPin: make("MapPin"),
     Lightning: make("Lightning"),
     Star: make("Star"),
+    SpeakerHigh: make("SpeakerHigh"),
+    SpeakerSlash: make("SpeakerSlash"),
   };
 });
 

@@ -544,4 +544,6 @@ export interface UIState {
   isTimelineOpen: boolean;
   hasSeenTimelineOnboarding: boolean;
   isMuted: boolean;
+  /** Whether sound effects are enabled (separate from feed video mute). */
+  isSoundEnabled: boolean;
 }

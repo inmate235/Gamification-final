@@ -129,6 +129,8 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     "Heart",
     "ShoppingBag",
     "PuzzlePiece",
+    "SpeakerHigh",
+    "SpeakerSlash",
   ];
   const obj: Record<string, ReturnType<typeof make>> = {};
   for (const n of names) obj[n] = make(n);

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
 import { ParticleField } from "@/components/onboarding/ParticleField";
 import { useOnboardingStore } from "@/stores/onboardingStore";
+import { playSound, SOUNDS } from "@/lib/sound";
 
 /**
  * InviteScreen — the entry gate at `/`.
@@ -64,8 +65,9 @@ const UNLOCKED_PERKS = [
 
 type Phase = "input" | "transitioning" | "welcome";
 
-/** Transition duration in ms (curtains close → lock unlock → stamp → curtains up) */
-const TRANSITION_DURATION = 2400;
+/** Transition duration in ms (curtains close → lock unlock → stamp → curtains up).
+ *  Extended to give the ACCESS GRANTED moment enough screen time to land. */
+const TRANSITION_DURATION = 4500;
 
 /* ============================================================================
    Helpers
@@ -187,6 +189,9 @@ export function InviteScreen() {
     setError(null);
     setSubmitting(true);
     advanceToSurvey();
+
+    // Play the access-granted sound effect at the moment of validation.
+    playSound(SOUNDS.ACCESS_TO_APP);
 
     if (isTest) {
       setPhase("welcome");
@@ -690,14 +695,15 @@ export function InviteScreen() {
           ) : null}
         </AnimatePresence>
 
-        {/* ================================================================
+            {/* ================================================================
             TRANSITION OVERLAY — curtains + lock unlock + ACCESS GRANTED stamp
-            Timeline (2400ms total):
-              0-360ms     curtains sweep in from sides
-              360-696ms   lock badge appears, shakes
-              696ms       UNLOCK: icon swap + flash + rings + sparks
-              840-2088ms  "ACCESS GRANTED" stamp with radiating rays
-              1992-2400ms curtains sweep up to reveal welcome phase
+            Timeline (scales with TRANSITION_DURATION via TD):
+              0-15%       curtains sweep in from sides
+              15-29%      lock badge appears, shakes, unlocks
+              29-35%      UNLOCK flash + rings + sparks
+              35-93%      "ACCESS GRANTED" stamp with radiating rays (held)
+              83-100%     curtains sweep up to reveal welcome phase
+              93-98%      stamp fades out just before curtains fully open
             ================================================================ */}
         <AnimatePresence>
           {phase === "transitioning" && !isTest && (
@@ -959,7 +965,7 @@ export function InviteScreen() {
                   }}
                   transition={{
                     duration: TD,
-                    times: [0, 0.35, 0.4, 0.79, 0.87],
+                    times: [0, 0.35, 0.4, 0.93, 0.98],
                     ease: "easeOut",
                   }}
                 />
@@ -975,7 +981,7 @@ export function InviteScreen() {
                   }}
                   transition={{
                     duration: TD,
-                    times: [0, 0.35, 0.39, 0.45, 0.79, 0.87],
+                    times: [0, 0.35, 0.39, 0.45, 0.93, 0.98],
                     ease: [0.34, 1.56, 0.64, 1],
                   }}
                 >

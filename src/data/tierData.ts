@@ -62,6 +62,8 @@ export interface TierVisual {
   label: string;
   /** Short tagline shown in celebrations / perks panel. */
   tagline: string;
+  /** Hero image URL for the tier-upgrade celebration popup. */
+  imageUrl: string;
 }
 
 export const TIER_VISUALS: Record<Tier, TierVisual> = {
@@ -70,24 +72,28 @@ export const TIER_VISUALS: Record<Tier, TierVisual> = {
     glow: "0 0 12px rgba(184, 115, 51, 0.3)",
     label: "Bronze",
     tagline: "Where every member begins.",
+    imageUrl: "/assets/tiers/bronze.png",
   },
   silver: {
     color: "#c0c0c0",
     glow: "0 0 12px rgba(192, 192, 192, 0.3)",
     label: "Silver",
     tagline: "Sharper perks, steadier rewards.",
+    imageUrl: "/assets/tiers/silver.png",
   },
   gold: {
     color: "#d4af37",
     glow: "0 0 16px rgba(212, 175, 55, 0.4)",
     label: "Gold",
     tagline: "The preferred inner circle.",
+    imageUrl: "/assets/tiers/gold.png",
   },
   neodymium: {
     color: "#9d7fdb",
     glow: "0 0 20px rgba(157, 127, 219, 0.5)",
     label: "Neodymium",
     tagline: "Rare earth. Rarer access.",
+    imageUrl: "/assets/tiers/neodymium.png",
   },
 };
 

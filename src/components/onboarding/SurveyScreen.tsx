@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Check } from "@phosphor-icons/react";
 import type { IconWeight } from "@phosphor-icons/react";
@@ -11,6 +10,8 @@ import { classifyBartleType } from "@/lib/bartle";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { Logo } from "@/components/ui/Logo";
+import { LoadingTransition } from "@/components/onboarding/LoadingTransition";
+import { playSound, stopAllSounds, SURVEY_SOUNDS, SOUNDS } from "@/lib/sound";
 
 /**
  * SurveyScreen — the style profile survey at `/survey`.
@@ -29,7 +30,8 @@ import { Logo } from "@/components/ui/Logo";
  *  - Progress dots retained for test compatibility (aria-label "Question N")
  */
 
-const AUTO_ADVANCE_DELAY = 650; // ms — visual feedback before advancing
+const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
+const AUTO_ADVANCE_DELAY = isTest ? 50 : 2500; // ms — let survey sounds play before advancing
 const STEP_BACKGROUNDS = [
   "radial-gradient(120% 92% at 10% -14%, rgba(232,121,161,0.30) 0%, rgba(232,121,161,0.11) 36%, rgba(232,121,161,0) 70%), radial-gradient(108% 85% at 92% 0%, rgba(79,209,197,0.30) 0%, rgba(79,209,197,0.10) 38%, rgba(79,209,197,0) 72%), linear-gradient(180deg, #fff8fc 0%, #fff 54%, #f8fbff 100%)",
   "radial-gradient(120% 98% at 0% -10%, rgba(157,127,219,0.28) 0%, rgba(157,127,219,0.09) 40%, rgba(157,127,219,0) 74%), radial-gradient(115% 95% at 95% 5%, rgba(232,121,161,0.25) 0%, rgba(232,121,161,0.08) 36%, rgba(232,121,161,0) 70%), linear-gradient(180deg, #fbf8ff 0%, #fff 56%, #fff8fd 100%)",
@@ -105,20 +107,17 @@ const cardVariants: Variants = {
    Component
    ========================================================================== */
 
-const isTest = typeof process !== "undefined" && process.env.NODE_ENV === "test";
-const EXIT_DELAY = isTest ? 0 : 550;
-
 /** Figma subtitle shown at the top of the survey (text node 3:173). */
 const SURVEY_SUBTITLE =
   "Answer three quick questions so MurkyCorps can personalize your mall experience.";
 
 export function SurveyScreen() {
-  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAdvancing, setIsAdvancing] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
+  const [isExiting] = useState(false);
+  const [showLoading, setShowLoading] = useState(false);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigatedRef = useRef(false);
 
@@ -146,6 +145,10 @@ export function SurveyScreen() {
     (option: SurveyOption) => {
       if (isAdvancing) return; // guard against rapid double-click
 
+      // Play the survey-specific sound for this option immediately on tap.
+      const surveySound = SURVEY_SOUNDS[option.id];
+      if (surveySound) playSound(surveySound);
+
       setSelectedOption(option.id);
       setIsAdvancing(true);
 
@@ -157,6 +160,10 @@ export function SurveyScreen() {
 
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       advanceTimerRef.current = setTimeout(() => {
+        // Stop the survey sound before transitioning so long sounds
+        // (e.g. survey-deals at 10.6s) don't bleed into the next question.
+        stopAllSounds();
+
         if (isLastQuestion) {
           const bartleType = classifyBartleType(newAnswers);
           setSurveyAnswers(newAnswers);
@@ -167,12 +174,11 @@ export function SurveyScreen() {
 
           if (!navigatedRef.current) {
             navigatedRef.current = true;
-            setIsExiting(true);
-            setTimeout(() => {
-              router.push("/mall");
-            }, EXIT_DELAY);
+            setShowLoading(true);
           }
         } else {
+          // Play swoosh for the slide transition to the next question.
+          playSound(SOUNDS.SWOOSH);
           setCurrentIndex((prev) => prev + 1);
           setSelectedOption(null);
           setIsAdvancing(false);
@@ -184,7 +190,6 @@ export function SurveyScreen() {
       currentQuestion,
       isAdvancing,
       isLastQuestion,
-      router,
       setBartleType,
       setSurveyAnswers,
       grantOnboardingTrialPerks,
@@ -328,6 +333,9 @@ export function SurveyScreen() {
           Question {currentIndex + 1} of {totalQuestions}
         </p>
       </motion.div>
+
+      {/* Loading transition overlay (shown after last question) */}
+      {showLoading && <LoadingTransition />}
     </main>
   );
 }

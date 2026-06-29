@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { BrainRotCelebration } from "@/components/overlays/BrainRotCelebration";
 import { buySpins } from "@/engine/tokenEconomy";
+import { playSound, SOUNDS } from "@/lib/sound";
 
 /**
  * SpinningWheel — the variable-reward spinning wheel overlay with near-miss
@@ -212,6 +213,9 @@ function SpinningWheelContent() {
     setHighlightBigPrize(false);
 
     spinWheelStore();
+
+    // Play the spinning sound simultaneously with the wheel starting to rotate.
+    playSound(SOUNDS.SPIN_THE_WHEEL);
 
     const target = computeTargetRotation(
       rotationRef.current,

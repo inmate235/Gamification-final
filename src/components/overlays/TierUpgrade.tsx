@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkle,
   ArrowRight,
-  Medal,
   Crown,
   Coins,
   Timer,
@@ -208,39 +207,26 @@ export function TierUpgrade() {
                   </span>
                 </motion.div>
 
-                {/* Tier badge — scales in with spring (staggered #2) */}
+                {/* Tier hero image — scales in with spring (staggered #2) */}
                 <motion.div
                   initial={{ scale: 0, opacity: 0, rotate: -12 }}
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   transition={{ type: "spring", stiffness: 200, damping: 14, delay: 0.2 }}
-                  className="relative z-10 mx-auto mb-5 flex h-24 w-24 items-center justify-center"
+                  className="relative z-10 mx-auto mb-5 flex items-center justify-center"
                   data-testid="tier-upgrade-badge"
                 >
-                  {/* Pulsing ring behind badge */}
+                  {/* Pulsing ring behind image */}
                   <motion.div
-                    animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.1, 0.4] }}
+                    animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.1, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute inset-0 rounded-full bg-white/20"
+                    className="absolute inset-0 rounded-full bg-white/20 blur-md"
                   />
-                  <div
-                    className="relative flex h-24 w-24 items-center justify-center rounded-full ring-4 ring-white/40 shadow-[0_8px_24px_rgba(0,0,0,0.15)]"
-                    style={{ backgroundColor: "#ffffff" }}
-                  >
-                    <div
-                      className="flex h-16 w-16 items-center justify-center rounded-full"
-                      style={{
-                        background: `linear-gradient(135deg, ${visual.color} 0%, ${visual.color}dd 100%)`,
-                      }}
-                    >
-                      {newTier === "neodymium" ? (
-                        <Sparkle size={28} weight="fill" className="text-white" />
-                      ) : newTier === "gold" ? (
-                        <Crown size={28} weight="fill" className="text-white" />
-                      ) : (
-                        <Medal size={28} weight="fill" className="text-white" />
-                      )}
-                    </div>
-                  </div>
+                  <img
+                    src={visual.imageUrl}
+                    alt={`${visual.label} tier badge`}
+                    loading="eager"
+                    className="relative h-44 w-44 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+                  />
                 </motion.div>
 
                 {/* "You are now {Tier}!" — sticker heading (staggered #3) */}

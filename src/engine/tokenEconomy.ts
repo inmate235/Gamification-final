@@ -23,6 +23,7 @@ import { usePlayerStore } from "@/stores/playerStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { useUIStore } from "@/stores/uiStore";
 import { markRefractory } from "@/engine/flashSaleEngine";
+import { playAchievement } from "@/lib/sound";
 import type { Task } from "@/types";
 
 /* ============================================================================
@@ -50,6 +51,7 @@ export function showTokenFeedback(
 export function awardTaskReward(task: Task): number {
   const credited = usePlayerStore.getState().awardTokens(task.reward);
   showTokenFeedback("earn", credited, `+${credited} Tokens`);
+  playAchievement();
   return credited;
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Fire, MapPin, Lightning, Star } from "@phosphor-icons/react/dist/ssr";
+import { Fire, MapPin, Lightning, Star, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
@@ -65,6 +65,8 @@ export function StatusBar() {
   const comebackBonus = usePlayerStore((s) => s.streak.comebackBonus);
   const explorationPercent = useMapStore((s) => s.explorationPercent);
   const showOverlay = useUIStore((s) => s.showOverlay);
+  const isSoundEnabled = useUIStore((s) => s.isSoundEnabled);
+  const toggleSound = useUIStore((s) => s.toggleSound);
 
   const tierStyle = TIER_STYLES[tier];
   const comebackActive = comebackBonus !== null && comebackBonus.active;
@@ -289,6 +291,26 @@ export function StatusBar() {
             {explorationPercent}%
           </motion.span>
         </motion.div>
+
+        <AnimatedDivider />
+
+        {/* ─── Sound toggle ─── */}
+        <motion.button
+          custom={4}
+          variants={statVariants}
+          type="button"
+          onClick={toggleSound}
+          className="flex shrink-0 items-center justify-center rounded-full p-1.5 active:scale-[0.92] transition-colors hover:bg-[#141414]/5"
+          data-testid="status-sound-toggle"
+          aria-label={isSoundEnabled ? "Mute sound effects" : "Enable sound effects"}
+          aria-pressed={isSoundEnabled}
+        >
+          {isSoundEnabled ? (
+            <SpeakerHigh size={16} weight="fill" className="text-[#7c3aed]" />
+          ) : (
+            <SpeakerSlash size={16} weight="fill" className="text-[#8a8a8a]" />
+          )}
+        </motion.button>
       </div>
     </motion.div>
   );

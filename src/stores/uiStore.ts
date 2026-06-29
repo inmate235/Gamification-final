@@ -20,6 +20,8 @@ export interface UIStore extends UIState {
   setTimelineOpen: (isOpen: boolean) => void;
   markTimelineOnboardingSeen: () => void;
   setMuted: (muted: boolean) => void;
+  setSoundEnabled: (enabled: boolean) => void;
+  toggleSound: () => void;
   reset: () => void;
 }
 
@@ -30,6 +32,7 @@ const initialUIState: UIState = {
   isTimelineOpen: false,
   hasSeenTimelineOnboarding: false,
   isMuted: true,
+  isSoundEnabled: true,
 };
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -54,6 +57,12 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setMuted: (muted) =>
     set({ isMuted: muted }),
+
+  setSoundEnabled: (enabled) =>
+    set({ isSoundEnabled: enabled }),
+
+  toggleSound: () =>
+    set((state) => ({ isSoundEnabled: !state.isSoundEnabled })),
 
   reset: () => set({ ...initialUIState }),
 }));
