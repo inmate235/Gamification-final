@@ -180,7 +180,7 @@ describe("MallMap", () => {
     await waitFor(() => {
       expect(usePlayerStore.getState().tokens).toBeGreaterThan(0);
     });
-    expect(useUIStore.getState().activeOverlay).toBe("celebration");
+    expect(useUIStore.getState().celebrationQueue.length).toBeGreaterThan(0);
   });
 
   it("clicking a non-adjacent zone does not move the player", () => {
@@ -203,9 +203,9 @@ describe("MallMap", () => {
     render(<MallMap />);
     fireEvent.click(screen.getByTestId(`zone-${ZONE_EAST_WING}`));
     await waitFor(() => {
-      expect(useUIStore.getState().activeOverlay).toBe("celebration");
+      expect(useUIStore.getState().celebrationQueue.length).toBeGreaterThan(0);
     });
-    const data = useUIStore.getState().overlayData as { message: string };
+    const data = useUIStore.getState().celebrationQueue[0] as { message: string };
     expect(data.message).toContain("+1 Token");
   });
 

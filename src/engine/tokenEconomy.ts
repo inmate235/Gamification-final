@@ -121,6 +121,7 @@ export function showStreakCelebration(streakCount: number): void {
     amount: streakCount,
     kind: "streak",
   });
+  playAchievement();
 }
 
 /* ============================================================================
@@ -148,6 +149,7 @@ export function awardWheelReward(baseTokens: number): number {
   const credited = usePlayerStore.getState().awardTokens(baseTokens);
   if (credited > 0) {
     showTokenFeedback("earn", credited, `Wheel! +${credited} Tokens`);
+    playAchievement();
   }
   return credited;
 }
@@ -167,6 +169,7 @@ export function buyTokenPack(packId: string): boolean {
     .tokenPacks.find((p) => p.id === packId);
   const ok = useEconomyStore.getState().buyTokenPack(packId);
   if (ok) {
+    playAchievement();
     showTokenFeedback("earn", pack?.tokenAmount ?? 0, `+${pack?.tokenAmount ?? 0} Tokens`, {
       label: pack?.name,
     });
@@ -201,6 +204,7 @@ export function claimFlashSale(
     if (opts.showFeedback !== false) {
       showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
     }
+    playAchievement();
   }
   return ok;
 }
@@ -215,6 +219,7 @@ export function buySpins(amount: number, cost: number): boolean {
     showTokenFeedback("spend", cost, `Spins Purchased! -${cost} Tokens`, {
       label: `${amount} extra spin${amount !== 1 ? "s" : ""}`,
     });
+    playAchievement();
   }
   return ok;
 }

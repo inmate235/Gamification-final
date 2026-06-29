@@ -136,7 +136,8 @@ export function setSoundEnabled(enabled: boolean): void {
 export function playSound(
   path: string,
   volume: number = VOLUME.effect,
-  maxDurationMs?: number
+  maxDurationMs?: number,
+  startTimeSec?: number
 ): void {
   if (!isClient || !initialized || !soundEnabled) return;
 
@@ -146,6 +147,11 @@ export function playSound(
   // Clone for overlap support — the cached element is just a template.
   const clone = cached.cloneNode() as HTMLAudioElement;
   clone.volume = Math.min(1, Math.max(0, volume));
+  
+  if (startTimeSec !== undefined && startTimeSec > 0) {
+    clone.currentTime = startTimeSec;
+  }
+  
   activeClones.add(clone);
 
   clone.play().catch(() => {
@@ -187,6 +193,11 @@ export function playSound(
 /** Convenience: play the achievement sound at a higher volume. */
 export function playAchievement(): void {
   playSound(SOUNDS.ACHIEVEMENT, VOLUME.achievement);
+}
+
+/** Convenience: play the tier upgrade sound (survey friends starting at 1s). */
+export function playTierUpgrade(): void {
+  playSound(SOUNDS.SURVEY_FRIENDS, VOLUME.achievement, undefined, 1);
 }
 
 /**

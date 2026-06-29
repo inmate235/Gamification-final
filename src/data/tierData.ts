@@ -240,9 +240,9 @@ export function buildTrialPerks(now: number = Date.now()): Perk[] {
       expiresAt,
     },
     {
-      id: "trial-free-sugar",
-      name: "Free Sugar Rush (Trial)",
-      description: "One free hyper-consumable from the Sugar Station.",
+      id: "trial-token-bonus",
+      name: "Token Shop Bonus (Trial)",
+      description: "Get 10% extra tokens on your first token pack purchase.",
       type: "trial",
       expiresAt,
     },

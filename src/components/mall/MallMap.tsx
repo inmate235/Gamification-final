@@ -17,6 +17,7 @@ import {
   getZoneById,
 } from "@/data/mallData";
 import { onPlayerEnterZone, onZoneRevealed, onStoreVisited } from "@/engine/taskEngine";
+import { playAchievement } from "@/lib/sound";
 import type { Store, Zone } from "@/types";
 import { FogFilterDefs, FogOverlay } from "@/components/mall/FogOverlay";
 import { ZoneLabel, zoneColor } from "@/components/mall/ZoneLabel";
@@ -92,6 +93,7 @@ export function MallMap() {
   const streakCount = usePlayerStore((s) => s.streak.count);
 
   const showOverlay = useUIStore((s) => s.showOverlay);
+  const pushCelebration = useUIStore((s) => s.pushCelebration);
   const activeOverlay = useUIStore((s) => s.activeOverlay);
 
   const [failedZoneImages, setFailedZoneImages] = useState<Set<string>>(new Set());
@@ -130,29 +132,32 @@ export function MallMap() {
           // exploration reward, both tier-multiplied.
           const explore = awardTokens(EXPLORE_REWARD);
           const secret = awardTokens(FOOD_COURT_SECRET_REWARD);
-          showOverlay("celebration", {
+          pushCelebration({
             message: `Secret Token! +${secret}`,
             amount: explore + secret,
             kind: "earn",
           });
+          playAchievement();
         } else if (isFirstMove) {
           // First move from entrance: automatic first token (Day 1 2:00) on
           // top of the tier-multiplied exploration reward.
           const explore = awardTokens(EXPLORE_REWARD);
           addTokens(FIRST_TOKEN_BONUS);
-          showOverlay("celebration", {
+          pushCelebration({
             message: `+1 Token!`,
             amount: explore + FIRST_TOKEN_BONUS,
             kind: "earn",
           });
+          playAchievement();
           firstMoveDone = true;
         } else {
           const explore = awardTokens(EXPLORE_REWARD);
-          showOverlay("celebration", {
+          pushCelebration({
             message: `+${explore} Tokens`,
             amount: explore,
             kind: "earn",
           });
+          playAchievement();
         }
         // Breadcrumb task checks: a token was found on reveal (find-token)
         // and the player entered the zone (explore-zone). Delayed slightly so
@@ -165,11 +170,12 @@ export function MallMap() {
         if (isFirstMove) {
           // First move into an already-revealed zone still finds the first token.
           addTokens(FIRST_TOKEN_BONUS);
-          showOverlay("celebration", {
+          pushCelebration({
             message: `+${FIRST_TOKEN_BONUS} Token!`,
             amount: FIRST_TOKEN_BONUS,
             kind: "earn",
           });
+          playAchievement();
           firstMoveDone = true;
           window.setTimeout(() => onPlayerEnterZone(zone.id), 700);
         } else {
@@ -186,7 +192,7 @@ export function MallMap() {
       moveToZone,
       addTokens,
       awardTokens,
-      showOverlay,
+      pushCelebration,
     ]
   );
 

@@ -73,9 +73,9 @@ const FUND_OPTIONS: TierFundOption[] = [
   {
     id: "annual",
     label: "Annual",
-    price: "$89",
+    price: "$89.99",
     unit: "/yr",
-    description: "Save 26% vs monthly",
+    description: "Save 25% vs monthly",
     badge: "Best Value",
     highlighted: true,
   },

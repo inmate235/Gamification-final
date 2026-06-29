@@ -21,6 +21,7 @@ import {
   MAX_LEADERBOARD_ENTRIES,
 } from "@/engine/phantomEngine";
 import { TIER_VISUALS } from "@/data/tierData";
+import { playSound, SOUNDS } from "@/lib/sound";
 import type {
   LeaderboardEntry,
   LeaderboardMetric,
@@ -210,6 +211,14 @@ export function Leaderboard() {
   const setActiveMetric = useSocialStore((s) => s.setActiveMetric);
   const [pulseTick, setPulseTick] = useState(0);
 
+  const handleMetricSwitch = useCallback(
+    (metric: LeaderboardMetric) => {
+      playSound(SOUNDS.SWOOSH);
+      setActiveMetric(metric);
+    },
+    [setActiveMetric]
+  );
+
   const isOpen = activeOverlay === "leaderboard";
   const activeVisual = METRIC_VISUALS[activeMetric];
 
@@ -339,7 +348,7 @@ export function Leaderboard() {
                         key={tab.metric}
                         role="tab"
                         aria-selected={active}
-                        onClick={() => setActiveMetric(tab.metric)}
+                        onClick={() => handleMetricSwitch(tab.metric)}
                         className={cn(
                           "relative z-10 flex flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200",
                           active
@@ -655,56 +664,59 @@ export function ProximityAlertBanner() {
   const activeOverlay = useUIStore((s) => s.activeOverlay);
   const exited = useSessionStore((s) => s.exited);
 
-  // Don't show the banner while a non-shopping overlay is open or after exit.
-  // Allow it to persist when the shop or flash-sale is open — rank pressure
-  // is most persuasive exactly at the purchase decision moment.
-  if (exited) return null;
-  if (
-    activeOverlay !== "none" &&
-    activeOverlay !== "shop" &&
-    activeOverlay !== "flash-sale"
-  )
-    return null;
-
-  const latest = alerts[alerts.length - 1];
-  if (!latest) return null;
+  // Determine if the banner should be visible based on active overlay / exit status
+  const showBanner = !exited && (
+    activeOverlay === "none" ||
+    activeOverlay === "shop" ||
+    activeOverlay === "flash-sale"
+  );
+  
+  const latest = showBanner ? alerts[alerts.length - 1] : undefined;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        key={latest.id}
-        initial={{ opacity: 0, y: -24, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -16, scale: 0.95 }}
-        transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-        className="fixed left-1/2 top-[96px] z-30 -translate-x-1/2 px-3 w-[calc(100%-120px)] max-w-[280px] sm:w-auto"
-        data-testid="proximity-alert-banner"
-      >
-        <button
-          type="button"
-          onClick={() => dismiss(latest.id)}
-          className="flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-full bg-[#141414] px-4 py-2 ring-1 ring-[#ffffff]/15 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-200 active:scale-[0.97] hover:bg-[#202020] backdrop-blur-md"
-          aria-label={`${latest.message} — tap to dismiss`}
-        >
-          <motion.span
-            animate={{ scale: [1, 1.25, 1] }}
-            transition={{
-              duration: 1.4,
-              ease: PREMIUM_EASE,
-              repeat: Infinity,
-            }}
+    <div 
+      className="fixed left-1/2 top-[96px] z-30 w-full max-w-md -translate-x-1/2 px-4 flex justify-center pointer-events-none" 
+      aria-live="polite"
+    >
+      <AnimatePresence mode="wait">
+        {latest && (
+          <motion.div
+            key={latest.id}
+            initial={{ opacity: 0, y: -16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.98 }}
+            transition={{ duration: 0.4, ease: PREMIUM_EASE }}
+            className="w-full sm:w-auto flex justify-center pointer-events-auto"
+            data-testid="proximity-alert-banner"
           >
-            <CaretUp size={14} weight="bold" className="text-[#e6b800]" />
-          </motion.span>
-          <span
-            className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.06em] text-white truncate"
-            data-testid="proximity-alert-text"
-          >
-            {latest.message}
-          </span>
-        </button>
-      </motion.div>
-    </AnimatePresence>
+            <button
+              type="button"
+              onClick={() => dismiss(latest.id)}
+              className="flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-full bg-[#16161a]/95 px-5 py-2 border border-white/[0.08] shadow-[0_8px_30px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.02)] transition-[background-color,border-color,transform,box-shadow] duration-200 hover:bg-[#1f1f24] hover:border-white/[0.12] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6009e]/50 backdrop-blur-md"
+              aria-label={`${latest.message} — tap to dismiss`}
+            >
+              <motion.span
+                animate={{ scale: [1, 1.22, 1] }}
+                transition={{
+                  duration: 1.4,
+                  ease: PREMIUM_EASE,
+                  repeat: Infinity,
+                }}
+                className="flex shrink-0 items-center"
+              >
+                <CaretUp size={14} weight="bold" className="text-[#e6b800]" aria-hidden="true" />
+              </motion.span>
+              <span
+                className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.06em] text-white truncate"
+                data-testid="proximity-alert-text"
+              >
+                {latest.message}
+              </span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

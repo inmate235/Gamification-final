@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   ShoppingBag,
-  Lightning,
   Tag,
   Timer,
   Users,
@@ -25,24 +24,29 @@ import {
   Gauge,
   PlayCircle,
   CaretUp,
+  Wallet,
+  CreditCard,
+  Diamond,
 } from "@phosphor-icons/react/dist/ssr";
 import { dismissFlashSale, expireFlashSale } from "@/engine/flashSaleEngine";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { usePlayerStore } from "@/stores/playerStore";
-import { claimFlashSale, buySugarItem, showTokenFeedback } from "@/engine/tokenEconomy";
+import { claimFlashSale, buyTokenPack, showTokenFeedback } from "@/engine/tokenEconomy";
 import { getStoreById } from "@/data/mallData";
 import { TIER_PERKS, TIER_ORDER } from "@/data/tierData";
 import { setTimelineTargetStore } from "@/components/social/TimelineFeed";
 import { useSocialStore } from "@/stores/socialStore";
-import type { FlashSale, SugarItem, Tier } from "@/types";
+import { TOKEN_PACKS } from "@/data/tokenPackData";
+import { playSound, SOUNDS } from "@/lib/sound";
+import type { FlashSale, TokenPack, Tier } from "@/types";
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
 /* ============================================================================
    DARK PATTERN DATA — Tier pricing with exaggerated price gaps
-   Bronze (free) -> Silver ($9.99) -> Gold ($39.99) -> Neodymium ($249.99)
+   Bronze (free) -> Silver ($9.99) -> Gold ($39.99) -> Neodymium ($399.99)
    The annual toggle defaults to annual (dark pattern: lower monthly
    equivalent hides the larger upfront commitment).
    ========================================================================== */
@@ -69,29 +73,29 @@ const TIER_PRICING: Record<Tier, TierPricing> = {
   },
   silver: {
     monthly: 9.99,
-    annual: 89,
-    monthlyEquivalent: 7.42,
-    savingsPercent: 26,
+    annual: 89.99,
+    monthlyEquivalent: 7.50,
+    savingsPercent: 25,
     members: 3201,
     fakeRetailValue: 14.99,
   },
   gold: {
     monthly: 39.99,
-    annual: 359,
-    monthlyEquivalent: 29.92,
+    annual: 359.99,
+    monthlyEquivalent: 30.00,
     savingsPercent: 25,
     members: 1847,
     fakeRetailValue: 59.99,
   },
   neodymium: {
-    monthly: 249.99,
-    annual: 1999,
-    monthlyEquivalent: 166.58,
-    savingsPercent: 33,
+    monthly: 399.99,
+    annual: 3999.99,
+    monthlyEquivalent: 333.33,
+    savingsPercent: 17,
     members: 423,
     badge: "Best Value",
     highlighted: true,
-    fakeRetailValue: 399.99,
+    fakeRetailValue: 599.99,
   },
 };
 
@@ -99,14 +103,14 @@ const TIER_PRICING: Record<Tier, TierPricing> = {
 const FAKE_PURCHASERS: Array<{ name: string; action: string; store: string }> = [
   { name: "Yuki T.", action: "grabbed 40% off at", store: "Bloom" },
   { name: "Dario V.", action: "subscribed to", store: "Neodymium" },
-  { name: "Priya L.", action: "chugged a Neon Slushie from", store: "Sugar Station" },
+  { name: "Priya L.", action: "bought 800 tokens from", store: "Token Shop" },
   { name: "Kai O.", action: "unlocked 50% off at", store: "TechNova" },
   { name: "Mira C.", action: "grabbed Buy 1 Get 1 at", store: "Cafe Nuit" },
   { name: "Theo N.", action: "upgraded to Gold from", store: "Marketplace" },
   { name: "Zara H.", action: "snagged 35% off at", store: "Prism" },
-  { name: "Felix M.", action: "chugged Glitch Soda from", store: "Sugar Station" },
+  { name: "Felix M.", action: "bought 1,800 tokens from", store: "Token Shop" },
   { name: "Anya R.", action: "grabbed 30% off at", store: "Lumiere" },
-  { name: "Soren K.", action: "subscribed to", store: "Neodymium" },
+  { name: "Soren K.", action: "grabbed the Mega Pack from", store: "Token Shop" },
 ];
 
 /* Fake testimonials for the tiers tab (dark pattern: fabricated social proof) */
@@ -206,11 +210,16 @@ export function ShopOverlay() {
   const activeOverlay = useUIStore((s) => s.activeOverlay);
   const hideOverlay = useUIStore((s) => s.hideOverlay);
   const flashSales = useEconomyStore((s) => s.flashSales);
-  const sugarItems = useEconomyStore((s) => s.sugarItems);
+  const tokenPacks = useEconomyStore((s) => s.tokenPacks);
   const tokens = usePlayerStore((s) => s.tokens);
 
   const isOpen = activeOverlay === "shop";
-  const [activeTab, setActiveTab] = useState<"deals" | "sugar" | "tiers">("deals");
+  const [activeTab, setActiveTab] = useState<"deals" | "tokens" | "tiers">("deals");
+
+  const handleTabSwitch = useCallback((tab: "deals" | "tokens" | "tiers") => {
+    playSound(SOUNDS.SWOOSH);
+    setActiveTab(tab);
+  }, []);
 
   // Dark pattern: always ensure at least one deal is visible when the shop opens
   // so the deals tab is never empty. If all flash sales have expired or been
@@ -225,7 +234,7 @@ export function ShopOverlay() {
   const [prevFlashSalesCount, setPrevFlashSalesCount] = useState(flashSales.length);
   if (flashSales.length !== prevFlashSalesCount) {
     setPrevFlashSalesCount(flashSales.length);
-    if (flashSales.length > 0 && activeTab === "sugar") {
+    if (flashSales.length > 0 && activeTab === "tokens") {
       setActiveTab("deals");
     }
   }
@@ -308,22 +317,22 @@ export function ShopOverlay() {
                 <div className="mt-5 flex gap-1.5 rounded-xl bg-[#f4f4f5] p-1">
                   <TabButton
                     active={activeTab === "deals"}
-                    onClick={() => setActiveTab("deals")}
+                    onClick={() => handleTabSwitch("deals")}
                     accentColor="#e6009e"
                     badge={flashSales.length > 0 ? flashSales.length : undefined}
                     icon={<Tag size={12} weight={activeTab === "deals" ? "fill" : "regular"} />}
                     label="Deals"
                   />
                   <TabButton
-                    active={activeTab === "sugar"}
-                    onClick={() => setActiveTab("sugar")}
-                    accentColor="#7c3aed"
-                    icon={<Lightning size={12} weight={activeTab === "sugar" ? "fill" : "regular"} />}
-                    label="Sugar"
+                    active={activeTab === "tokens"}
+                    onClick={() => handleTabSwitch("tokens")}
+                    accentColor="#14b8a6"
+                    icon={<Coins size={12} weight={activeTab === "tokens" ? "fill" : "regular"} />}
+                    label="Tokens"
                   />
                   <TabButton
                     active={activeTab === "tiers"}
-                    onClick={() => setActiveTab("tiers")}
+                    onClick={() => handleTabSwitch("tiers")}
                     accentColor="#7c3aed"
                     icon={<Crown size={12} weight={activeTab === "tiers" ? "fill" : "regular"} />}
                     label="Tiers"
@@ -342,7 +351,7 @@ export function ShopOverlay() {
                     transition={{ duration: 0.25, ease: PREMIUM_EASE }}
                   >
                     {activeTab === "deals" && <ShopDealsTab sales={flashSales} tokens={tokens} />}
-                    {activeTab === "sugar" && <ShopSugarTab items={sugarItems} tokens={tokens} />}
+                    {activeTab === "tokens" && <ShopBuyTokensTab packs={tokenPacks} tokens={tokens} />}
                     {activeTab === "tiers" && <ShopTiersTab />}
                   </motion.div>
                 </AnimatePresence>
@@ -756,154 +765,545 @@ function Countdown({ remaining, onExpire }: { remaining: number; onExpire: () =>
 }
 
 /* ============================================================================
-   Sugar Station Tab — with consumption counters, trending, dynamic pricing
+   Buy Tokens Tab — real-money token packs with maximum dark patterns
+
+   Dark patterns deployed:
+   1. Currency obfuscation (gems ↔ USD, non-round conversion)
+   2. Decoy pricing ladder (Saver pack is worst value, makes Popular look good)
+   3. Fake "limited time" bonus event (cycles endlessly, never expires)
+   4. Deficit-aware prompt ("you need X more for [deal]")
+   5. First-time buyer trap (300% bonus that never gets consumed)
+   6. Live purchase ticker (fake social proof)
+   7. Loss aversion + leaderboard pressure
+   8. Fake scarcity on whale pack
+   9. Confirmshaming decline
+   10. Drip bonus bait
+   11. Hidden processing fee at "checkout"
    ========================================================================== */
 
-function ShopSugarTab({ items, tokens }: { items: SugarItem[]; tokens: number }) {
-  return (
-    <div className="space-y-4 pt-4">
-      {/* Dark pattern: fake daily consumption counter */}
-      <ConsumptionBanner />
+function ShopBuyTokensTab({ packs, tokens }: { packs: TokenPack[]; tokens: number }) {
+  const bonusMultiplier = useEconomyStore((s) => s.bonusEventMultiplier);
+  const bonusEndsAt = useEconomyStore((s) => s.bonusEventEndsAt);
+  const advanceBonusEvent = useEconomyStore((s) => s.advanceBonusEvent);
+  const decrementWhaleStock = useEconomyStore((s) => s.decrementWhaleStock);
 
-      {items.map((item, i) => (
-        <motion.div
-          key={item.id}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: i * 0.08, ease: PREMIUM_EASE }}
-        >
-          <SugarItemCard item={item} tokens={tokens} />
-        </motion.div>
-      ))}
-
-      {/* Dark pattern: bundle deal that costs more total */}
-      <BundleOffer />
-    </div>
-  );
-}
-
-function ConsumptionBanner() {
-  const [count, setCount] = useState(12847);
-
+  // Fake "X people bought tokens" counter (social proof)
+  const [purchaseCount, setPurchaseCount] = useState(2347);
   useEffect(() => {
     const interval = setInterval(() => {
-      setCount((prev) => prev + Math.floor(Math.random() * 4) + 1);
-    }, 2000);
+      setPurchaseCount((prev) => prev + Math.floor(Math.random() * 3) + 1);
+    }, 2200);
     return () => clearInterval(interval);
   }, []);
 
+  // Fake bonus event countdown (cycles endlessly)
+  const [bonusCountdown, setBonusCountdown] = useState(() =>
+    Math.max(0, Math.floor((bonusEndsAt - Date.now()) / 1000))
+  );
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((bonusEndsAt - Date.now()) / 1000));
+      setBonusCountdown(remaining);
+      if (remaining <= 0) {
+        advanceBonusEvent();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [bonusEndsAt, advanceBonusEvent]);
+
+  // Fake whale pack scarcity (decrements over time, restocks cyclically)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() > 0.6) {
+        decrementWhaleStock();
+      }
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [decrementWhaleStock]);
+
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-[#7c3aed]/10 to-[#e6009e]/10 px-4 py-3 ring-1 ring-[#7c3aed]/15">
-      <motion.div
-        animate={{ scale: [1, 1.15, 1] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7c3aed]/15"
-      >
-        <Lightning size={16} weight="fill" className="text-[#7c3aed]" />
-      </motion.div>
-      <div className="flex-1">
-        <p className="text-[11px] font-bold text-[#141414]">
-          <motion.span
-            key={count}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="font-mono tabular-nums text-[#7c3aed]"
-          >
-            {count.toLocaleString()}
-          </motion.span>{" "}
-          items chugged today
+    <div className="space-y-4 pt-4">
+      {/* Dark pattern: fake limited-time bonus event banner */}
+      <BonusEventBanner multiplier={bonusMultiplier} countdownSeconds={bonusCountdown} />
+
+      {/* Dark pattern: fake live purchase counter */}
+      <TokenPurchaseCounter count={purchaseCount} />
+
+      {/* Dark pattern: leaderboard pressure */}
+      <LeaderboardPressureBar tokens={tokens} />
+
+      {/* Dark pattern: deficit-aware prompt */}
+      <DeficitPrompt tokens={tokens} />
+
+      {/* Token pack grid — staggered for upselling: cheaper packs appear
+          first, premium packs (Mega/Whale) arrive last with extra delay */}
+      {packs.map((pack, i) => (
+        <motion.div
+          key={pack.id}
+          initial={{ opacity: 0, y: 16, scale: pack.highlighted || pack.id === "pack-whale" ? 0.96 : 1 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            duration: 0.45,
+            delay: i * 0.08 + (i >= 4 ? 0.12 : 0),
+            ease: PREMIUM_EASE,
+          }}
+        >
+          <TokenPackCard pack={pack} bonusMultiplier={bonusMultiplier} />
+        </motion.div>
+      ))}
+
+      {/* Dark pattern: drip bonus offer */}
+      <DripBonusOffer />
+
+      {/* Dark pattern: confirmshaming decline */}
+      <div className="pt-1">
+        <p className="text-center text-[10px] text-[#8a8a8a] cursor-pointer hover:underline transition-all">
+          No thanks, I&apos;d rather grind for 3 hours to earn 50 tokens
         </p>
-        <p className="text-[10px] text-[#8a8a8a] mt-0.5">The Sugar Station is buzzing right now.</p>
+      </div>
+
+      {/* Dark pattern: hidden fine print */}
+      <div className="rounded-xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/5">
+        <p className="text-[9px] leading-relaxed text-[#8a8a8a]">
+          Token pack purchases are non-refundable. Gems are a virtual currency
+          with no cash value. Bonus percentages are calculated against an
+          internal reference rate, not actual market value. Processing fees
+          may apply at checkout. Drip bonus tokens are distributed over 7
+          days and forfeited if the account is inactive for 24 hours.
+        </p>
       </div>
     </div>
   );
 }
 
-function SugarItemCard({ item, tokens }: { item: SugarItem; tokens: number }) {
-  const [purchasing, setPurchasing] = useState(false);
-  const canAfford = tokens >= item.tokenCost;
-  const shortfall = Math.max(0, item.tokenCost - tokens);
-
-  // Dark pattern: fake "X people chugged this" per-item counter
-  const [chuggedCount] = useState(() => 200 + Math.floor(Math.random() * 1800));
-  // Dark pattern: fake "trending" badge for the most expensive item
-  const isTrending = item.tokenCost >= 25;
-
-  const onBuy = useCallback(() => {
-    if (purchasing) return;
-    setPurchasing(true);
-    buySugarItem(item.id);
-    setTimeout(() => setPurchasing(false), 400);
-  }, [item.id, purchasing]);
+/* Fake "MEGA BONUS EVENT" banner with cycling countdown (dark pattern: fake urgency) */
+function BonusEventBanner({
+  multiplier,
+  countdownSeconds,
+}: {
+  multiplier: number;
+  countdownSeconds: number;
+}) {
+  const mm = Math.floor(countdownSeconds / 60);
+  const ss = countdownSeconds % 60;
+  const timeStr = `${mm}:${ss.toString().padStart(2, "0")}`;
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-[#7c3aed]/8 to-[#e6009e]/8 p-4 ring-1 ring-[#7c3aed]/15 relative overflow-hidden transition-all hover:ring-[#7c3aed]/30">
-      {/* Decorative lightning bolt */}
-      <div className="absolute top-0 right-0 p-4 opacity-[0.07]">
-        <Lightning size={72} weight="fill" className="text-[#e6009e]" />
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative flex items-center gap-3 rounded-xl bg-gradient-to-r from-[#14b8a6] to-[#0d9488] px-4 py-3 text-white shadow-sm shadow-[#14b8a6]/20 overflow-hidden"
+    >
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent to-white/15 animate-spotlight-sweep" />
+      </div>
+      <motion.div
+        animate={{ scale: [1, 1.15, 1] }}
+        transition={{ duration: 1, repeat: Infinity }}
+        className="shrink-0"
+      >
+        <Diamond size={20} weight="fill" className="text-white" />
+      </motion.div>
+      <div className="flex-1 relative z-10">
+        <p className="text-xs font-bold tracking-wide">
+          +{multiplier}% BONUS TOKENS EVENT!
+        </p>
+        <p className="text-[10px] opacity-90 mt-0.5">
+          Ends in{" "}
+          <span className="font-mono font-bold tabular-nums">{timeStr}</span>{" "}
+          — don&apos;t miss out!
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+/* Fake live purchase counter (dark pattern: social proof) */
+function TokenPurchaseCounter({ count }: { count: number }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl bg-[#f4f4f5] px-3 py-2 ring-1 ring-[#141414]/5">
+      <motion.span
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#14b8a6]/15"
+      >
+        <CheckCircle size={12} weight="fill" className="text-[#14b8a6]" />
+      </motion.span>
+      <p className="text-[11px] leading-tight text-[#4b4b4b] flex-1">
+        <motion.span
+          key={count}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="font-mono tabular-nums font-bold text-[#14b8a6]"
+        >
+          {count.toLocaleString()}
+        </motion.span>{" "}
+        token packs purchased in the last hour
+      </p>
+    </div>
+  );
+}
+
+/* Leaderboard pressure (dark pattern: loss aversion + social comparison) */
+function LeaderboardPressureBar({ tokens }: { tokens: number }) {
+  const leaderboard = useSocialStore((s) => s.leaderboard);
+  const playerEntry = leaderboard.find((e) => e.isPlayer);
+  const playerRank = playerEntry?.rank ?? 0;
+
+  // Find the next person above on the leaderboard
+  const above = playerRank > 1
+    ? leaderboard.find((e) => e.rank === playerRank - 1)
+    : null;
+
+  if (!above) return null;
+
+  const gap = Math.max(0, above.tokenCount - tokens);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex items-center gap-3 rounded-xl bg-[#ef4444]/8 px-4 py-3 ring-1 ring-[#ef4444]/20"
+    >
+      <motion.div
+        animate={{ y: [0, -3, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ef4444]/15"
+      >
+        <TrendUp size={16} weight="bold" className="text-[#ef4444]" />
+      </motion.div>
+      <div className="flex-1">
+        <p className="text-[11px] font-bold text-[#141414]">
+          Only{" "}
+          <span className="font-mono text-[#ef4444] tabular-nums">{gap}</span>{" "}
+          tokens behind #{playerRank - 1}
+        </p>
+        <p className="text-[10px] text-[#8a8a8a] mt-0.5">
+          Buy tokens now to overtake {above.name} on the leaderboard
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+/* Deficit-aware prompt (dark pattern: contextual "you need X more" CTA) */
+function DeficitPrompt({ tokens }: { tokens: number }) {
+  const flashSales = useEconomyStore((s) => s.flashSales);
+  const nearestSale = flashSales[0];
+
+  if (!nearestSale) return null;
+  const store = getStoreById(nearestSale.storeId);
+  const shortfall = Math.max(0, nearestSale.tokenCost - tokens);
+  if (shortfall <= 0) return null;
+
+  // Find the cheapest pack that covers the shortfall
+  const cheapestCover = TOKEN_PACKS.find((p) => p.tokenAmount >= shortfall);
+  if (!cheapestCover) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl bg-gradient-to-r from-[#ffe600]/15 to-[#14b8a6]/8 px-4 py-3 ring-1 ring-[#ffe600]/30"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <Wallet size={14} weight="fill" className="text-[#e6009e]" />
+        <p className="text-[11px] font-bold text-[#141414]">
+          You need {shortfall} more tokens for {store?.name ?? "this deal"}
+        </p>
+      </div>
+      <p className="text-[10px] text-[#4b4b4b]">
+        Get{" "}
+        <span className="font-bold text-[#14b8a6]">{cheapestCover.tokenAmount} tokens</span>{" "}
+        for just{" "}
+        <span className="font-mono font-bold text-[#141414]">${cheapestCover.price}</span>{" "}
+        — covers your deal and leaves extra for next time
+      </p>
+    </motion.div>
+  );
+}
+
+/* Token pack card (dark pattern: price anchoring, gems obfuscation, fake badges) */
+function TokenPackCard({
+  pack,
+  bonusMultiplier,
+}: {
+  pack: TokenPack;
+  bonusMultiplier: number;
+}) {
+  const [purchasing, setPurchasing] = useState(false);
+  const [showFeeDialog, setShowFeeDialog] = useState(false);
+
+  // Dark pattern: fake "X people bought this" per-pack counter
+  const [boughtCount] = useState(() => 50 + Math.floor(Math.random() * 2400));
+  // Dark pattern: fake per-pack "viewing" count that fluctuates
+  const [liveViewers, setLiveViewers] = useState(() => 8 + Math.floor(Math.random() * 30));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLiveViewers((prev) => {
+        const change = Math.random() > 0.4 ? 1 : -1;
+        return Math.max(3, prev + change);
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const onBuy = useCallback(() => {
+    setShowFeeDialog(true);
+  }, []);
+
+  const onConfirmPurchase = useCallback(() => {
+    if (purchasing) return;
+    setPurchasing(true);
+    buyTokenPack(pack.id);
+    setTimeout(() => {
+      setPurchasing(false);
+      setShowFeeDialog(false);
+    }, 600);
+  }, [pack.id, purchasing]);
+
+  const isHighlighted = pack.highlighted;
+  const isWhale = pack.id === "pack-whale";
+  const isPremium = isHighlighted || isWhale;
+  const isFirstPurchase = pack.firstPurchaseBonus;
+  const scarcityLow = pack.stockLeft !== undefined && pack.stockLeft <= 2;
+
+  // The "regular" (pre-bonus) token amount for the crossed-out display
+  const regularAmount = Math.round(pack.tokenAmount / (1 + bonusMultiplier / 100));
+
+  return (
+    <div
+      className={cn(
+        "rounded-2xl p-4 relative overflow-hidden transition-all",
+        isHighlighted
+          ? "bg-gradient-to-br from-[#14b8a6]/10 to-[#e6009e]/8 ring-2 ring-[#14b8a6]/30 hover:ring-[#14b8a6]/50 shadow-[0_4px_20px_rgba(20,184,166,0.08)]"
+          : isWhale
+            ? "bg-gradient-to-br from-[#141414]/3 to-[#14b8a6]/5 ring-2 ring-[#141414]/15 hover:ring-[#14b8a6]/30 shadow-[0_4px_20px_rgba(20,20,20,0.06)]"
+            : "bg-white ring-1 ring-[#141414]/10 hover:ring-[#141414]/20"
+      )}
+    >
+      {/* Premium shimmer sweep for Mega and Whale packs */}
+      {isPremium && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+          <div className="absolute top-0 -left-full h-full w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-spotlight-sweep" />
+        </div>
+      )}
+
+      {/* Decorative coin icon */}
+      <div className="absolute top-0 right-0 p-4 opacity-[0.06]">
+        <Coins size={64} weight="fill" className="text-[#14b8a6]" />
       </div>
 
       <div className="relative z-10">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#7c3aed]/15 text-[#7c3aed]">
-            <Lightning size={16} weight="fill" />
-          </span>
-          <span className="text-base font-bold text-[#141414]">{item.name}</span>
-          {isTrending && (
+        {/* Top row: badges */}
+        <div className="mb-2 flex items-center gap-2 flex-wrap">
+          <span className="text-base font-bold text-[#141414]">{pack.name}</span>
+          {pack.badge && (
             <motion.span
-              animate={{ scale: [1, 1.05, 1] }}
+              animate={{ scale: [1, 1.04, 1] }}
               transition={{ duration: 1.5, repeat: Infinity }}
-              className="flex items-center gap-1 rounded-full bg-[#e6009e] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white",
+                isHighlighted ? "bg-[#14b8a6]" : isWhale ? "bg-[#141414]" : "bg-[#e6009e]"
+              )}
             >
-              <Fire size={8} weight="fill" /> Trending
+              {isPremium && <Sparkle size={8} weight="fill" />}
+              {pack.badge}
             </motion.span>
+          )}
+          {isFirstPurchase && (
+            <motion.span
+              animate={{ scale: [1, 1.08, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="flex items-center gap-1 rounded-full bg-[#ef4444] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+            >
+              <Fire size={8} weight="fill" /> 300% FIRST BONUS
+            </motion.span>
+          )}
+          {scarcityLow && (
+            <span className="flex items-center gap-1 rounded-full bg-[#ef4444] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+              <Fire size={8} weight="fill" /> Only {pack.stockLeft} left!
+            </span>
           )}
         </div>
 
-        <p className="mb-3 text-xs leading-relaxed text-[#4b4b4b] pr-12">{item.description}</p>
+        <p className="mb-3 text-xs leading-relaxed text-[#4b4b4b] pr-12">{pack.description}</p>
 
-        {/* Dark pattern: fake consumption count */}
-        <div className="mb-3 flex items-center gap-1.5">
-          <Eye size={11} weight="fill" className="text-[#8a8a8a]" />
-          <span className="text-[10px] text-[#8a8a8a]">
-            <span className="font-bold text-[#4b4b4b] font-mono tabular-nums">
-              {chuggedCount.toLocaleString()}
-            </span>{" "}
-            chugged this week
+        {/* Dark pattern: fake "bought this week" + live viewers */}
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Eye size={11} weight="fill" className="text-[#8a8a8a]" />
+            <span className="text-[10px] text-[#8a8a8a]">
+              <span className="font-bold text-[#4b4b4b] font-mono tabular-nums">
+                {liveViewers}
+              </span>{" "}
+              viewing
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle size={11} weight="fill" className="text-[#14b8a6]" />
+            <span className="text-[10px] text-[#8a8a8a]">
+              <span className="font-bold text-[#4b4b4b] font-mono tabular-nums">
+                {boughtCount.toLocaleString()}
+              </span>{" "}
+              bought this week
+            </span>
+          </div>
+        </div>
+
+        {/* Token amount with fake bonus anchoring */}
+        <div className="mb-3 flex items-baseline gap-2">
+          <span className="font-mono text-sm text-[#8a8a8a] line-through tabular-nums">
+            {regularAmount}
+          </span>
+          <Coins size={12} weight="fill" className="text-[#8a8a8a]" />
+          <span className="font-mono text-2xl font-bold tabular-nums text-[#14b8a6]">
+            {pack.tokenAmount}
+          </span>
+          <Coins size={14} weight="fill" className="text-[#14b8a6]" />
+          <span className="text-[10px] font-bold text-[#14b8a6]">
+            +{bonusPercentDisplay(pack, bonusMultiplier)}% BONUS
           </span>
         </div>
 
+        {/* Price block: USD (small) + gems (prominent) — dark pattern: currency obfuscation */}
+        <div className="mb-3 flex items-center gap-3 rounded-xl bg-[#f4f4f5] px-3 py-2 ring-1 ring-[#141414]/5">
+          <div className="flex items-baseline gap-1.5">
+            <Diamond size={12} weight="fill" className="text-[#14b8a6]" />
+            <span className="font-mono text-lg font-bold tabular-nums text-[#141414]">
+              {pack.gemsPrice.toLocaleString()}
+            </span>
+            <span className="text-[9px] uppercase tracking-wider text-[#8a8a8a]">gems</span>
+          </div>
+          <div className="ml-auto flex items-baseline gap-1">
+            <span className="text-[9px] text-[#8a8a8a]">≈</span>
+            <span className="font-mono text-xs text-[#8a8a8a]">
+              ${pack.price.toFixed(2)}
+            </span>
+          </div>
+          {/* Dark pattern: fake retail price crossed out */}
+          <span className="font-mono text-[10px] text-[#8a8a8a] line-through tabular-nums">
+            ${pack.fakeRetailPrice.toFixed(2)}
+          </span>
+        </div>
+
+        {/* CTA */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-mono text-2xl font-bold tabular-nums text-[#e6009e]">
-              {item.tokenCost}
+            <p className="text-[10px] text-[#8a8a8a]">
+              <span className="font-mono font-bold text-[#14b8a6]">
+                ${(pack.price / pack.tokenAmount * 100).toFixed(2)}
+              </span>{" "}
+              per 100 tokens
             </p>
-            <p className="text-[10px] uppercase tracking-[0.12em] text-[#8a8a8a]">Tokens</p>
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={onBuy}
-            disabled={!canAfford || purchasing}
+            disabled={purchasing}
             className={cn(
-              "rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.16em] transition-all",
+              "flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-[0.14em] transition-all",
               purchasing
-                ? "scale-95 bg-[#e6009e]/50 text-white"
-                : canAfford
-                  ? "bg-gradient-to-r from-[#7c3aed] to-[#e6009e] text-white shadow-[0_4px_12px_rgba(124,58,237,0.25)] hover:shadow-[0_6px_18px_rgba(124,58,237,0.35)] active:scale-95"
-                  : "bg-white text-[#8a8a8a] ring-1 ring-[#141414]/10 cursor-not-allowed opacity-80"
+                ? "scale-95 bg-[#14b8a6]/50 text-white"
+                : isHighlighted
+                  ? "bg-gradient-to-r from-[#14b8a6] to-[#0d9488] text-white shadow-[0_4px_12px_rgba(20,184,166,0.30)] hover:shadow-[0_6px_18px_rgba(20,184,166,0.40)] active:scale-95"
+                  : "bg-[#14b8a6] text-white shadow-[0_4px_0_#0d9488] hover:bg-[#0d9488] active:translate-y-[2px] active:shadow-[0_2px_0_#0d9488]"
             )}
           >
-            {purchasing ? "Chugging..." : canAfford ? "CHUG" : `${shortfall} more`}
+            {purchasing ? (
+              "Processing..."
+            ) : (
+              <>
+                <CreditCard size={14} weight="fill" />
+                Buy Now
+              </>
+            )}
           </motion.button>
         </div>
       </div>
+
+      {/* Dark pattern: hidden processing fee dialog (confirmshaming + fee reveal) */}
+      <AnimatePresence>
+        {showFeeDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-20 flex items-center justify-center bg-white/95 backdrop-blur-sm rounded-2xl"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 10 }}
+              transition={{ duration: 0.25, ease: PREMIUM_EASE }}
+              className="w-full p-5 text-center"
+            >
+              <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-[#14b8a6]/10 ring-2 ring-[#14b8a6]/30 mb-3">
+                <CreditCard size={24} weight="fill" className="text-[#14b8a6]" />
+              </div>
+              <h4 className="text-sm font-bold text-[#141414] mb-1">Confirm Purchase</h4>
+              <p className="text-[11px] text-[#4b4b4b] mb-3">{pack.name}</p>
+              {/* Fee breakdown — dark pattern: hidden until this dialog */}
+              <div className="rounded-xl bg-[#f4f4f5] p-3 mb-3 text-left">
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="text-[#8a8a8a]">Pack price</span>
+                  <span className="font-mono font-bold text-[#141414]">${pack.price.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="text-[#8a8a8a]">Processing fee</span>
+                  <span className="font-mono text-[#8a8a8a]">$0.99</span>
+                </div>
+                <div className="border-t border-[#141414]/8 pt-1.5 flex justify-between">
+                  <span className="text-[11px] font-bold text-[#141414]">Total</span>
+                  <span className="font-mono text-sm font-bold text-[#14b8a6]">
+                    ${(pack.price + 0.99).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              {/* Pre-checked "save card" (dark pattern: default opt-in) */}
+              <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                <input type="checkbox" defaultChecked className="accent-[#14b8a6]" />
+                <span className="text-[10px] text-[#8a8a8a]">
+                  Save card for 1-click future purchases
+                </span>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowFeeDialog(false)}
+                  className="flex-1 rounded-full bg-[#f4f4f5] py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#8a8a8a] transition-all hover:bg-[#141414]/5"
+                >
+                  Maybe later
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onConfirmPurchase}
+                  disabled={purchasing}
+                  className="flex-1 rounded-full bg-[#14b8a6] py-2.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-[0_3px_0_#0d9488] active:translate-y-[1px] active:shadow-[0_1px_0_#0d9488] transition-all"
+                >
+                  {purchasing ? "Processing..." : `Pay $${(pack.price + 0.99).toFixed(2)}`}
+                </motion.button>
+              </div>
+              {/* Dark pattern: tiny auto-renew notice */}
+              <p className="text-[8px] text-[#8a8a8a] mt-2">
+                By clicking Pay you agree to auto-renewal terms. Cancel anytime in settings.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-/* Dark pattern: bundle deal that looks cheaper per unit but costs more total */
-function BundleOffer() {
+/* Compute the displayed bonus percentage (combines pack base + event multiplier) */
+function bonusPercentDisplay(pack: TokenPack, eventMultiplier: number): number {
+  return pack.bonusPercent + eventMultiplier;
+}
+
+/* Drip bonus offer (dark pattern: looks like extra but creates daily return habit) */
+function DripBonusOffer() {
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -912,33 +1312,34 @@ function BundleOffer() {
       className="rounded-2xl bg-[#ffe600]/15 p-4 ring-2 ring-[#ffe600]/40 relative overflow-hidden"
     >
       <div className="absolute top-0 right-0 p-3 opacity-10">
-        <Gift size={56} weight="fill" className="text-[#e6009e]" />
+        <Gift size={56} weight="fill" className="text-[#14b8a6]" />
       </div>
       <div className="relative z-10">
         <div className="flex items-center gap-2 mb-2">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ffe600]/30 text-[#e6009e]">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ffe600]/30 text-[#14b8a6]">
             <Gift size={16} weight="fill" />
           </span>
           <div>
-            <span className="text-sm font-bold text-[#141414]">Sugar Combo Pack</span>
-            <p className="text-[10px] text-[#8a8a8a]">All 4 sugar items + 2 free refills</p>
+            <span className="text-sm font-bold text-[#141414]">Daily Drip Bonus</span>
+            <p className="text-[10px] text-[#8a8a8a]">Buy any Mega Pack and get 100 bonus tokens/day for 7 days</p>
           </div>
         </div>
         <div className="flex items-center gap-2 mb-3">
-          <span className="font-mono text-sm text-[#8a8a8a] line-through tabular-nums">184</span>
-          <span className="font-mono text-2xl font-bold tabular-nums text-[#e6009e]">139</span>
-          <Coins size={14} weight="fill" className="text-[#e6009e]" />
-          <span className="text-[10px] font-bold text-[#14b8a6]">Save 24%</span>
+          <span className="font-mono text-sm text-[#8a8a8a] line-through tabular-nums">2,500</span>
+          <Coins size={12} weight="fill" className="text-[#8a8a8a]" />
+          <span className="font-mono text-2xl font-bold tabular-nums text-[#14b8a6]">1,800</span>
+          <Coins size={14} weight="fill" className="text-[#14b8a6]" />
+          <span className="text-[10px] font-bold text-[#14b8a6]">+700 drip bonus</span>
         </div>
         <div className="flex items-center gap-2">
           <motion.button
             whileTap={{ scale: 0.95 }}
-            className="flex-1 rounded-full bg-[#e6009e] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.16em] text-white shadow-[0_4px_0_#b8007e] active:translate-y-[2px] active:shadow-[0_2px_0_#b8007e] transition-all"
+            className="flex-1 rounded-full bg-[#14b8a6] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.16em] text-white shadow-[0_4px_0_#0d9488] active:translate-y-[2px] active:shadow-[0_2px_0_#0d9488] transition-all"
           >
-            Grab Combo
+            Grab Drip Bonus
           </motion.button>
-          <span className="text-[9px] text-[#8a8a8a] max-w-[10ch] text-right leading-tight">
-            47 grabbed today
+          <span className="text-[9px] text-[#8a8a8a] max-w-[12ch] text-right leading-tight">
+            63 claimed today
           </span>
         </div>
       </div>
@@ -1108,7 +1509,7 @@ function ShopTiersTab() {
       <div className="rounded-xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/5">
         <p className="text-[9px] leading-relaxed text-[#8a8a8a]">
           By subscribing you agree to a 12-month commitment. Plan auto-renews at the full
-          rate after the initial period. Early termination fees of $89 apply. Token
+          rate after the initial period. Early termination fees of $89.99 apply. Token
           multipliers are calculated on base rewards and do not stack with promotional
           bonuses. Hidden zones require Neodymium tier and may be rotated without notice.
           Savings percentages compare to an internal reference price, not actual market
@@ -1432,13 +1833,23 @@ function TierDetailCard({
               <span className="text-xs text-[#8a8a8a] uppercase tracking-widest">/ month</span>
             </div>
             {billingCycle === "annual" && (
-              <p className="text-[10px] text-[#8a8a8a] mb-3">
-                Billed annually at{" "}
-                <span className="font-mono font-bold text-[#4b4b4b]">
-                  ${pricing.annual}
-                </span>{" "}
-                (save {pricing.savingsPercent}%)
-              </p>
+              <>
+                <p className="text-[10px] text-[#8a8a8a] mb-1">
+                  Billed annually at{" "}
+                  <span className="font-mono font-bold text-[#4b4b4b]">
+                    ${pricing.annual}
+                  </span>{" "}
+                  (save {pricing.savingsPercent}%)
+                </p>
+                <p className="text-[10px] text-[#8a8a8a] mb-3">
+                  <span className="font-mono line-through">${pricing.monthly.toFixed(2)}</span>
+                  /mo monthly ·{" "}
+                  <span className="font-bold text-[#14b8a6]">
+                    save ${(pricing.monthly * 12 - pricing.annual).toFixed(0)}/yr
+                  </span>{" "}
+                  with annual
+                </p>
+              </>
             )}
 
             {/* Dark pattern: price comparison vs cheaper tier */}

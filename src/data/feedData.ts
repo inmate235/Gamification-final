@@ -1,4 +1,4 @@
-import { STORE_BLOOM, STORE_PULSE, STORE_TECHNOVA, STORE_CHROME, STORE_MURKY_PLAYGROUND } from "@/data/mallData";
+import { STORE_BLOOM, STORE_PULSE, STORE_TECHNOVA, STORE_CHROME, STORE_MURKY_PLAYGROUND, STORE_LUMIERE } from "@/data/mallData";
 
 export interface FeedItem {
   id: string;
@@ -84,7 +84,7 @@ export const timelineFeed: FeedItem[] = [
   {
     id: "feed-buy-tokens-brainrot",
     storeId: STORE_TECHNOVA,
-    videoUrl: "",
+    videoUrl: "/feed/videos/Dynamic Video Ad Generation.mp4",
     prompt:
       "BRAIN ROT TOKEN AD: A hyper-stimulating split-screen video. Top half shows a hypnotic kinetic sand cutting compilation, bottom half shows GTA V car parkour. Flashing neon text screams 'YOU ARE BROKE!!! BUY MORE TOKENS NOW!!! NO CAP 🧢🔥'. An AI voice aggressively reads the text over extremely loud phonk music.",
     likes: 999999,
@@ -94,11 +94,41 @@ export const timelineFeed: FeedItem[] = [
   {
     id: "feed-spend-more-brainrot",
     storeId: STORE_PULSE,
-    videoUrl: "",
+    videoUrl: "/feed/videos/Subway Surfers Sigma Grindset Video (1).mp4",
     prompt:
       "BRAIN ROT SPEND AD: A weird looping video of Subway Surfers gameplay but the character is just running into walls repeatedly. Overlay text aggressively pulses: 'YOU HAVE TOKENS JUST SITTING THERE. SPEND THEM NOW!! GET THE TIER UPGRADE!! SIGMA GRINDSET 📈💀'. Audio is heavily bass-boosted and distorted.",
     likes: 777777,
     comments: 6969,
     shares: 1337,
+  },
+  {
+    id: "feed-old-brainrot-end",
+    storeId: STORE_BLOOM,
+    videoUrl: "/feed/videos/Subway Surfers Sigma Grindset Video.mp4",
+    prompt:
+      "OLD BRAIN ROT AD: The original Subway Surfers gameplay video showing endless running and satisfying jumps to keep the viewer locked in while browsing Bloom fashion.",
+    likes: 888888,
+    comments: 5555,
+    shares: 2222,
+  },
+  {
+    id: "feed-influencer-handbag-review",
+    storeId: STORE_CHROME,
+    videoUrl: "",
+    prompt:
+      "INFLUENCER DARK PATTERN AD 1: A hyper-enthusiastic TikTok influencer vlogging while speed-walking through the dark, aesthetic neon-lit corridors of Murky Mall. She holds up a glowing, high-end handbag from Chrome. 'Guys, I literally CANNOT believe the exclusive deals in the Murky Mall app right now! Look at this bag! 😭 If you don't download the app this second, you are literally throwing money away. Use my link to invite 3 friends and unlock the hidden Platinum Tier NOW. The FOMO is real, do it before the timer runs out! ⏳🚨'",
+    likes: 1250430,
+    comments: 43200,
+    shares: 89000,
+  },
+  {
+    id: "feed-influencer-app-hype",
+    storeId: STORE_LUMIERE,
+    videoUrl: "",
+    prompt:
+      "INFLUENCER DARK PATTERN AD 2: A fast-paced, jump-cut heavy vlog of a lifestyle influencer unboxing a glowing Amber Candle from Lumiere. The background is artificially blurred to look like a premium VIP lounge. 'I'm gatekeeping this no more! The Murky Mall app is basically free money if you know the glitch. 🤫 Step 1: Download it. Step 2: Spam your invite link to literally everyone in your contacts to get 500 free tokens. If you aren't doing this, you're literally falling behind. Click the link below, tag 5 friends, and secure the bag! 💸🔥'",
+    likes: 980500,
+    comments: 31000,
+    shares: 112000,
   },
 ];

@@ -9,6 +9,7 @@ import { getStoreById } from "@/data/mallData";
 import { DealCard } from "@/components/mall/DealCard";
 import { calculateDeficitPrice } from "@/stores/economyStore";
 import { showTokenFeedback } from "@/engine/tokenEconomy";
+import { playAchievement } from "@/lib/sound";
 import type { Store, StoreCategory } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +121,7 @@ export function StoreDetail() {
     const ok = spendTokens(dealCost);
     if (ok) {
       setClaimed(true);
+      playAchievement();
       setTimeout(() => {
         showTokenFeedback("spend", dealCost, `Deal Claimed! -${dealCost} Tokens`);
         hideOverlay();
@@ -220,20 +222,30 @@ export function StoreDetail() {
 
               {/* Gamified Deal Card */}
               {store.dealInfo && (
-                <div className="mb-5" data-testid="store-deal">
-                  <DealCard
-                    deal={{
-                      title: store.dealInfo.title,
-                      discount: store.dealInfo.discount,
-                      tokenCost: dealCost,
-                      countdownSeconds: 240,
-                    }}
-                    storeName={store.name}
-                    onClaim={handleClaim}
-                    isClaimed={claimed}
-                    canAfford={canAfford}
-                    shortfall={shortfall}
-                  />
+                <div className="mb-5 overflow-hidden rounded-2xl" data-testid="store-deal">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={store.dealInfo.title}
+                      initial={{ opacity: 0, y: 15, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -15, scale: 0.96 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                      <DealCard
+                        deal={{
+                          title: store.dealInfo.title,
+                          discount: store.dealInfo.discount,
+                          tokenCost: dealCost,
+                          countdownSeconds: store.dealInfo.countdownSeconds || 240,
+                        }}
+                        storeName={store.name}
+                        onClaim={handleClaim}
+                        isClaimed={claimed}
+                        canAfford={canAfford}
+                        shortfall={shortfall}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               )}
 

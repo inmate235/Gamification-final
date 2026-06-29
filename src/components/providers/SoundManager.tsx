@@ -7,6 +7,7 @@ import {
   setSoundEnabled as setSoundEnabledGlobal,
   playSound,
   playAchievement,
+  playTierUpgrade,
   startBackgroundMusic,
   stopBackgroundMusic,
   SOUNDS,
@@ -21,6 +22,7 @@ import {
  *  3. Play open/close tab sounds on overlay transitions
  *  4. Play achievement sound on tier-upgrade overlay open
  *  5. Play swoosh on timeline open/close
+ *  6. Play open/close tab sounds on task panel expand/collapse
  *
  * Mounted once in Providers.tsx. Renders nothing.
  */
@@ -64,7 +66,9 @@ export function SoundManager() {
 
       // Overlay transition: none → X (open)
       if (prevState.activeOverlay === "none" && state.activeOverlay !== "none") {
-        if (ACHIEVEMENT_OVERLAYS.has(state.activeOverlay)) {
+        if (state.activeOverlay === "tier-upgrade") {
+          playTierUpgrade();
+        } else if (ACHIEVEMENT_OVERLAYS.has(state.activeOverlay)) {
           playAchievement();
         } else if (!SILENT_OVERLAYS.has(state.activeOverlay)) {
           playSound(SOUNDS.OPEN_TAB, undefined, TAB_SOUND_CAP_MS);
@@ -81,6 +85,15 @@ export function SoundManager() {
       // Timeline open/close swoosh
       if (prevState.isTimelineOpen !== state.isTimelineOpen) {
         playSound(SOUNDS.SWOOSH);
+      }
+
+      // Task panel expand/collapse open/close tab sounds
+      if (prevState.bottomPanelExpanded !== state.bottomPanelExpanded) {
+        playSound(
+          state.bottomPanelExpanded ? SOUNDS.OPEN_TAB : SOUNDS.CLOSE_TAB,
+          undefined,
+          TAB_SOUND_CAP_MS
+        );
       }
     });
 
