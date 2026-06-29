@@ -572,6 +572,16 @@ export function MallMap() {
           })}
         </g>
 
+        {/* ── Atrium fountain — between West Wing and East Wing ──────────────
+            Sits in the 120 SVG-unit gap (x=440–560, y=640–980) that
+            separates the two wings. Appears when either wing is revealed.  */}
+        <FountainLandmark
+          visible={
+            fogState[ZONE_WEST_WING] === true ||
+            fogState[ZONE_EAST_WING] === true
+          }
+        />
+
         {/* Store markers (only in revealed zones) */}
         <g>
           {stores.map((store) => {
@@ -617,6 +627,91 @@ export function MallMap() {
         <PlayerAvatar />
       </svg>
     </div>
+  );
+}
+
+/* ============================================================================
+   Fountain landmark — atrium between West Wing and East Wing
+   ========================================================================== */
+
+/**
+ * FountainLandmark — the crown-fountain PNG centred in the open corridor
+ * between West Wing (right edge x=440) and East Wing (left edge x=560).
+ *
+ * Visual stack (bottom → top):
+ *   1. Three staggered horizontal ripple ellipses (sky-blue, pulsing outward)
+ *   2. The fountain PNG (gently floating up/down)
+ *
+ * Sits at SVG centre-point (500, 810) — midway between the two wings both
+ * horizontally and vertically.
+ */
+function FountainLandmark({ visible }: { visible: boolean }) {
+  // Fountain centre in SVG space
+  const cx = 500;
+  const cy = 810;
+  // PNG frame — 160×160, centred on cx/cy
+  const fw = 160;
+  const fh = 160;
+  const fx = cx - fw / 2;
+  const fy = cy - fh / 2;
+
+  return (
+    <motion.g
+      initial={false}
+      animate={{ opacity: visible ? 1 : 0 }}
+      transition={{ duration: 1.2, ease: [0.32, 0.72, 0, 1] }}
+      pointerEvents="none"
+      data-testid="fountain-landmark"
+    >
+      {/* ── Water ripple ellipses (horizontal — fills the landscape gap) ── */}
+      {[
+        { rx: 90, ry: 22, delay: 0 },
+        { rx: 68, ry: 17, delay: 1.3 },
+        { rx: 46, ry: 12, delay: 2.6 },
+      ].map(({ rx, ry, delay }, i) => (
+        <motion.ellipse
+          key={i}
+          cx={cx}
+          cy={cy + fh * 0.38}  /* sit at base of fountain, not its centre */
+          rx={rx}
+          ry={ry}
+          fill="rgba(56,189,248,0.12)"
+          stroke="rgba(56,189,248,0.32)"
+          strokeWidth={1.5}
+          animate={{
+            scale: [1, 1.35, 1],
+            opacity: [0.7, 0, 0.7],
+          }}
+          transition={{
+            duration: 4,
+            delay,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          style={{ transformOrigin: `${cx}px ${cy + fh * 0.38}px` }}
+        />
+      ))}
+
+      {/* ── Fountain PNG — gently floating ── */}
+      <motion.image
+        href="/assets/map/fountain.png"
+        x={fx}
+        y={fy}
+        width={fw}
+        height={fh}
+        preserveAspectRatio="xMidYMid meet"
+        animate={{ y: [0, -6, 0] }}
+        transition={{
+          duration: 3.5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        style={{
+          filter:
+            "drop-shadow(0 14px 22px rgba(56,189,248,0.45)) drop-shadow(0 4px 6px rgba(20,20,20,0.18))",
+        }}
+      />
+    </motion.g>
   );
 }
 
