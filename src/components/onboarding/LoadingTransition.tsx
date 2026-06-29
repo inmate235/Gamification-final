@@ -100,7 +100,7 @@ export function LoadingTransition() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: SMOOTH, delay: 0.2 }}
-              className="font-display text-center text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 sm:text-3xl"
+              className="font-display text-center text-2xl font-bold text-pink-500 sm:text-3xl"
             >
               Entering MurkyCorps Mall...
             </motion.h2>
