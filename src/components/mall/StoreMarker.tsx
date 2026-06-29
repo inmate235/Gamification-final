@@ -153,34 +153,34 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
         </div>
       </foreignObject>
 
-      {/* Store name label — white backing pill, Geist Sans, #141414 */}
+      {/* Store name label — Apple-style frosted pill */}
       <foreignObject
-        x={x - 56}
+        x={x - 58}
         y={labelY}
-        width={112}
-        height={22}
+        width={116}
+        height={24}
       >
         <div
           style={{
-            width: 112,
-            height: 22,
+            width: 116,
+            height: 24,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 9999,
-            background: "rgba(255,255,255,0.92)",
-            boxShadow: "0 1px 2px rgba(20,20,20,0.12)",
+            background: "rgba(255,255,255,0.95)",
+            boxShadow: "0 2px 8px rgba(20,20,20,0.14), 0 0 0 1px rgba(20,20,20,0.06)",
             fontFamily: "var(--font-sans), sans-serif",
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 700,
             color: "#141414",
-            letterSpacing: "0.04em",
+            letterSpacing: "0.05em",
             textTransform: "uppercase",
             overflow: "hidden",
             whiteSpace: "nowrap",
             textOverflow: "ellipsis",
             pointerEvents: "none",
-            padding: "0 6px",
+            padding: "0 8px",
           }}
         >
           {store.name}

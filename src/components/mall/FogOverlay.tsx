@@ -19,8 +19,21 @@ interface FogOverlayProps {
   revealed: boolean;
 }
 
+/** Corner radius matching MallMap zone rooms. */
+const FOG_RADIUS = 28;
+
+/** Parse polygon points into a simple rect descriptor. */
+function toRect(points: string): { x: number; y: number; w: number; h: number } {
+  const coords = points.split(/\s+/).map((p) => p.split(",").map(Number));
+  const xs = coords.map((c) => c[0]);
+  const ys = coords.map((c) => c[1]);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  return { x: minX, y: minY, w: Math.max(...xs) - minX, h: Math.max(...ys) - minY };
+}
+
 export function FogOverlay({ zone, revealed }: FogOverlayProps) {
   const filterId = `fog-${zone.id}`;
+  const r = toRect(zone.polygonPoints);
 
   return (
     <motion.g
@@ -32,15 +45,19 @@ export function FogOverlay({ zone, revealed }: FogOverlayProps) {
       aria-hidden={revealed ? true : undefined}
     >
       {/* Misty light cloud fill with turbulence displacement */}
-      <polygon
-        points={zone.polygonPoints}
+      <rect
+        x={r.x} y={r.y}
+        width={r.w} height={r.h}
+        rx={FOG_RADIUS} ry={FOG_RADIUS}
         fill={`url(#${filterId}-grad)`}
         filter={`url(#${filterId}-mist)`}
         opacity={0.96}
       />
       {/* Extra white veil so unexplored zones read as obscured */}
-      <polygon
-        points={zone.polygonPoints}
+      <rect
+        x={r.x} y={r.y}
+        width={r.w} height={r.h}
+        rx={FOG_RADIUS} ry={FOG_RADIUS}
         fill="#ffffff"
         opacity={0.7}
       />

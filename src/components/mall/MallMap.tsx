@@ -14,7 +14,6 @@ import {
   ZONE_WEST_WING,
   ZONE_CENTRAL_PLAZA,
   ZONE_FOOD_COURT,
-  getZoneById,
 } from "@/data/mallData";
 import { onPlayerEnterZone, onZoneRevealed, onStoreVisited } from "@/engine/taskEngine";
 import { playAchievement } from "@/lib/sound";
@@ -41,6 +40,27 @@ import { Star, MapPin } from "@phosphor-icons/react/dist/ssr";
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
+/** Corner radius for all zone shapes — the key to Apple-aligned rounded rooms. */
+const ZONE_RADIUS = 28;
+
+/**
+ * Architectural corridor strips — fills the structural gaps between zones
+ * so the space between rooms reads as a connected hallway rather than empty air.
+ * Each entry is { x, y, w, h } in the 1000×1200 SVG coordinate space.
+ */
+const CORRIDOR_STRIPS = [
+  // Food Court ↔ Central Plaza  (horizontal, top section)
+  { x: 360, y: 340, w: 280, h: 20 },
+  // Central Plaza ↔ West Wing  (left connector)
+  { x: 300, y: 620, w: 140, h: 20 },
+  // Central Plaza ↔ East Wing  (right connector)
+  { x: 560, y: 620, w: 140, h: 20 },
+  // West Wing ↔ Entrance
+  { x: 150, y: 980, w: 290, h: 20 },
+  // East Wing ↔ Entrance
+  { x: 560, y: 980, w: 290, h: 20 },
+] as const;
+
 /* ============================================================================
    Component
    ========================================================================== */
@@ -61,7 +81,7 @@ const ZONE_ICON_LAYOUT: Record<string, { scale: number; dx?: number; dy?: number
   [ZONE_FOOD_COURT]: { scale: 0.58, dy: 0.02 },
 };
 
-/** Compute the bounding box {x, y, width, height} from polygon points. */
+/** Compute the bounding box {x, y, w, h} from polygon points string. */
 function polygonBBox(points: string): { x: number; y: number; w: number; h: number } {
   const coords = points.split(/\s+/).map((p) => p.split(",").map(Number));
   const xs = coords.map((c) => c[0]);
@@ -70,6 +90,12 @@ function polygonBBox(points: string): { x: number; y: number; w: number; h: numb
   const minY = Math.min(...ys);
   return { x: minX, y: minY, w: Math.max(...xs) - minX, h: Math.max(...ys) - minY };
 }
+
+/**
+ * Alias that returns the same bounding box as a rect descriptor.
+ * All zones in mallData are rectangles so this is lossless.
+ */
+const polygonToRect = polygonBBox;
 
 function iconFrame(zoneId: string, bbox: { x: number; y: number; w: number; h: number }) {
   const layout = ZONE_ICON_LAYOUT[zoneId] ?? { scale: 0.6 };
@@ -98,9 +124,6 @@ export function MallMap() {
 
   const [failedZoneImages, setFailedZoneImages] = useState<Set<string>>(new Set());
   const [streakImgError, setStreakImgError] = useState(false);
-
-  /* --- Build the set of corridor edges (undirected, de-duplicated) --- */
-  const corridorEdges = buildCorridorEdges(zones);
 
   /* --- Click-to-move handler --- */
   const handleZoneClick = useCallback(
@@ -137,7 +160,7 @@ export function MallMap() {
             amount: explore + secret,
             kind: "earn",
           });
-          playAchievement();
+          playAchievement(0.8);
         } else if (isFirstMove) {
           // First move from entrance: automatic first token (Day 1 2:00) on
           // top of the tier-multiplied exploration reward.
@@ -148,7 +171,7 @@ export function MallMap() {
             amount: explore + FIRST_TOKEN_BONUS,
             kind: "earn",
           });
-          playAchievement();
+          playAchievement(0.8);
           firstMoveDone = true;
         } else {
           const explore = awardTokens(EXPLORE_REWARD);
@@ -157,7 +180,7 @@ export function MallMap() {
             amount: explore,
             kind: "earn",
           });
-          playAchievement();
+          playAchievement(0.8);
         }
         // Breadcrumb task checks: a token was found on reveal (find-token)
         // and the player entered the zone (explore-zone). Delayed slightly so
@@ -175,7 +198,7 @@ export function MallMap() {
             amount: FIRST_TOKEN_BONUS,
             kind: "earn",
           });
-          playAchievement();
+          playAchievement(0.8);
           firstMoveDone = true;
           window.setTimeout(() => onPlayerEnterZone(zone.id), 700);
         } else {
@@ -285,26 +308,64 @@ export function MallMap() {
         data-testid="mall-map-svg"
       >
         <defs>
-          {/* Warm atmospheric gradient — soft amber/cream center, golden edges */}
+          {/* Warm architectural paper — slightly neutral to suggest floor-plan paper */}
           <radialGradient id="map-atmosphere" cx="50%" cy="45%" r="75%">
-            <stop offset="0%" stopColor="#fffbeb" stopOpacity={1} />
-            <stop offset="50%" stopColor="#fef9e7" stopOpacity={1} />
-            <stop offset="100%" stopColor="#fef3c7" stopOpacity={1} />
+            <stop offset="0%" stopColor="#fdf8ee" stopOpacity={1} />
+            <stop offset="55%" stopColor="#f7f0e0" stopOpacity={1} />
+            <stop offset="100%" stopColor="#ede5d0" stopOpacity={1} />
           </radialGradient>
-          {/* Subtle vertical tint — warm honey at top, soft amber at bottom */}
+          {/* Subtle vertical warmth overlay */}
           <linearGradient id="map-tint" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#fde68a" stopOpacity={0.22} />
+            <stop offset="0%" stopColor="#fde68a" stopOpacity={0.14} />
             <stop offset="50%" stopColor="#fffbeb" stopOpacity={0} />
-            <stop offset="100%" stopColor="#fcd34d" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#fcd34d" stopOpacity={0.10} />
           </linearGradient>
-          {/* Soft glow filter for revealed zone edges */}
+
+          {/* Floor tile grid pattern — renders inside revealed zone rooms */}
+          <pattern id="floor-tiles" patternUnits="userSpaceOnUse" width="36" height="36">
+            <rect width="36" height="36" fill="none" />
+            <line x1="0" y1="0" x2="36" y2="0" stroke="rgba(20,20,20,0.04)" strokeWidth="1" />
+            <line x1="0" y1="0" x2="0" y2="36" stroke="rgba(20,20,20,0.04)" strokeWidth="1" />
+          </pattern>
+
+          {/* Corridor hatching pattern — crosshatch for the hallway strips */}
+          <pattern id="corridor-hatch" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(20,20,20,0.05)" strokeWidth="1.5" />
+          </pattern>
+
+          {/* Soft outer glow for revealed zone edges */}
           <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+
+          {/* Inset shadow filter for zone depth */}
+          <filter id="zone-inset" x="-5%" y="-5%" width="110%" height="110%">
+            <feFlood floodColor="rgba(20,20,20,0.08)" result="flood" />
+            <feComposite in="flood" in2="SourceGraphic" operator="in" result="shadow" />
+            <feGaussianBlur in="shadow" stdDeviation="6" result="blurred" />
+            <feMerge>
+              <feMergeNode in="SourceGraphic" />
+              <feMergeNode in="blurred" />
+            </feMerge>
+          </filter>
+
+          {/* Per-zone rounded-rect clip paths — images + fog respect zone corners */}
+          {zones.map((zone) => {
+            const r = polygonToRect(zone.polygonPoints);
+            return (
+              <clipPath key={`clip-${zone.id}`} id={`clip-${zone.id}`}>
+                <rect
+                  x={r.x} y={r.y}
+                  width={r.w} height={r.h}
+                  rx={ZONE_RADIUS} ry={ZONE_RADIUS}
+                />
+              </clipPath>
+            );
+          })}
 
           {/* Per-zone fog filters + gradients */}
           <FogFilterDefs zones={zones} />
@@ -329,45 +390,73 @@ export function MallMap() {
           rx={24}
         />
 
-        {/* Corridors (dashed lines between adjacent zones) */}
+        {/* ── Architectural corridor strips ──────────────────────────────────
+            These fill the structural gaps between rooms so the map reads as
+            a connected floor plan rather than isolated floating zones.        */}
         <g pointerEvents="none">
-          {corridorEdges.map((edge) => (
-            <line
-              key={`${edge.from}-${edge.to}`}
-              x1={edge.x1}
-              y1={edge.y1}
-              x2={edge.x2}
-              y2={edge.y2}
-              stroke="rgba(20,20,20,0.14)"
-              strokeWidth={5}
-              strokeDasharray="4 10"
-              strokeLinecap="round"
-            />
+          {CORRIDOR_STRIPS.map((c, i) => (
+            <g key={i}>
+              {/* Corridor floor — slightly warmer than background, darker than room */}
+              <rect
+                x={c.x} y={c.y}
+                width={c.w} height={c.h}
+                fill="#e8dfc8"
+                rx={4}
+              />
+              {/* Corridor hatching for texture */}
+              <rect
+                x={c.x} y={c.y}
+                width={c.w} height={c.h}
+                fill="url(#corridor-hatch)"
+                rx={4}
+                opacity={0.6}
+              />
+              {/* Corridor center guide line */}
+              <line
+                x1={c.x + c.w / 2}
+                y1={c.y}
+                x2={c.x + c.w / 2}
+                y2={c.y + c.h}
+                stroke="rgba(20,20,20,0.10)"
+                strokeWidth={1}
+                strokeDasharray="3 5"
+                strokeLinecap="round"
+              />
+            </g>
           ))}
         </g>
 
-        {/* Zone polygons */}
+        {/* ── Zone rooms (rounded rectangles) ────────────────────────────────
+            All zone polygons are rectangles in mallData, so we parse them
+            into rect descriptors and render with rx=ZONE_RADIUS for proper
+            Apple-style rounded corners. Each room gets:
+            • A white/neutral fill (like a floor plan room)
+            • A zone-colored stroke border (the "wall outline")
+            • A subtle floor-tile grid inside revealed rooms
+            • An inner-glow shadow for the "you are here" state              */}
         <g>
           {zones.map((zone) => {
             const revealed = fogState[zone.id] === true;
             const current = playerPosition.zoneId === zone.id;
-            const reachable =
-              isAdjacent(playerPosition.zoneId, zone.id) && !current;
+            const reachable = isAdjacent(playerPosition.zoneId, zone.id) && !current;
             const stroke = zoneColor(zone.id);
+            const r = polygonToRect(zone.polygonPoints);
+
             return (
               <g key={zone.id}>
-                <polygon
-                  points={zone.polygonPoints}
-                  fill={revealed ? "#ffffff" : "#f4f4f5"}
-                  stroke={
-                    revealed ? stroke : "rgba(20,20,20,0.1)"
-                  }
-                  strokeWidth={revealed ? 3 : 1.5}
+                {/* ── Room floor fill ── */}
+                <rect
+                  x={r.x} y={r.y}
+                  width={r.w} height={r.h}
+                  rx={ZONE_RADIUS} ry={ZONE_RADIUS}
+                  fill={revealed ? "#fafaf8" : "#f0ede6"}
+                  stroke={revealed ? stroke : "rgba(20,20,20,0.12)"}
+                  strokeWidth={revealed ? 3.5 : 2}
                   filter={revealed ? "url(#edge-glow)" : undefined}
                   style={{
                     cursor: reachable ? "pointer" : "default",
                     transition:
-                      "stroke 700ms cubic-bezier(0.32,0.72,0,1), fill 700ms cubic-bezier(0.32,0.72,0,1)",
+                      "stroke 700ms cubic-bezier(0.32,0.72,0,1), fill 700ms cubic-bezier(0.32,0.72,0,1), stroke-width 700ms cubic-bezier(0.32,0.72,0,1)",
                   }}
                   onClick={() => handleZoneClick(zone)}
                   data-testid={`zone-${zone.id}`}
@@ -376,28 +465,71 @@ export function MallMap() {
                   aria-label={zone.name}
                   role={reachable ? "button" : undefined}
                 />
-                {/* Subtle highlight overlay for reachable adjacent zones */}
+
+                {/* ── Floor tile grid (revealed rooms only) ── */}
+                {revealed && (
+                  <rect
+                    x={r.x} y={r.y}
+                    width={r.w} height={r.h}
+                    rx={ZONE_RADIUS} ry={ZONE_RADIUS}
+                    fill="url(#floor-tiles)"
+                    pointerEvents="none"
+                  />
+                )}
+
+                {/* ── Corner accent dots — architectural notation ── */}
+                {revealed && [
+                  [r.x + ZONE_RADIUS, r.y + ZONE_RADIUS],
+                  [r.x + r.w - ZONE_RADIUS, r.y + ZONE_RADIUS],
+                  [r.x + ZONE_RADIUS, r.y + r.h - ZONE_RADIUS],
+                  [r.x + r.w - ZONE_RADIUS, r.y + r.h - ZONE_RADIUS],
+                ].map(([cx, cy], i) => (
+                  <circle
+                    key={i}
+                    cx={cx} cy={cy}
+                    r={3}
+                    fill={stroke}
+                    opacity={0.35}
+                    pointerEvents="none"
+                  />
+                ))}
+
+                {/* ── Reachable pulse overlay ── */}
                 {reachable && (
-                  <motion.polygon
-                    points={zone.polygonPoints}
+                  <motion.rect
+                    x={r.x} y={r.y}
+                    width={r.w} height={r.h}
+                    rx={ZONE_RADIUS} ry={ZONE_RADIUS}
                     fill={stroke}
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.06, 0.16, 0.06] }}
-                    transition={{
-                      duration: 2.4,
-                      ease: PREMIUM_EASE,
-                      repeat: Infinity,
-                    }}
+                    animate={{ opacity: [0.06, 0.18, 0.06] }}
+                    transition={{ duration: 2.4, ease: PREMIUM_EASE, repeat: Infinity }}
                     pointerEvents="none"
                     data-testid={`zone-hint-${zone.id}`}
                   />
                 )}
-                {/* Current zone soft glow */}
+
+                {/* ── Current zone soft tint ── */}
                 {current && (
-                  <polygon
-                    points={zone.polygonPoints}
+                  <rect
+                    x={r.x} y={r.y}
+                    width={r.w} height={r.h}
+                    rx={ZONE_RADIUS} ry={ZONE_RADIUS}
                     fill={stroke}
-                    opacity={0.1}
+                    opacity={0.09}
+                    pointerEvents="none"
+                  />
+                )}
+
+                {/* ── Revealed: inner wall-edge shadow line ── */}
+                {revealed && (
+                  <rect
+                    x={r.x + 1} y={r.y + 1}
+                    width={r.w - 2} height={r.h - 2}
+                    rx={ZONE_RADIUS - 1} ry={ZONE_RADIUS - 1}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.8)"
+                    strokeWidth={2}
                     pointerEvents="none"
                   />
                 )}
@@ -406,7 +538,9 @@ export function MallMap() {
           })}
         </g>
 
-        {/* Zone illustrations (icon-like assets centered per revealed zone) */}
+        {/* ── Zone illustrations — clipped to the rounded zone rect ────────
+            The clipPath ensures PNGs can never bleed over the rounded corner
+            walls, even if scale/position tweaks cause slight overflow.       */}
         <g pointerEvents="none">
           {zones.map((zone) => {
             const revealed = fogState[zone.id] === true;
@@ -423,8 +557,9 @@ export function MallMap() {
                 width={frame.w}
                 height={frame.h}
                 preserveAspectRatio="xMidYMid meet"
-                opacity={0.98}
-                style={{ filter: "drop-shadow(0 8px 10px rgba(20,20,20,0.12))" }}
+                opacity={0.97}
+                clipPath={`url(#clip-${zone.id})`}
+                style={{ filter: "drop-shadow(0 10px 14px rgba(20,20,20,0.14))" }}
                 onError={() =>
                   setFailedZoneImages((prev) => {
                     const next = new Set(prev);
@@ -514,40 +649,7 @@ function Doodle({
    Helpers
    ========================================================================== */
 
-interface CorridorEdge {
-  from: string;
-  to: string;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-}
 
-/** Builds the de-duplicated set of corridor edges from zone adjacency. */
-function buildCorridorEdges(zones: Zone[]): CorridorEdge[] {
-  const seen = new Set<string>();
-  const edges: CorridorEdge[] = [];
-  for (const zone of zones) {
-    const from = getZoneById(zone.id);
-    if (!from) continue;
-    for (const adjId of zone.adjacentZoneIds) {
-      const to = getZoneById(adjId);
-      if (!to) continue;
-      const key = [zone.id, adjId].sort().join("|");
-      if (seen.has(key)) continue;
-      seen.add(key);
-      edges.push({
-        from: zone.id,
-        to: adjId,
-        x1: from.center.x,
-        y1: from.center.y,
-        x2: to.center.x,
-        y2: to.center.y,
-      });
-    }
-  }
-  return edges;
-}
 
 // Module-level flag: has the player made their first move from the entrance?
 // (Per Day 1 minute 2:00 the first token is found automatically on the

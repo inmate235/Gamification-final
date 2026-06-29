@@ -51,15 +51,12 @@ export function TierHint() {
       {visible && (
         <motion.button
           layout
-          initial={{ opacity: 0, y: 24, scale: 0.9 }}
+          initial={{ opacity: 0, y: -24, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 24, scale: 0.9 }}
+          exit={{ opacity: 0, y: -24, scale: 0.9 }}
           transition={{ duration: 0.7, ease: PREMIUM_EASE }}
           onClick={() => showOverlay("tier-perks")}
-          className="fixed bottom-28 right-3 z-30 flex max-w-[220px] items-center gap-2 rounded-full bg-white px-3.5 py-2.5 ring-1 backdrop-blur-sm shadow-[0_4px_16px_rgba(20,20,20,0.08)] transition-all duration-200 active:scale-[0.97] sm:bottom-32 sm:right-4"
-          style={{
-            borderColor: `${nextVisual.color}40`,
-          }}
+          className="fixed top-24 left-1/2 z-40 flex -translate-x-1/2 w-max items-center gap-2.5 rounded-full bg-[#16161a]/95 px-4 py-2 border border-white/[0.08] backdrop-blur-md shadow-[0_8px_30px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.02)] transition-[background-color,border-color,transform,box-shadow] duration-200 hover:bg-[#1f1f24] hover:border-white/[0.12] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e6009e]/50"
           aria-label={hint.message}
           data-testid="tier-hint"
         >
@@ -69,8 +66,8 @@ export function TierHint() {
           >
             <ArrowUp size={12} weight="bold" style={{ color: nextVisual.color }} />
           </span>
-          <span className="min-w-0 flex-1 text-left text-[11px] leading-tight text-[#141414]">
-            <span className="font-semibold" style={{ color: nextVisual.color }}>
+          <span className="min-w-0 flex-1 text-left text-[12px] font-medium leading-tight text-white/90">
+            <span style={{ color: nextVisual.color }}>
               {hint.remaining} more
             </span>{" "}
             to {nextVisual.label}!
@@ -88,7 +85,7 @@ export function TierHint() {
                 setDismissed(true);
               }
             }}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[#8a8a8a] transition-colors hover:text-[#141414]"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white/40 transition-colors hover:text-white/80"
             aria-label="Dismiss hint"
           >
             <X size={11} weight="bold" />

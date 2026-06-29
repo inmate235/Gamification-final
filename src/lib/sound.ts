@@ -194,11 +194,11 @@ export function playSound(
 }
 
 /** Convenience: play the achievement sound at a higher volume. */
-export function playAchievement(): void {
+export function playAchievement(volumeMultiplier: number = 1): void {
   const now = Date.now();
   if (now - lastAchievementTime < 1000) return;
   lastAchievementTime = now;
-  playSound(SOUNDS.ACHIEVEMENT, VOLUME.achievement);
+  playSound(SOUNDS.ACHIEVEMENT, VOLUME.achievement * volumeMultiplier);
 }
 
 /** Convenience: play the tier upgrade sound (survey friends starting at 1s). */
