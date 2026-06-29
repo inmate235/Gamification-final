@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
 import { usePlayerStore } from "@/stores/playerStore";
-import { TIER_VISUALS } from "@/data/tierData";
+import { TIER_VISUALS, TIER_PRICING } from "@/data/tierData";
 import { cn } from "@/lib/utils";
 import type { Tier, TierUpgradeData } from "@/types";
 
@@ -55,31 +55,6 @@ interface TierFundOption {
   highlighted?: boolean;
 }
 
-const FUND_OPTIONS: TierFundOption[] = [
-  {
-    id: "tokens",
-    label: "Token Lock",
-    price: "50",
-    unit: "tokens",
-    description: "Lock in for 30 days",
-  },
-  {
-    id: "monthly",
-    label: "Monthly",
-    price: "$9.99",
-    unit: "/mo",
-    description: "Auto-renews monthly",
-  },
-  {
-    id: "annual",
-    label: "Annual",
-    price: "$89.99",
-    unit: "/yr",
-    description: "Save 25% vs monthly",
-    badge: "Best Value",
-    highlighted: true,
-  },
-];
 
 /* Fake social proof — "members who upgraded this week" */
 const FAKE_UPGRADE_COUNT: Record<Tier, number> = {
@@ -142,8 +117,36 @@ export function TierUpgrade() {
   const upgradeCount = FAKE_UPGRADE_COUNT[newTier];
   const spotsLeft = FAKE_SPOTS_LEFT[newTier];
 
-  const currentFund = FUND_OPTIONS.find((f) => f.id === selectedFund)!;
-  const canAffordTokens = selectedFund === "tokens" ? tokens >= 50 : true;
+  const pricing = TIER_PRICING[newTier] || TIER_PRICING.silver;
+
+  const fundOptions: TierFundOption[] = [
+    {
+      id: "tokens",
+      label: "Token Lock",
+      price: pricing.tokens.toString(),
+      unit: "tokens",
+      description: "Lock in for 30 days",
+    },
+    {
+      id: "monthly",
+      label: "Monthly",
+      price: `$${pricing.monthly}`,
+      unit: "/mo",
+      description: "Auto-renews monthly",
+    },
+    {
+      id: "annual",
+      label: "Annual",
+      price: `$${pricing.annual}`,
+      unit: "/yr",
+      description: `Save ${pricing.savingsPercent}% vs monthly`,
+      badge: pricing.badge,
+      highlighted: pricing.highlighted,
+    },
+  ];
+
+  const currentFund = fundOptions.find((f) => f.id === selectedFund)!;
+  const canAffordTokens = selectedFund === "tokens" ? tokens >= pricing.tokens : true;
 
   return (
     <AnimatePresence>
@@ -324,14 +327,14 @@ export function TierUpgrade() {
                     Choose your plan to lock in
                   </p>
                   <div className="grid grid-cols-3 gap-2">
-                    {FUND_OPTIONS.map((opt) => (
+                    {fundOptions.map((opt) => (
                       <FundOptionCard
                         key={opt.id}
                         option={opt}
                         selected={selectedFund === opt.id}
                         onSelect={() => setSelectedFund(opt.id)}
                         tierColor={visual.color}
-                        canAfford={opt.id === "tokens" ? tokens >= 50 : true}
+                        canAfford={opt.id === "tokens" ? tokens >= pricing.tokens : true}
                       />
                     ))}
                   </div>

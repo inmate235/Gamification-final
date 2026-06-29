@@ -140,7 +140,8 @@ export function MallMap() {
       if (!isAdjacent(currentZoneId, zone.id)) return;
 
       const wasFogged = !fogState[zone.id];
-      const isFirstMove = currentZoneId === ZONE_ENTRANCE && !firstMoveDone;
+      const revealedCount = Object.values(fogState).filter(Boolean).length;
+      const isFirstMove = currentZoneId === ZONE_ENTRANCE && !firstMoveDone && revealedCount <= 1;
       const isFoodCourtFirstReveal =
         zone.id === ZONE_FOOD_COURT && wasFogged;
 

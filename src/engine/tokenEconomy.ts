@@ -135,7 +135,7 @@ export function showStreakCelebration(streakCount: number): void {
  */
 export function awardTaskReward(task: Task): number {
   const credited = usePlayerStore.getState().awardTokens(task.reward);
-  showTokenFeedback("earn", credited, `+${credited} Tokens`);
+  showTokenFeedback("earn", credited, `Task Complete! +${credited} Tokens`);
   playAchievement();
   return credited;
 }

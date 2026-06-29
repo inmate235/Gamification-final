@@ -24,6 +24,63 @@
 import type { Tier } from "@/types";
 
 /* ============================================================================
+   Tier Pricing
+   ========================================================================== */
+
+export interface TierPricing {
+  monthly: number;
+  annual: number;
+  monthlyEquivalent: number;
+  savingsPercent: number;
+  members: number;
+  badge?: string;
+  highlighted?: boolean;
+  fakeRetailValue: number;
+  tokens: number;
+}
+
+export const TIER_PRICING: Record<Tier, TierPricing> = {
+  bronze: {
+    monthly: 0,
+    annual: 0,
+    monthlyEquivalent: 0,
+    savingsPercent: 0,
+    members: 8421,
+    fakeRetailValue: 0,
+    tokens: 0,
+  },
+  silver: {
+    monthly: 9.99,
+    annual: 89.99,
+    monthlyEquivalent: 7.50,
+    savingsPercent: 25,
+    members: 3201,
+    fakeRetailValue: 14.99,
+    tokens: 50,
+  },
+  gold: {
+    monthly: 39.99,
+    annual: 359.99,
+    monthlyEquivalent: 30.00,
+    savingsPercent: 25,
+    members: 1847,
+    fakeRetailValue: 59.99,
+    tokens: 200,
+  },
+  neodymium: {
+    monthly: 399.99,
+    annual: 3999.99,
+    monthlyEquivalent: 333.33,
+    savingsPercent: 17,
+    members: 423,
+    badge: "Best Value",
+    highlighted: true,
+    fakeRetailValue: 599.99,
+    tokens: 1000,
+  },
+};
+
+/* ============================================================================
    Tier ordering
    ========================================================================== */
 

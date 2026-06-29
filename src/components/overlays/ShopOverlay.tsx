@@ -35,7 +35,7 @@ import { useEconomyStore } from "@/stores/economyStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { claimFlashSale, buyTokenPack, showTokenFeedback } from "@/engine/tokenEconomy";
 import { getStoreById } from "@/data/mallData";
-import { TIER_PERKS, TIER_ORDER } from "@/data/tierData";
+import { TIER_PERKS, TIER_ORDER, TIER_PRICING } from "@/data/tierData";
 import { setTimelineTargetStore } from "@/components/social/TimelineFeed";
 import { useSocialStore } from "@/stores/socialStore";
 import { TOKEN_PACKS } from "@/data/tokenPackData";
@@ -46,58 +46,7 @@ const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 
 /* ============================================================================
    DARK PATTERN DATA — Tier pricing with exaggerated price gaps
-   Bronze (free) -> Silver ($9.99) -> Gold ($39.99) -> Neodymium ($399.99)
-   The annual toggle defaults to annual (dark pattern: lower monthly
-   equivalent hides the larger upfront commitment).
    ========================================================================== */
-
-interface TierPricing {
-  monthly: number;
-  annual: number;
-  monthlyEquivalent: number;
-  savingsPercent: number;
-  members: number;
-  badge?: string;
-  highlighted?: boolean;
-  fakeRetailValue: number;
-}
-
-const TIER_PRICING: Record<Tier, TierPricing> = {
-  bronze: {
-    monthly: 0,
-    annual: 0,
-    monthlyEquivalent: 0,
-    savingsPercent: 0,
-    members: 8421,
-    fakeRetailValue: 0,
-  },
-  silver: {
-    monthly: 9.99,
-    annual: 89.99,
-    monthlyEquivalent: 7.50,
-    savingsPercent: 25,
-    members: 3201,
-    fakeRetailValue: 14.99,
-  },
-  gold: {
-    monthly: 39.99,
-    annual: 359.99,
-    monthlyEquivalent: 30.00,
-    savingsPercent: 25,
-    members: 1847,
-    fakeRetailValue: 59.99,
-  },
-  neodymium: {
-    monthly: 399.99,
-    annual: 3999.99,
-    monthlyEquivalent: 333.33,
-    savingsPercent: 17,
-    members: 423,
-    badge: "Best Value",
-    highlighted: true,
-    fakeRetailValue: 599.99,
-  },
-};
 
 /* Fake purchaser names for the live purchase ticker (dark pattern: social proof) */
 const FAKE_PURCHASERS: Array<{ name: string; action: string; store: string }> = [
