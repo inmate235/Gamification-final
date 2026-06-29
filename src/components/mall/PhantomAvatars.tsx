@@ -24,9 +24,16 @@ import type { PhantomUser } from "@/types";
  * unexplored zones more frequently (VAL-CROSS-039), but those phantoms
  * remain hidden under fog until the zone is revealed — creating a sense of
  * "someone is exploring ahead" once the user arrives.
+ *
+ * Fading footprint trails trail behind each moving phantom so the player
+ * sees where they've been walking, reinforcing the "lots of people walking"
+ * impression.
  */
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
+
+/** Number of fading trail dots behind each phantom. */
+const TRAIL_LENGTH = 2;
 
 interface PhantomAvatarProps {
   phantom: PhantomUser;
@@ -36,9 +43,9 @@ interface PhantomAvatarProps {
 function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   const { x, y } = phantom.position;
 
-  // Deterministic staggered delay and movement speed derived from the phantom
-  // id so the pulsing rings are desynchronized and each phantom walks at a
-  // slightly different pace (4–10s) without calling Math.random during render.
+  // Deterministic movement speed per phantom. Durations are kept just under
+  // the 2-second phantom tick so the walk animation is continuous — the
+  // avatar is always mid-stride when the next position arrives.
   const { moveDuration } = useMemo(() => {
     let hash = 0;
     for (let i = 0; i < phantom.id.length; i += 1) {
@@ -46,21 +53,32 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
     }
     const absHash = Math.abs(hash);
     return {
-      moveDuration: 4 + (absHash % 7), // 4–10 seconds
+      moveDuration: 1.4 + (absHash % 4) * 0.15, // 1.4 .. 1.85 seconds
     };
   }, [phantom.id]);
 
   const [isFlipped, setIsFlipped] = useState(false);
-  const prevXRef = useRef(x);
+  const [isMoving, setIsMoving] = useState(false);
+  const prevPosRef = useRef({ x, y });
+  // Brief grace period after a position change before we mark idle again.
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (x < prevXRef.current) {
-      setIsFlipped(true); // walking left
-    } else if (x > prevXRef.current) {
-      setIsFlipped(false); // walking right
+    const moved = x !== prevPosRef.current.x || y !== prevPosRef.current.y;
+    if (moved) {
+      if (x < prevPosRef.current.x) setIsFlipped(true);
+      else if (x > prevPosRef.current.x) setIsFlipped(false);
+      prevPosRef.current = { x, y };
+      setIsMoving(true);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      // Keep walking animation alive for the full moveDuration, then idle.
+      idleTimerRef.current = setTimeout(() => setIsMoving(false), moveDuration * 1000);
     }
-    prevXRef.current = x;
-  }, [x]);
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [x, y]);
 
   return (
     <motion.g
@@ -71,8 +89,8 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
       transition={{
         opacity: { duration: 0.5, ease: PREMIUM_EASE },
         scale: { duration: 0.5, ease: PREMIUM_EASE },
-        x: { duration: moveDuration, ease: "easeInOut" },
-        y: { duration: moveDuration, ease: "easeInOut" }
+        x: { duration: moveDuration, ease: [0.25, 0.1, 0.25, 1] },
+        y: { duration: moveDuration, ease: [0.25, 0.1, 0.25, 1] },
       }}
       style={{ transformBox: "fill-box", transformOrigin: "center" }}
       data-testid={`phantom-avatar-${phantom.id}`}
@@ -104,17 +122,17 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
         </text>
       </g>
 
-      {/* Walking sway/bobbing animation wrapper */}
+      {/* Walking sway/bobbing — active only while position is changing */}
       <motion.g
         animate={{
-          y: [0, -3, 0],
-          rotate: [-3, 3, -3],
+          y: isMoving ? [0, -3, 0] : 0,
+          rotate: isMoving ? [-3, 3, -3] : 0,
           scaleX: isFlipped ? -1 : 1,
         }}
         transition={{
-          y: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
-          rotate: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
-          scaleX: { duration: 0.25 }
+          y: { duration: 0.55, repeat: isMoving ? Infinity : 0, ease: "easeInOut" },
+          rotate: { duration: 0.55, repeat: isMoving ? Infinity : 0, ease: "easeInOut" },
+          scaleX: { duration: 0.2 },
         }}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
       >
@@ -136,6 +154,68 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   );
 }
 
+/* ============================================================================
+   Phantom trails — fading footprint dots behind moving phantoms
+   ========================================================================== */
+
+interface TrailEntry {
+  lastSeen: { x: number; y: number } | null;
+  trail: Array<{ x: number; y: number }>;
+}
+
+/**
+ * Module-level trail cache (NOT a React ref) — stores each phantom's recent
+ * positions so we can render fading footprint dots. Updated during render
+ * with a position-change guard, which is safe under React strict-mode
+ * double-rendering because the guard prevents duplicate pushes.
+ */
+const trailCache = new Map<string, TrailEntry>();
+
+/**
+ * PhantomTrails — renders small fading dots at each phantom's recent
+ * positions so the player sees where they've walked. The dots are static
+ * (no animation) and semi-transparent; they read as footprints left behind
+ * as the avatar strides away.
+ */
+function PhantomTrails({ phantoms }: { phantoms: PhantomUser[] }) {
+  for (const p of phantoms) {
+    const st = trailCache.get(p.id);
+    if (!st) {
+      trailCache.set(p.id, {
+        lastSeen: { x: p.position.x, y: p.position.y },
+        trail: [],
+      });
+      continue;
+    }
+    if (
+      st.lastSeen &&
+      (st.lastSeen.x !== p.position.x || st.lastSeen.y !== p.position.y)
+    ) {
+      st.trail = [st.lastSeen, ...st.trail].slice(0, TRAIL_LENGTH);
+      st.lastSeen = { x: p.position.x, y: p.position.y };
+    }
+  }
+
+  return (
+    <g data-testid="phantom-trails-layer" style={{ pointerEvents: "none" }}>
+      {phantoms.map((p) => {
+        const st = trailCache.get(p.id);
+        const trail = st?.trail ?? [];
+        return trail.map((pos, i) => (
+          <circle
+            key={`${p.id}-trail-${i}`}
+            cx={pos.x}
+            cy={pos.y}
+            r={4 - i}
+            fill="#c4b5fd"
+            opacity={0.3 - i * 0.12}
+          />
+        ));
+      })}
+    </g>
+  );
+}
+
 /**
  * Renders all phantoms that are currently in REVEALED zones. Phantoms in
  * fogged zones are hidden (consistent with fog-of-war).
@@ -152,6 +232,7 @@ export function PhantomAvatars() {
 
   return (
     <g data-testid="phantom-avatars-layer" aria-label="Friends on the map">
+      <PhantomTrails phantoms={visiblePhantoms} />
       {visiblePhantoms.map((phantom) => (
         <PhantomAvatar
           key={phantom.id}

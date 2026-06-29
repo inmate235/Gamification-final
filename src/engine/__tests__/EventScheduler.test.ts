@@ -153,17 +153,16 @@ describe("EventScheduler", () => {
     expect(onProcess.mock.calls[0]?.[0]?.id).toBe(event.id);
   });
 
-  it("tick() moves phantoms every 5th tick", () => {
+  it("tick() moves phantoms every 2nd tick", () => {
     const moveSpy = vi.spyOn(useSocialStore.getState(), "movePhantoms");
     useSessionStore.getState().startSession();
-    // Tick 4 times -> no move yet.
-    for (let i = 0; i < 4; i++) scheduler.tick();
-    const movesBefore5 = moveSpy.mock.calls.length;
-    scheduler.tick(); // 5th tick
+    // Tick once -> no move yet (odd tick).
+    scheduler.tick();
+    expect(moveSpy.mock.calls.length).toBe(0);
+    // 2nd tick -> phantoms + ambient crowd move.
+    scheduler.tick();
     expect(useSocialStore.getState().phantoms.length).toBeGreaterThan(0);
-    // Spy may be invalidated by state changes; just assert movement happened
-    // by checking that a phantom position field is still well-formed.
-    expect(moveSpy.mock.calls.length).toBeGreaterThanOrEqual(movesBefore5);
+    expect(moveSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
     moveSpy.mockRestore();
   });
 

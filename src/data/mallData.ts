@@ -41,21 +41,21 @@ export const zones: Zone[] = [
     id: ZONE_ENTRANCE,
     name: "Entrance",
     description: "The grand entry. Always lit, always welcoming.",
-    // Bottom band spanning most of the width
+    // Bottom band — expanded to fill 88% of canvas width
     polygonPoints:
-      "150,1000 850,1000 850,1180 150,1180",
+      "60,1000 940,1000 940,1180 60,1180",
     center: { x: 500, y: 1090 },
     adjacentZoneIds: [ZONE_EAST_WING, ZONE_WEST_WING],
-    revealed: true, // Entrance is always revealed on first visit
+    revealed: true,
   },
   {
     id: ZONE_EAST_WING,
     name: "East Wing",
     description: "Glowing tech boutiques and accessory alcoves.",
-    // Right column above entrance
+    // Right column — widened to 400px, 80px fountain gap to West Wing
     polygonPoints:
-      "560,640 850,640 850,980 560,980",
-    center: { x: 705, y: 810 },
+      "540,640 940,640 940,980 540,980",
+    center: { x: 740, y: 810 },
     adjacentZoneIds: [ZONE_ENTRANCE, ZONE_CENTRAL_PLAZA],
     revealed: false,
   },
@@ -63,10 +63,10 @@ export const zones: Zone[] = [
     id: ZONE_WEST_WING,
     name: "West Wing",
     description: "Lifestyle ateliers and curated living spaces.",
-    // Left column above entrance
+    // Left column — widened to 400px, 80px fountain gap to East Wing
     polygonPoints:
-      "150,640 440,640 440,980 150,980",
-    center: { x: 295, y: 810 },
+      "60,640 460,640 460,980 60,980",
+    center: { x: 260, y: 810 },
     adjacentZoneIds: [ZONE_ENTRANCE, ZONE_CENTRAL_PLAZA],
     revealed: false,
   },
@@ -75,9 +75,9 @@ export const zones: Zone[] = [
     name: "Central Plaza",
     description:
       "The crossroads. Spinning wheel station and the leaderboard throne.",
-    // Middle band connecting wings to food court
+    // Middle band — widened to 560px to match expanded wings
     polygonPoints:
-      "300,360 700,360 700,620 300,620",
+      "220,360 780,360 780,620 220,620",
     center: { x: 500, y: 490 },
     adjacentZoneIds: [ZONE_EAST_WING, ZONE_WEST_WING, ZONE_FOOD_COURT],
     revealed: false,
@@ -87,9 +87,9 @@ export const zones: Zone[] = [
     name: "Food Court",
     description:
       "The furthest hall. Rumored to hold a secret token among the steam.",
-    // Top band
+    // Top band — widened to 560px to match Central Plaza
     polygonPoints:
-      "300,60 700,60 700,340 300,340",
+      "220,60 780,60 780,340 220,340",
     center: { x: 500, y: 200 },
     adjacentZoneIds: [ZONE_CENTRAL_PLAZA],
     revealed: false,
@@ -119,7 +119,7 @@ export const stores: Store[] = [
     name: "Bloom",
     category: "fashion",
     zoneId: ZONE_ENTRANCE,
-    position: { x: 320, y: 1060 },
+    position: { x: 200, y: 1060 },
     icon: "Hanger",
     reviews: reviewsForStore(STORE_BLOOM),
     visitorCount: 41, // amplified from a real ~3
@@ -136,7 +136,7 @@ export const stores: Store[] = [
     name: "Pulse",
     category: "tech",
     zoneId: ZONE_ENTRANCE,
-    position: { x: 680, y: 1060 },
+    position: { x: 800, y: 1060 },
     icon: "DeviceMobileCamera",
     reviews: reviewsForStore(STORE_PULSE),
     visitorCount: 38,
@@ -172,7 +172,7 @@ export const stores: Store[] = [
     name: "TechNova",
     category: "tech",
     zoneId: ZONE_EAST_WING,
-    position: { x: 640, y: 760 },
+    position: { x: 640, y: 730 },
     icon: "Cpu",
     reviews: reviewsForStore(STORE_TECHNOVA),
     visitorCount: 52,
@@ -189,7 +189,7 @@ export const stores: Store[] = [
     name: "Chrome",
     category: "accessories",
     zoneId: ZONE_EAST_WING,
-    position: { x: 760, y: 800 },
+    position: { x: 855, y: 790 },
     icon: "Watch",
     reviews: reviewsForStore(STORE_CHROME),
     visitorCount: 27,
@@ -206,7 +206,7 @@ export const stores: Store[] = [
     name: "Prism",
     category: "accessories",
     zoneId: ZONE_EAST_WING,
-    position: { x: 700, y: 870 },
+    position: { x: 730, y: 890 },
     icon: "Sunglasses",
     reviews: reviewsForStore(STORE_PRISM),
     visitorCount: 33,
@@ -224,7 +224,7 @@ export const stores: Store[] = [
     name: "Lumiere",
     category: "lifestyle",
     zoneId: ZONE_WEST_WING,
-    position: { x: 240, y: 760 },
+    position: { x: 155, y: 750 },
     icon: "Lamp",
     reviews: reviewsForStore(STORE_LUMIERE),
     visitorCount: 44,
@@ -241,7 +241,7 @@ export const stores: Store[] = [
     name: "Maison",
     category: "lifestyle",
     zoneId: ZONE_WEST_WING,
-    position: { x: 350, y: 850 },
+    position: { x: 295, y: 880 },
     icon: "House",
     reviews: reviewsForStore(STORE_MAISON),
     visitorCount: 29,
@@ -259,7 +259,7 @@ export const stores: Store[] = [
     name: "Cafe Nuit",
     category: "food",
     zoneId: ZONE_FOOD_COURT,
-    position: { x: 380, y: 180 },
+    position: { x: 320, y: 185 },
     icon: "Coffee",
     reviews: reviewsForStore(STORE_CAFE_NUIT),
     visitorCount: 61,
@@ -293,7 +293,7 @@ export const stores: Store[] = [
     name: "Burger Hex",
     category: "food",
     zoneId: ZONE_FOOD_COURT,
-    position: { x: 620, y: 200 },
+    position: { x: 680, y: 195 },
     icon: "Hamburger",
     reviews: reviewsForStore(STORE_BURGER_HEX),
     visitorCount: 58,

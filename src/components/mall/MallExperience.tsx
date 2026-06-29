@@ -45,6 +45,7 @@ import { usePlayerStore } from "@/stores/playerStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSocialStore } from "@/stores/socialStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useCrowdStore } from "@/stores/crowdStore";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -144,7 +145,12 @@ export function MallExperience() {
     // but at 22% base probability the first sale could take 10+ seconds).
     // Try a handful of times — each call is an independent probability roll.
     for (let i = 0; i < 6; i++) {
-      if (triggerProximityFlashSale()) break;
+      const seededSale = triggerProximityFlashSale();
+      if (seededSale) {
+        // Crowd event: flash-sale rush on the seeded sale.
+        useCrowdStore.getState().setMagnet(seededSale.storeId, 24);
+        break;
+      }
     }
 
     // Start the ambient background music (fades in over ~800ms, loops).

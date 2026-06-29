@@ -37,6 +37,7 @@ import {
   transitioningAction,
   idleWanderAction,
   noticeAction,
+  getCorridorWaypoint,
 } from "@/data/phantomData";
 import { getStoreById, getZoneById, stores as allStores } from "@/data/mallData";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -75,6 +76,11 @@ interface PhantomBehaviorState {
   targetZoneId: string | null;
   ticksInPhase: number;
   dwellTicks: number;
+  /** Corridor waypoint passed — phantom can now head straight to zone center. */
+  waypointReached: boolean;
+  /** Stable in-store anchor set on arrival; avoids per-tick jitter. */
+  anchorX: number | null;
+  anchorY: number | null;
 }
 
 const phantomStates = new Map<string, PhantomBehaviorState>();
@@ -90,6 +96,9 @@ function initFSMState(): PhantomBehaviorState {
     targetZoneId: null,
     ticksInPhase: 0,
     dwellTicks: 0,
+    waypointReached: false,
+    anchorX: null,
+    anchorY: null,
   };
 }
 
@@ -302,31 +311,45 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
           case "wandering": {
             const moveChance = 0.55 + (idHash % 30) / 100;
             if (Math.random() > moveChance) {
-              // Idle — always drift a little so no phantom fully freezes.
+              // Idle — drift a little so no phantom fully freezes.
               if (Math.random() < 0.25) currentAction = idleWanderAction();
-              position = wanderWithinZone(position, 20 + (idHash % 15));
+              position = wanderWithinZone(position, 14 + (idHash % 10));
               break;
             }
-            // Try to target a store in the current zone.
-            const store = pickStoreInZone(position.zoneId);
+
+            // Zone-roam probability: phantoms get restless over time.
+            // Base 40% chance to head to a new zone; rises to 65% after 3+
+            // ticks of wandering so they don't park in one zone indefinitely.
+            const roamChance = fsm.ticksInPhase >= 3 ? 0.65 : 0.40;
+            const shouldRoam = Math.random() < roamChance;
+
+            const store = shouldRoam ? null : pickStoreInZone(position.zoneId);
             if (store) {
-              // Transition and immediately take the first step toward the store.
               fsm = { ...fsm, phase: "approaching-store", targetStoreId: store.id, ticksInPhase: 0 };
-              const stepSizeW = 50 + (idHash % 25);
+              const stepSizeW = 55 + (idHash % 30);
               position = moveTowardTarget(position, store.position, stepSizeW);
               currentAction = approachingAction(store.name);
             } else {
-              // No stores in this zone — transition to an adjacent zone.
-              const adjZone = pickAdjacentZone(position.zoneId, fogState, bartleType);
+              // Move to an adjacent zone.
+              let adjZone = pickAdjacentZone(position.zoneId, fogState, bartleType);
+
+              // Socializer-type players: phantoms drift toward the player's
+              // zone when it is adjacent, creating a "following" crowd feel.
+              if (bartleType === "socializer" && Math.random() < 0.5) {
+                const curZone = getZoneById(position.zoneId);
+                if (curZone && curZone.adjacentZoneIds.includes(playerPos.zoneId)) {
+                  adjZone = playerPos.zoneId;
+                }
+              }
+
               if (adjZone) {
-                // Transition and immediately start moving toward the adjacent zone.
-                fsm = { ...fsm, phase: "transitioning", targetZoneId: adjZone, ticksInPhase: 0 };
-                position = moveTowardZone(position, adjZone, 55);
+                fsm = { ...fsm, phase: "transitioning", targetZoneId: adjZone, ticksInPhase: 0, waypointReached: false };
+                position = moveTowardZone(position, adjZone, 65);
                 const zone = getZoneById(adjZone);
                 currentAction = transitioningAction(zone?.name ?? adjZone);
               } else {
-                // Wander locally.
-                position = wanderWithinZone(position, 40 + (idHash % 25));
+                // No adjacent zone available — wander locally.
+                position = wanderWithinZone(position, 26 + (idHash % 16));
                 currentAction = idleWanderAction();
               }
             }
@@ -340,19 +363,20 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
               currentAction = idleWanderAction();
               break;
             }
-            const stepSize = 50 + (idHash % 25);
+            const stepSize = 55 + (idHash % 30);
             position = moveTowardTarget(position, store.position, stepSize);
             if (isNearTarget(position, store.position, 25)) {
-              // Arrived — enter the store.
+              // Arrived — spread anchor deterministically around the store so
+              // multiple phantoms don't stack on the exact same pixel. The angle
+              // is derived from idHash so each phantom occupies a different slot.
+              const angle = ((idHash % 12) / 12) * Math.PI * 2;
+              const radius = 28 + (idHash % 38);
+              const anchorX = store.position.x + Math.cos(angle) * radius;
+              const anchorY = store.position.y + Math.sin(angle) * radius;
               const dwellTicks = 2 + Math.floor(Math.random() * 4);
-              fsm = { ...fsm, phase: "in-store", ticksInPhase: 0, dwellTicks };
+              fsm = { ...fsm, phase: "in-store", ticksInPhase: 0, dwellTicks, anchorX, anchorY };
               currentAction = storeInStoreAction(store.id);
-              // Snap near the store with slight jitter.
-              position = {
-                x: store.position.x + (Math.random() - 0.5) * 20,
-                y: store.position.y + (Math.random() - 0.5) * 20,
-                zoneId: position.zoneId,
-              };
+              position = { x: anchorX, y: anchorY, zoneId: position.zoneId };
             } else {
               currentAction = approachingAction(store.name);
             }
@@ -366,12 +390,17 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
               currentAction = idleWanderAction();
               break;
             }
-            // Jitter near the store.
-            position = {
-              x: store.position.x + (Math.random() - 0.5) * 20,
-              y: store.position.y + (Math.random() - 0.5) * 20,
-              zoneId: position.zoneId,
-            };
+            // Drift gently around the anchor so the separation pass can push
+            // overlapping in-store phantoms apart instead of snapping back.
+            if (fsm.anchorX !== null && fsm.anchorY !== null) {
+              const jx = (Math.random() - 0.5) * 10;
+              const jy = (Math.random() - 0.5) * 10;
+              position = {
+                x: fsm.anchorX + jx,
+                y: fsm.anchorY + jy,
+                zoneId: position.zoneId,
+              };
+            }
             currentAction = storeInStoreAction(store.id);
 
             // Dwell complete — produce consequences and leave.
@@ -399,7 +428,7 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
               : "the store";
             const zone = getZoneById(position.zoneId);
             const target = zone?.center ?? position;
-            position = moveTowardTarget(position, target, 45);
+            position = moveTowardTarget(position, target, 30);
             if (fsm.ticksInPhase >= 2 || isNearTarget(position, target, 40)) {
               fsm = { ...fsm, phase: "wandering", targetStoreId: null, ticksInPhase: 0 };
               currentAction = idleWanderAction();
@@ -412,17 +441,38 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
           case "transitioning": {
             const targetZoneId = fsm.targetZoneId;
             if (!targetZoneId) {
-              fsm = { ...fsm, phase: "wandering", targetZoneId: null, ticksInPhase: 0 };
+              fsm = { ...fsm, phase: "wandering", targetZoneId: null, ticksInPhase: 0, waypointReached: false };
               currentAction = idleWanderAction();
               break;
             }
-            position = moveTowardZone(position, targetZoneId, 55);
+
+            const zone = getZoneById(targetZoneId);
+            currentAction = transitioningAction(zone?.name ?? targetZoneId);
+
+            if (!fsm.waypointReached) {
+              // Phase 1: walk toward the corridor waypoint first.
+              const waypoint = getCorridorWaypoint(position.zoneId, targetZoneId);
+              if (waypoint && !isNearTarget(position, waypoint, 35)) {
+                const dx = waypoint.x - position.x;
+                const dy = waypoint.y - position.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const step = Math.min(65, dist);
+                position = {
+                  x: position.x + (dx / dist) * step,
+                  y: position.y + (dy / dist) * step,
+                  zoneId: position.zoneId,
+                };
+                break;
+              }
+              // Waypoint reached (or no waypoint) — advance to phase 2.
+              fsm = { ...fsm, waypointReached: true };
+            }
+
+            // Phase 2: head straight to the zone centre.
+            position = moveTowardZone(position, targetZoneId, 65);
             if (position.zoneId === targetZoneId) {
-              fsm = { ...fsm, phase: "wandering", targetZoneId: null, ticksInPhase: 0 };
+              fsm = { ...fsm, phase: "wandering", targetZoneId: null, ticksInPhase: 0, waypointReached: false };
               currentAction = idleWanderAction();
-            } else {
-              const zone = getZoneById(targetZoneId);
-              currentAction = transitioningAction(zone?.name ?? targetZoneId);
             }
             break;
           }
@@ -432,26 +482,50 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
         return { ...p, position, currentAction, tokenCount, lastActivity: "just now" };
       });
 
-      // --- Separation pass (skip in-store & approaching phantoms) ---
-      const MIN_DIST = 90;
-      const REPULSION_FORCE = 0.4;
+      // --- Separation pass ---
+      // Named phantom GIFs are 90px wide so they need at least ~90px clearance.
+      // In-store phantoms are now included (with smaller threshold) since the
+      // anchor now drifts per-tick, allowing pushes to have lasting effect.
+      for (let i = 0; i < newPhantoms.length; i++) {
+        const p1 = newPhantoms[i]!;
+        const fsm1 = phantomStates.get(p1.id);
+        const p1InStore = fsm1?.phase === "in-store";
+        const minDist1 = p1InStore ? 55 : 95;
+        const force1 = p1InStore ? 0.3 : 0.5;
 
-      for (let step = 0; step < 2; step++) {
-        for (let i = 0; i < newPhantoms.length; i++) {
-          const p1 = newPhantoms[i]!;
-          const fsm1 = phantomStates.get(p1.id);
-          // Skip phantoms that are targeted at a store position.
-          if (fsm1 && (fsm1.phase === "in-store" || fsm1.phase === "approaching-store")) {
-            continue;
+        // Separate from player.
+        if (p1.position.zoneId === playerPos.zoneId) {
+          const dx = p1.position.x - playerPos.x;
+          const dy = p1.position.y - playerPos.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < minDist1) {
+            const push = (minDist1 - dist) * force1;
+            p1.position = wanderWithinZone(
+              {
+                x: p1.position.x + (dx / dist) * push,
+                y: p1.position.y + (dy / dist) * push,
+                zoneId: p1.position.zoneId,
+              },
+              0,
+            );
           }
+        }
 
-          // Separate from player.
-          if (p1.position.zoneId === playerPos.zoneId) {
-            const dx = p1.position.x - playerPos.x;
-            const dy = p1.position.y - playerPos.y;
+        // Separate from other phantoms.
+        for (let j = i + 1; j < newPhantoms.length; j++) {
+          const p2 = newPhantoms[j]!;
+          const fsm2 = phantomStates.get(p2.id);
+          // Skip pairs that are both actively approaching — let them walk freely.
+          if (fsm1?.phase === "approaching-store" && fsm2?.phase === "approaching-store") continue;
+          if (p1.position.zoneId === p2.position.zoneId) {
+            const p2InStore = fsm2?.phase === "in-store";
+            const minDist = Math.min(minDist1, p2InStore ? 55 : 95);
+            const force = Math.min(force1, p2InStore ? 0.3 : 0.5) * 0.5;
+            const dx = p1.position.x - p2.position.x;
+            const dy = p1.position.y - p2.position.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            if (dist < MIN_DIST) {
-              const push = (MIN_DIST - dist) * REPULSION_FORCE;
+            if (dist < minDist) {
+              const push = (minDist - dist) * force;
               p1.position = wanderWithinZone(
                 {
                   x: p1.position.x + (dx / dist) * push,
@@ -460,39 +534,14 @@ export const useSocialStore = create<SocialStore>((set, get) => ({
                 },
                 0,
               );
-            }
-          }
-
-          // Separate from other phantoms.
-          for (let j = i + 1; j < newPhantoms.length; j++) {
-            const p2 = newPhantoms[j]!;
-            const fsm2 = phantomStates.get(p2.id);
-            if (fsm2 && (fsm2.phase === "in-store" || fsm2.phase === "approaching-store")) {
-              continue;
-            }
-            if (p1.position.zoneId === p2.position.zoneId) {
-              const dx = p1.position.x - p2.position.x;
-              const dy = p1.position.y - p2.position.y;
-              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-              if (dist < MIN_DIST) {
-                const push = (MIN_DIST - dist) * REPULSION_FORCE * 0.5;
-                p1.position = wanderWithinZone(
-                  {
-                    x: p1.position.x + (dx / dist) * push,
-                    y: p1.position.y + (dy / dist) * push,
-                    zoneId: p1.position.zoneId,
-                  },
-                  0,
-                );
-                p2.position = wanderWithinZone(
-                  {
-                    x: p2.position.x - (dx / dist) * push,
-                    y: p2.position.y - (dy / dist) * push,
-                    zoneId: p2.position.zoneId,
-                  },
-                  0,
-                );
-              }
+              p2.position = wanderWithinZone(
+                {
+                  x: p2.position.x - (dx / dist) * push,
+                  y: p2.position.y - (dy / dist) * push,
+                  zoneId: p2.position.zoneId,
+                },
+                0,
+              );
             }
           }
         }

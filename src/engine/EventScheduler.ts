@@ -25,6 +25,8 @@ import { useSocialStore } from "@/stores/socialStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useCrowdStore } from "@/stores/crowdStore";
+import { storesByZone, ZONE_FOOD_COURT } from "@/data/mallData";
 import { checkForTierUpgrade } from "@/engine/tierEngine";
 import {
   triggerProximityFlashSale,
@@ -163,14 +165,13 @@ export class EventScheduler {
       }
     }
 
-    // 5. Phantom movement -> update positions every 5s (every 5th tick).
-    //    For Explorer-type players, phantoms move more frequently (every 3rd
-    //    tick) so more phantom friend activity appears on the map
-    //    (VAL-CROSS-039).
-    const bartleType = usePlayerStore.getState().bartleType;
-    const phantomMoveInterval = bartleType === "explorer" ? 3 : 5;
-    if (this.tickCount % phantomMoveInterval === 0) {
+    // 5. Phantom movement -> update positions every 2s (every 2nd tick) so
+    //    walking reads as continuous rather than jump-then-freeze. The
+    //    ambient background crowd ticks on the same cadence
+    //    (VAL-CROSS-039, VAL-CROSS-051).
+    if (this.tickCount % 2 === 0) {
       useSocialStore.getState().movePhantoms();
+      useCrowdStore.getState().tickCrowd();
     }
 
     // 6. Flash sale background timer tick — decrement countdowns for ALL
@@ -192,10 +193,23 @@ export class EventScheduler {
         const sale = triggerProximityFlashSale();
         if (sale) {
           this.handlers.onFlashSaleTriggered?.(sale);
+          // Crowd event: flash-sale rush — pull nearby ambient crowd toward
+          // the sale store so the player sees a visible rush.
+          useCrowdStore.getState().setMagnet(sale.storeId, 24);
           // Flash sales no longer auto-popup on proximity. They will trigger 
           // silently and add a notification badge to the Shop icon.
           // The Shop icon will handle the subtle nudge/animation.
         }
+      }
+    }
+
+    // 7b. Lunch rush — every ~90s, swell the Food Court with a crowd magnet
+    //     so the furthest zone periodically feels busy and worth the walk.
+    if (this.tickCount % 90 === 0) {
+      const foodStores = storesByZone[ZONE_FOOD_COURT] ?? [];
+      if (foodStores.length > 0) {
+        const store = foodStores[Math.floor(Math.random() * foodStores.length)];
+        if (store) useCrowdStore.getState().setMagnet(store.id, 30);
       }
     }
 
@@ -310,6 +324,7 @@ export class EventScheduler {
     useSessionStore.getState().reset();
     useEconomyStore.getState().reset();
     useSocialStore.getState().reset();
+    useCrowdStore.getState().reset();
     resetFlashSaleEngine();
     resetPhantomEngine();
   }

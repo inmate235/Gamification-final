@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -23,6 +23,7 @@ import { ZoneLabel, zoneColor } from "@/components/mall/ZoneLabel";
 import { StoreMarker } from "@/components/mall/StoreMarker";
 import { PlayerAvatar } from "@/components/mall/PlayerAvatar";
 import { PhantomAvatars } from "@/components/mall/PhantomAvatars";
+import { AmbientCrowd } from "@/components/mall/AmbientCrowd";
 import { Star, MapPin } from "@phosphor-icons/react/dist/ssr";
 
 /**
@@ -49,16 +50,16 @@ const ZONE_RADIUS = 28;
  * Each entry is { x, y, w, h } in the 1000×1200 SVG coordinate space.
  */
 const CORRIDOR_STRIPS = [
-  // Food Court ↔ Central Plaza  (horizontal, top section)
-  { x: 360, y: 340, w: 280, h: 20 },
-  // Central Plaza ↔ West Wing  (left connector)
-  { x: 300, y: 620, w: 140, h: 20 },
-  // Central Plaza ↔ East Wing  (right connector)
-  { x: 560, y: 620, w: 140, h: 20 },
-  // West Wing ↔ Entrance
-  { x: 150, y: 980, w: 290, h: 20 },
-  // East Wing ↔ Entrance
-  { x: 560, y: 980, w: 290, h: 20 },
+  // Food Court ↔ Central Plaza (both are x=220–780, centered strip)
+  { x: 330, y: 340, w: 340, h: 20 },
+  // Central Plaza (x=220–780) ↔ West Wing (x=60–460) — overlap x=220–460
+  { x: 235, y: 620, w: 215, h: 20 },
+  // Central Plaza (x=220–780) ↔ East Wing (x=540–940) — overlap x=540–780
+  { x: 550, y: 620, w: 215, h: 20 },
+  // West Wing (x=60–460) ↔ Entrance (x=60–940) — overlap x=60–460
+  { x: 80, y: 980, w: 365, h: 20 },
+  // East Wing (x=540–940) ↔ Entrance (x=60–940) — overlap x=540–940
+  { x: 555, y: 980, w: 365, h: 20 },
 ] as const;
 
 /* ============================================================================
@@ -74,11 +75,16 @@ const ZONE_IMAGES: Record<string, string> = {
 };
 
 const ZONE_ICON_LAYOUT: Record<string, { scale: number; dx?: number; dy?: number }> = {
-  [ZONE_ENTRANCE]: { scale: 0.62, dy: 0.04 },
-  [ZONE_EAST_WING]: { scale: 0.84, dx: -0.08 },
-  [ZONE_WEST_WING]: { scale: 0.805, dx: -0.1 },
-  [ZONE_CENTRAL_PLAZA]: { scale: 0.66 },
-  [ZONE_FOOD_COURT]: { scale: 0.58, dy: 0.02 },
+  // Entrance is now 880×180 — keep image wide and centered vertically
+  [ZONE_ENTRANCE]: { scale: 0.78, dy: 0.04 },
+  // East Wing is now 400×340 — slightly less dx offset needed in wider zone
+  [ZONE_EAST_WING]: { scale: 0.97, dx: -0.05 },
+  // West Wing is now 400×340 — slightly less dx offset needed in wider zone
+  [ZONE_WEST_WING]: { scale: 0.80, dx: -0.07 },
+  // Central Plaza is now 560×260 — can scale up a touch
+  [ZONE_CENTRAL_PLAZA]: { scale: 0.78 },
+  // Food Court is now 560×280 — can scale up a touch
+  [ZONE_FOOD_COURT]: { scale: 0.60, dy: 0.02 },
 };
 
 /** Compute the bounding box {x, y, w, h} from polygon points string. */
@@ -96,6 +102,70 @@ function polygonBBox(points: string): { x: number; y: number; w: number; h: numb
  * All zones in mallData are rectangles so this is lossless.
  */
 const polygonToRect = polygonBBox;
+
+/**
+ * Build an SVG path string for a rounded rectangle that has a single
+ * concave arc "indent" on one vertical side — used for the West Wing
+ * (right-side indent) and East Wing (left-side indent) to create the
+ * scalloped atrium recess facing the central fountain corridor.
+ *
+ * @param r        Zone bounding rect
+ * @param rx       Corner radius
+ * @param side     Which vertical edge gets the indent
+ * @param indentCY Y centre of the indent arc
+ * @param arcR     Circle radius for the indent arc (larger = shallower)
+ * @param arcSpan  Vertical span of the indent chord in SVG units
+ */
+function buildIndentPath(
+  r: { x: number; y: number; w: number; h: number },
+  rx: number,
+  side: "left" | "right",
+  indentCY: number,
+  arcR: number,
+  arcSpan: number,
+): string {
+  const { x, y, w, h } = r;
+  const x2 = x + w;
+  const y2 = y + h;
+  const arcTop = indentCY - arcSpan / 2;
+  const arcBot = indentCY + arcSpan / 2;
+
+  if (side === "right") {
+    // Path traces the zone clockwise; right edge goes DOWN, indent bows LEFT (sweep=0).
+    return [
+      `M ${x + rx},${y}`,
+      `L ${x2 - rx},${y}`,
+      `Q ${x2},${y} ${x2},${y + rx}`,
+      `L ${x2},${arcTop}`,
+      `A ${arcR},${arcR} 0 0,0 ${x2},${arcBot}`,
+      `L ${x2},${y2 - rx}`,
+      `Q ${x2},${y2} ${x2 - rx},${y2}`,
+      `L ${x + rx},${y2}`,
+      `Q ${x},${y2} ${x},${y2 - rx}`,
+      `L ${x},${y + rx}`,
+      `Q ${x},${y} ${x + rx},${y}`,
+      "Z",
+    ].join(" ");
+  } else {
+    // Path traces the zone clockwise; left edge goes UP, indent bows RIGHT (sweep=0
+    // mirrors the right-side sweep=0 — both use CCW arc so they bow symmetrically
+    // inward toward their respective zone interiors).
+    return [
+      `M ${x + rx},${y}`,
+      `L ${x2 - rx},${y}`,
+      `Q ${x2},${y} ${x2},${y + rx}`,
+      `L ${x2},${y2 - rx}`,
+      `Q ${x2},${y2} ${x2 - rx},${y2}`,
+      `L ${x + rx},${y2}`,
+      `Q ${x},${y2} ${x},${y2 - rx}`,
+      `L ${x},${arcBot}`,
+      `A ${arcR},${arcR} 0 0,0 ${x},${arcTop}`,
+      `L ${x},${y + rx}`,
+      `Q ${x},${y} ${x + rx},${y}`,
+      "Z",
+    ].join(" ");
+  }
+}
 
 function iconFrame(zoneId: string, bbox: { x: number; y: number; w: number; h: number }) {
   const layout = ZONE_ICON_LAYOUT[zoneId] ?? { scale: 0.6 };
@@ -354,16 +424,20 @@ export function MallMap() {
             </feMerge>
           </filter>
 
-          {/* Per-zone rounded-rect clip paths — images + fog respect zone corners */}
+          {/* Per-zone clip paths — indented zones use path, others use rect */}
           {zones.map((zone) => {
             const r = polygonToRect(zone.polygonPoints);
+            const isWest = zone.id === ZONE_WEST_WING;
+            const isEast = zone.id === ZONE_EAST_WING;
             return (
               <clipPath key={`clip-${zone.id}`} id={`clip-${zone.id}`}>
-                <rect
-                  x={r.x} y={r.y}
-                  width={r.w} height={r.h}
-                  rx={ZONE_RADIUS} ry={ZONE_RADIUS}
-                />
+                {isWest ? (
+                  <path d={buildIndentPath(r, ZONE_RADIUS, "right", 810, 100, 160)} />
+                ) : isEast ? (
+                  <path d={buildIndentPath(r, ZONE_RADIUS, "left", 810, 100, 160)} />
+                ) : (
+                  <rect x={r.x} y={r.y} width={r.w} height={r.h} rx={ZONE_RADIUS} ry={ZONE_RADIUS} />
+                )}
               </clipPath>
             );
           })}
@@ -390,6 +464,9 @@ export function MallMap() {
           fill="url(#map-tint)"
           rx={24}
         />
+
+        {/* ── All map content shifted 10 SVG units up ── */}
+        <g transform="translate(0, -10)">
 
         {/* ── Architectural corridor strips ──────────────────────────────────
             These fill the structural gaps between rooms so the map reads as
@@ -442,40 +519,63 @@ export function MallMap() {
             const reachable = isAdjacent(playerPosition.zoneId, zone.id) && !current;
             const stroke = zoneColor(zone.id);
             const r = polygonToRect(zone.polygonPoints);
+            const isWest = zone.id === ZONE_WEST_WING;
+            const isEast = zone.id === ZONE_EAST_WING;
+            const hasIndent = isWest || isEast;
+            const indentSide = isWest ? "right" : "left";
+            const indentPath = hasIndent
+              ? buildIndentPath(r, ZONE_RADIUS, indentSide, 810, 100, 160)
+              : "";
+
+            const sharedPathProps = {
+              fill: revealed ? "#fafaf8" : "#f0ede6",
+              stroke: revealed ? stroke : "rgba(20,20,20,0.12)",
+              strokeWidth: revealed ? 3.5 : 2,
+              filter: revealed ? "url(#edge-glow)" : undefined,
+              style: {
+                cursor: reachable ? "pointer" : "default",
+                transition:
+                  "stroke 700ms cubic-bezier(0.32,0.72,0,1), fill 700ms cubic-bezier(0.32,0.72,0,1), stroke-width 700ms cubic-bezier(0.32,0.72,0,1)",
+              } as React.CSSProperties,
+              onClick: () => handleZoneClick(zone),
+              "data-testid": `zone-${zone.id}`,
+              "data-reachable": reachable ? "true" : "false",
+              "data-revealed": revealed ? "true" : "false",
+              "aria-label": zone.name,
+              role: reachable ? ("button" as const) : undefined,
+            };
 
             return (
               <g key={zone.id}>
                 {/* ── Room floor fill ── */}
-                <rect
-                  x={r.x} y={r.y}
-                  width={r.w} height={r.h}
-                  rx={ZONE_RADIUS} ry={ZONE_RADIUS}
-                  fill={revealed ? "#fafaf8" : "#f0ede6"}
-                  stroke={revealed ? stroke : "rgba(20,20,20,0.12)"}
-                  strokeWidth={revealed ? 3.5 : 2}
-                  filter={revealed ? "url(#edge-glow)" : undefined}
-                  style={{
-                    cursor: reachable ? "pointer" : "default",
-                    transition:
-                      "stroke 700ms cubic-bezier(0.32,0.72,0,1), fill 700ms cubic-bezier(0.32,0.72,0,1), stroke-width 700ms cubic-bezier(0.32,0.72,0,1)",
-                  }}
-                  onClick={() => handleZoneClick(zone)}
-                  data-testid={`zone-${zone.id}`}
-                  data-reachable={reachable ? "true" : "false"}
-                  data-revealed={revealed ? "true" : "false"}
-                  aria-label={zone.name}
-                  role={reachable ? "button" : undefined}
-                />
-
-                {/* ── Floor tile grid (revealed rooms only) ── */}
-                {revealed && (
+                {hasIndent ? (
+                  <path d={indentPath} {...sharedPathProps} />
+                ) : (
                   <rect
                     x={r.x} y={r.y}
                     width={r.w} height={r.h}
                     rx={ZONE_RADIUS} ry={ZONE_RADIUS}
-                    fill="url(#floor-tiles)"
-                    pointerEvents="none"
+                    {...sharedPathProps}
                   />
+                )}
+
+                {/* ── Floor tile grid (revealed rooms only) ── */}
+                {revealed && (
+                  hasIndent ? (
+                    <path
+                      d={indentPath}
+                      fill="url(#floor-tiles)"
+                      pointerEvents="none"
+                    />
+                  ) : (
+                    <rect
+                      x={r.x} y={r.y}
+                      width={r.w} height={r.h}
+                      rx={ZONE_RADIUS} ry={ZONE_RADIUS}
+                      fill="url(#floor-tiles)"
+                      pointerEvents="none"
+                    />
+                  )
                 )}
 
                 {/* ── Corner accent dots — architectural notation ── */}
@@ -497,42 +597,80 @@ export function MallMap() {
 
                 {/* ── Reachable pulse overlay ── */}
                 {reachable && (
-                  <motion.rect
-                    x={r.x} y={r.y}
-                    width={r.w} height={r.h}
-                    rx={ZONE_RADIUS} ry={ZONE_RADIUS}
-                    fill={stroke}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.06, 0.18, 0.06] }}
-                    transition={{ duration: 2.4, ease: PREMIUM_EASE, repeat: Infinity }}
-                    pointerEvents="none"
-                    data-testid={`zone-hint-${zone.id}`}
-                  />
+                  hasIndent ? (
+                    <motion.path
+                      d={indentPath}
+                      fill={stroke}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0.06, 0.18, 0.06] }}
+                      transition={{ duration: 2.4, ease: PREMIUM_EASE, repeat: Infinity }}
+                      pointerEvents="none"
+                      data-testid={`zone-hint-${zone.id}`}
+                    />
+                  ) : (
+                    <motion.rect
+                      x={r.x} y={r.y}
+                      width={r.w} height={r.h}
+                      rx={ZONE_RADIUS} ry={ZONE_RADIUS}
+                      fill={stroke}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0.06, 0.18, 0.06] }}
+                      transition={{ duration: 2.4, ease: PREMIUM_EASE, repeat: Infinity }}
+                      pointerEvents="none"
+                      data-testid={`zone-hint-${zone.id}`}
+                    />
+                  )
                 )}
 
                 {/* ── Current zone soft tint ── */}
                 {current && (
-                  <rect
-                    x={r.x} y={r.y}
-                    width={r.w} height={r.h}
-                    rx={ZONE_RADIUS} ry={ZONE_RADIUS}
-                    fill={stroke}
-                    opacity={0.09}
-                    pointerEvents="none"
-                  />
+                  hasIndent ? (
+                    <path
+                      d={indentPath}
+                      fill={stroke}
+                      opacity={0.09}
+                      pointerEvents="none"
+                    />
+                  ) : (
+                    <rect
+                      x={r.x} y={r.y}
+                      width={r.w} height={r.h}
+                      rx={ZONE_RADIUS} ry={ZONE_RADIUS}
+                      fill={stroke}
+                      opacity={0.09}
+                      pointerEvents="none"
+                    />
+                  )
                 )}
 
-                {/* ── Revealed: inner wall-edge shadow line ── */}
+                {/* ── Revealed: inner wall-edge highlight ── */}
                 {revealed && (
-                  <rect
-                    x={r.x + 1} y={r.y + 1}
-                    width={r.w - 2} height={r.h - 2}
-                    rx={ZONE_RADIUS - 1} ry={ZONE_RADIUS - 1}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.8)"
-                    strokeWidth={2}
-                    pointerEvents="none"
-                  />
+                  hasIndent ? (
+                    <path
+                      d={buildIndentPath(
+                        { x: r.x + 1, y: r.y + 1, w: r.w - 2, h: r.h - 2 },
+                        ZONE_RADIUS - 1,
+                        indentSide,
+                        810,
+                        100,
+                        158,
+                      )}
+                      fill="none"
+                      stroke="rgba(255,255,255,0.8)"
+                      strokeWidth={2}
+                      pointerEvents="none"
+                    />
+                  ) : (
+                    <rect
+                      x={r.x + 1} y={r.y + 1}
+                      width={r.w - 2} height={r.h - 2}
+                      rx={ZONE_RADIUS - 1} ry={ZONE_RADIUS - 1}
+                      fill="none"
+                      stroke="rgba(255,255,255,0.8)"
+                      strokeWidth={2}
+                      pointerEvents="none"
+                    />
+                  )
                 )}
               </g>
             );
@@ -609,6 +747,9 @@ export function MallMap() {
           ))}
         </g>
 
+        {/* Ambient background crowd (only in revealed zones) */}
+        <AmbientCrowd />
+
         {/* Phantom friend avatars (only in revealed zones, VAL-CROSS-051) */}
         <PhantomAvatars />
 
@@ -626,6 +767,8 @@ export function MallMap() {
 
         {/* Player avatar (top layer) */}
         <PlayerAvatar />
+
+        </g>{/* end translate(0, -10) */}
       </svg>
     </div>
   );
@@ -647,14 +790,16 @@ export function MallMap() {
  * horizontally and vertically.
  */
 function FountainLandmark({ visible }: { visible: boolean }) {
-  // Fountain centre in SVG space
+  // Fountain centre in SVG space — original atrium midpoint
   const cx = 500;
   const cy = 810;
-  // PNG frame — 160×160, centred on cx/cy
-  const fw = 160;
-  const fh = 160;
+  // PNG frame — expanded to 210×210 to fill the wider atrium corridor
+  const fw = 210;
+  const fh = 210;
   const fx = cx - fw / 2;
   const fy = cy - fh / 2;
+  // Water basin base Y (slightly below image centre)
+  const basinY = cy + fh * 0.34;
 
   return (
     <motion.g
@@ -664,20 +809,31 @@ function FountainLandmark({ visible }: { visible: boolean }) {
       pointerEvents="none"
       data-testid="fountain-landmark"
     >
-      {/* ── Water ripple ellipses (horizontal — fills the landscape gap) ── */}
+      {/* ── Atrium floor disc — grounds the fountain in the corridor ── */}
+      <ellipse
+        cx={cx}
+        cy={basinY}
+        rx={68}
+        ry={18}
+        fill="rgba(186,230,253,0.22)"
+        stroke="rgba(56,189,248,0.18)"
+        strokeWidth={1}
+      />
+
+      {/* ── Water ripple ellipses — wider to match larger atrium ── */}
       {[
-        { rx: 90, ry: 22, delay: 0 },
-        { rx: 68, ry: 17, delay: 1.3 },
-        { rx: 46, ry: 12, delay: 2.6 },
+        { rx: 110, ry: 28, delay: 0 },
+        { rx: 82, ry: 21, delay: 1.3 },
+        { rx: 54, ry: 14, delay: 2.6 },
       ].map(({ rx, ry, delay }, i) => (
         <motion.ellipse
           key={i}
           cx={cx}
-          cy={cy + fh * 0.38}  /* sit at base of fountain, not its centre */
+          cy={basinY}
           rx={rx}
           ry={ry}
-          fill="rgba(56,189,248,0.12)"
-          stroke="rgba(56,189,248,0.32)"
+          fill="rgba(56,189,248,0.10)"
+          stroke="rgba(56,189,248,0.28)"
           strokeWidth={1.5}
           animate={{
             scale: [1, 1.35, 1],
@@ -689,7 +845,7 @@ function FountainLandmark({ visible }: { visible: boolean }) {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          style={{ transformOrigin: `${cx}px ${cy + fh * 0.38}px` }}
+          style={{ transformOrigin: `${cx}px ${basinY}px` }}
         />
       ))}
 
@@ -701,7 +857,7 @@ function FountainLandmark({ visible }: { visible: boolean }) {
         width={fw}
         height={fh}
         preserveAspectRatio="xMidYMid meet"
-        animate={{ y: [0, -6, 0] }}
+        animate={{ y: [0, -7, 0] }}
         transition={{
           duration: 3.5,
           repeat: Infinity,
@@ -709,7 +865,7 @@ function FountainLandmark({ visible }: { visible: boolean }) {
         }}
         style={{
           filter:
-            "drop-shadow(0 14px 22px rgba(56,189,248,0.45)) drop-shadow(0 4px 6px rgba(20,20,20,0.18))",
+            "drop-shadow(0 16px 26px rgba(56,189,248,0.50)) drop-shadow(0 4px 8px rgba(20,20,20,0.20))",
         }}
       />
     </motion.g>

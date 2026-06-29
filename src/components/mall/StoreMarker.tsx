@@ -1,8 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import * as Phosphor from "@phosphor-icons/react/dist/ssr";
 import type { Store, StoreCategory } from "@/types";
+import { useCrowdStore } from "@/stores/crowdStore";
+import { useSocialStore } from "@/stores/socialStore";
 
 /**
  * StoreMarker — a clickable store pin rendered on the map.
@@ -75,6 +78,29 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
   const x = store.position.x + visual.dx;
   const y = store.position.y + visual.dy;
   const labelY = (visual.labelDy ?? 22) + y;
+
+  // Live shopper count — fluctuates as the ambient crowd and named phantoms
+  // move around the store. Counts entities within 75px of the store position.
+  const crowdNpcs = useCrowdStore((s) => s.npcs);
+  const socialPhantoms = useSocialStore((s) => s.phantoms);
+  const liveCount = useMemo(() => {
+    const sx = store.position.x;
+    const sy = store.position.y;
+    const near = (px: number, py: number) => Math.hypot(px - sx, py - sy) < 75;
+    const crowd = crowdNpcs.reduce(
+      (acc, n) => acc + (n.zoneId === store.zoneId && near(n.x, n.y) ? 1 : 0),
+      0,
+    );
+    const phantoms = socialPhantoms.reduce(
+      (acc, p) =>
+        acc +
+        (p.position.zoneId === store.zoneId && near(p.position.x, p.position.y)
+          ? 1
+          : 0),
+      0,
+    );
+    return crowd + phantoms;
+  }, [crowdNpcs, socialPhantoms, store.position.x, store.position.y, store.zoneId]);
 
   return (
     <motion.g
@@ -248,6 +274,34 @@ export function StoreMarker({ store, onStoreClick }: StoreMarkerProps) {
             </div>
           </foreignObject>
         </motion.g>
+      )}
+
+      {/* Live shopper count — fluctuates as crowd + phantoms move nearby */}
+      {liveCount >= 2 && (
+        <g
+          style={{ pointerEvents: "none" }}
+          data-testid={`store-live-count-${store.id}`}
+        >
+          <circle
+            cx={x - 17}
+            cy={y + 17}
+            r={9}
+            fill="rgba(20,20,20,0.82)"
+            stroke="#ffffff"
+            strokeWidth={1.5}
+          />
+          <text
+            x={x - 17}
+            y={y + 20}
+            textAnchor="middle"
+            fill="#ffffff"
+            fontSize="9px"
+            fontWeight="700"
+            fontFamily="system-ui, -apple-system, sans-serif"
+          >
+            {liveCount}
+          </text>
+        </g>
       )}
     </motion.g>
   );

@@ -19,9 +19,9 @@ const PHANTOM_ZONE_POSITIONS: Record<
   { x: number; y: number; zoneId: string }
 > = {
   "zone-entrance": { x: 480, y: 1090, zoneId: "zone-entrance" },
-  "zone-east-wing": { x: 690, y: 810, zoneId: "zone-east-wing" },
-  "zone-west-wing": { x: 320, y: 810, zoneId: "zone-west-wing" },
-  "zone-central-plaza": { x: 510, y: 490, zoneId: "zone-central-plaza" },
+  "zone-east-wing": { x: 740, y: 810, zoneId: "zone-east-wing" },
+  "zone-west-wing": { x: 260, y: 810, zoneId: "zone-west-wing" },
+  "zone-central-plaza": { x: 500, y: 490, zoneId: "zone-central-plaza" },
   "zone-food-court": { x: 500, y: 200, zoneId: "zone-food-court" },
 };
 
@@ -35,11 +35,11 @@ const ZONE_BOUNDS: Record<
   string,
   { minX: number; maxX: number; minY: number; maxY: number }
 > = {
-  "zone-entrance": { minX: 180, maxX: 820, minY: 1020, maxY: 1160 },
-  "zone-east-wing": { minX: 590, maxX: 820, minY: 670, maxY: 950 },
-  "zone-west-wing": { minX: 180, maxX: 410, minY: 670, maxY: 950 },
-  "zone-central-plaza": { minX: 330, maxX: 670, minY: 390, maxY: 590 },
-  "zone-food-court": { minX: 330, maxX: 670, minY: 90, maxY: 310 },
+  "zone-entrance": { minX: 90, maxX: 910, minY: 1030, maxY: 1165 },
+  "zone-east-wing": { minX: 575, maxX: 910, minY: 670, maxY: 950 },
+  "zone-west-wing": { minX: 90, maxX: 430, minY: 670, maxY: 950 },
+  "zone-central-plaza": { minX: 255, maxX: 745, minY: 390, maxY: 590 },
+  "zone-food-court": { minX: 255, maxX: 745, minY: 90, maxY: 310 },
 };
 
 /**
@@ -549,6 +549,33 @@ export function samplePhantomAction(rng: () => number = Math.random): string {
   const action = PHANTOM_ACTIONS[idx];
   if (!action) return PHANTOM_ACTIONS[0] ?? "browsing";
   return action;
+}
+
+/**
+ * Corridor waypoints — the centre of each connecting corridor strip.
+ * Phantoms route through these when transitioning between zones so they
+ * walk through corridors rather than cutting diagonally through walls.
+ * Key format: "fromZoneId:toZoneId" (both directions are listed).
+ */
+const CORRIDOR_WAYPOINTS: Record<string, { x: number; y: number }> = {
+  "zone-entrance:zone-west-wing":   { x: 262, y: 985 },
+  "zone-west-wing:zone-entrance":   { x: 262, y: 985 },
+  "zone-entrance:zone-east-wing":   { x: 738, y: 985 },
+  "zone-east-wing:zone-entrance":   { x: 738, y: 985 },
+  "zone-west-wing:zone-central-plaza":  { x: 340, y: 625 },
+  "zone-central-plaza:zone-west-wing":  { x: 340, y: 625 },
+  "zone-east-wing:zone-central-plaza":  { x: 660, y: 625 },
+  "zone-central-plaza:zone-east-wing":  { x: 660, y: 625 },
+  "zone-central-plaza:zone-food-court": { x: 500, y: 348 },
+  "zone-food-court:zone-central-plaza": { x: 500, y: 348 },
+};
+
+/** Return the corridor waypoint between two adjacent zones, or null if none. */
+export function getCorridorWaypoint(
+  fromZoneId: string,
+  toZoneId: string,
+): { x: number; y: number } | null {
+  return CORRIDOR_WAYPOINTS[`${fromZoneId}:${toZoneId}`] ?? null;
 }
 
 export { PHANTOM_ZONE_POSITIONS, PHANTOM_ACTIONS, ZONE_BOUNDS };
