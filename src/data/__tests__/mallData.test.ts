@@ -19,8 +19,8 @@ describe("mallData", () => {
     expect(zones).toHaveLength(5);
   });
 
-  it("contains exactly 10 stores", () => {
-    expect(stores).toHaveLength(10);
+  it("contains exactly 11 stores", () => {
+    expect(stores).toHaveLength(11);
   });
 
   it("zones have the canonical names", () => {
@@ -85,7 +85,7 @@ describe("mallData", () => {
     for (const s of stores) {
       dist[s.zoneId] = (dist[s.zoneId] ?? 0) + 1;
     }
-    expect(dist[ZONE_ENTRANCE]).toBe(2);
+    expect(dist[ZONE_ENTRANCE]).toBe(3);
     expect(dist[ZONE_EAST_WING]).toBe(3);
     expect(dist[ZONE_WEST_WING]).toBe(2);
     expect(dist[ZONE_FOOD_COURT]).toBe(3);
@@ -110,7 +110,7 @@ describe("mallData", () => {
   });
 
   it("storesByZone groups stores by zone id", () => {
-    expect(storesByZone[ZONE_ENTRANCE]).toHaveLength(2);
+    expect(storesByZone[ZONE_ENTRANCE]).toHaveLength(3);
     expect(storesByZone[ZONE_FOOD_COURT]).toHaveLength(3);
     expect(storesByZone[ZONE_CENTRAL_PLAZA]).toBeUndefined();
   });

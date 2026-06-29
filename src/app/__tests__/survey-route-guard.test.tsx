@@ -71,7 +71,7 @@ vi.mock("@/components/onboarding/ParticleField", () => ({
 import SurveyPage from "@/app/survey/page";
 import { useOnboardingStore } from "@/stores/onboardingStore";
 import { usePlayerStore } from "@/stores/playerStore";
-import { SURVEY_QUESTIONS } from "@/lib/bartle";
+import { SURVEY_QUESTIONS } from "@/data/surveyData";
 
 describe("/survey route guard", () => {
   beforeEach(() => {

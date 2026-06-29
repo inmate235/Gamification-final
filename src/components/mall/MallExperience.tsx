@@ -9,8 +9,8 @@ import {
   checkStreakOnVisit,
   processMissedDayPenalties,
 } from "@/engine/streakEngine";
-import { StatusBar } from "./StatusBar";
-import { MallMap } from "./MallMap";
+import { StatusBar } from "@/components/mall/StatusBar";
+import { MallMap } from "@/components/mall/MallMap";
 import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { StoreDetail } from "@/components/overlays/StoreDetail";
 import { Celebration } from "@/components/overlays/Celebration";
@@ -25,13 +25,13 @@ import {
   LeaderboardEntryButton,
   ProximityAlertBanner,
 } from "@/components/social/Leaderboard";
-import { LeaveMallButton } from "./LeaveMallButton";
-import { GoodbyeScreen } from "./GoodbyeScreen";
-import { TierHint } from "./TierHint";
-import { TierDemotionThreat } from "./TierDemotionThreat";
-import { StreakAnxietyMessage } from "./StreakAnxietyMessage";
-import { StreakRecoveryBanner } from "./StreakRecoveryBanner";
-import { StreakPenaltyNotification } from "./StreakPenaltyNotification";
+import { LeaveMallButton } from "@/components/mall/exit/LeaveMallButton";
+import { GoodbyeScreen } from "@/components/mall/exit/GoodbyeScreen";
+import { TierHint } from "@/components/mall/tier/TierHint";
+import { TierDemotionThreat } from "@/components/mall/tier/TierDemotionThreat";
+import { StreakAnxietyMessage } from "@/components/mall/streak/StreakAnxietyMessage";
+import { StreakRecoveryBanner } from "@/components/mall/streak/StreakRecoveryBanner";
+import { StreakPenaltyNotification } from "@/components/mall/streak/StreakPenaltyNotification";
 import { TimelineFeed } from "@/components/social/TimelineFeed";
 import { TimelineEntryButton } from "@/components/social/TimelineEntryButton";
 import { usePlayerStore } from "@/stores/playerStore";

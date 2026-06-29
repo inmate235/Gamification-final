@@ -19,10 +19,10 @@ describe("mapStore", () => {
     useMapStore.getState().reset();
   });
 
-  it("initializes with 5 zones and 10 stores", () => {
+  it("initializes with 5 zones and 11 stores", () => {
     const s = useMapStore.getState();
     expect(s.zones).toHaveLength(5);
-    expect(s.stores).toHaveLength(10);
+    expect(s.stores).toHaveLength(11);
   });
 
   it("starts with the entrance zone revealed and others fogged", () => {
@@ -131,7 +131,7 @@ describe("mapStore", () => {
     expect(areZonesAdjacent(ZONE_ENTRANCE, ZONE_CENTRAL_PLAZA)).toBe(false);
   });
 
-  it("static store data has 10 stores with valid zone assignments", () => {
+  it("static store data has 11 stores with valid zone assignments", () => {
     const validZoneIds = new Set(staticZones.map((z) => z.id));
     for (const store of staticStores) {
       expect(validZoneIds.has(store.zoneId)).toBe(true);

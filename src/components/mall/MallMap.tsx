@@ -18,11 +18,11 @@ import {
 } from "@/data/mallData";
 import { onPlayerEnterZone, onZoneRevealed, onStoreVisited } from "@/engine/taskEngine";
 import type { Store, Zone } from "@/types";
-import { FogFilterDefs, FogOverlay } from "./FogOverlay";
-import { ZoneLabel, zoneColor } from "./ZoneLabel";
-import { StoreMarker } from "./StoreMarker";
-import { PlayerAvatar } from "./PlayerAvatar";
-import { PhantomAvatars } from "./PhantomAvatars";
+import { FogFilterDefs, FogOverlay } from "@/components/mall/FogOverlay";
+import { ZoneLabel, zoneColor } from "@/components/mall/ZoneLabel";
+import { StoreMarker } from "@/components/mall/StoreMarker";
+import { PlayerAvatar } from "@/components/mall/PlayerAvatar";
+import { PhantomAvatars } from "@/components/mall/PhantomAvatars";
 import { Star, MapPin } from "@phosphor-icons/react/dist/ssr";
 
 /**
@@ -45,11 +45,11 @@ const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
    ========================================================================== */
 
 const ZONE_IMAGES: Record<string, string> = {
-  [ZONE_ENTRANCE]: "/assets/figma/map entrance PAGE 8.png",
-  [ZONE_EAST_WING]: "/assets/figma/maps EASt WING.png",
-  [ZONE_WEST_WING]: "/assets/figma/map west wing.png",
-  [ZONE_CENTRAL_PLAZA]: "/assets/figma/map central plaza.png",
-  [ZONE_FOOD_COURT]: "/assets/figma/map food court.png",
+  [ZONE_ENTRANCE]: "/assets/map/entrance.png",
+  [ZONE_EAST_WING]: "/assets/map/east-wing.png",
+  [ZONE_WEST_WING]: "/assets/map/west-wing.png",
+  [ZONE_CENTRAL_PLAZA]: "/assets/map/central-plaza.png",
+  [ZONE_FOOD_COURT]: "/assets/map/food-court.png",
 };
 
 const ZONE_ICON_LAYOUT: Record<string, { scale: number; dx?: number; dy?: number }> = {
@@ -257,7 +257,7 @@ export function MallMap() {
         >
           {!streakImgError ? (
             <img
-              src="/assets/figma/1 da sreak 1.png"
+              src="/assets/map/streak-badge.png"
               alt=""
               className="h-5 w-5 object-contain"
               onError={() => setStreakImgError(true)}

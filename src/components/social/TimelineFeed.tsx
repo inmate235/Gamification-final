@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CaretLeft } from "@phosphor-icons/react";
 import { timelineFeed } from "@/data/feedData";
-import { TimelineVideo } from "./TimelineVideo";
-import { TimelineOnboardingPopup } from "./TimelineOnboardingPopup";
+import { TimelineVideo } from "@/components/social/TimelineVideo";
+import { TimelineOnboardingPopup } from "@/components/social/TimelineOnboardingPopup";
 import { useUIStore } from "@/stores/uiStore";
 
 /* ============================================================================

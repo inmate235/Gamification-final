@@ -11,7 +11,7 @@
 
 import { create } from "zustand";
 import type { EconomyState, FlashSale } from "@/types";
-import { usePlayerStore } from "./playerStore";
+import { usePlayerStore } from "@/stores/playerStore";
 import { SUGAR_ITEMS } from "@/data/sugarData";
 
 /* ============================================================================

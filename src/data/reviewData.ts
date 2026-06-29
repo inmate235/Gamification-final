@@ -127,6 +127,7 @@ function storeCategory(storeId: string): string {
   if (storeId.includes("prism")) return "accessories";
   if (storeId.includes("lumiere")) return "lifestyle";
   if (storeId.includes("maison")) return "lifestyle";
+  if (storeId.includes("murky")) return "lifestyle";
   if (storeId.includes("cafe")) return "food";
   if (storeId.includes("sushi")) return "food";
   if (storeId.includes("burger")) return "food";

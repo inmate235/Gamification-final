@@ -93,6 +93,7 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     "Fish",
     "Hamburger",
     "ShoppingBag",
+    "PuzzlePiece",
   ];
   const obj: Record<string, ReturnType<typeof make>> = {};
   for (const n of names) obj[n] = make(n);
@@ -146,9 +147,10 @@ describe("MallMap", () => {
 
   it("shows store markers only for revealed zones on first load", () => {
     render(<MallMap />);
-    // Entrance stores (Bloom, Pulse) are visible
+    // Entrance stores (Bloom, Pulse, Murky Playground) are visible
     expect(screen.getByTestId("store-marker-store-bloom")).toBeInTheDocument();
     expect(screen.getByTestId("store-marker-store-pulse")).toBeInTheDocument();
+    expect(screen.getByTestId("store-marker-store-murky-playground")).toBeInTheDocument();
     // East Wing stores are hidden (fogged)
     expect(screen.queryByTestId("store-marker-store-technova")).not.toBeInTheDocument();
     expect(screen.queryByTestId("store-marker-store-chrome")).not.toBeInTheDocument();

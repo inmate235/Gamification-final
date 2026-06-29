@@ -61,7 +61,7 @@ vi.mock("framer-motion", () => {
 });
 
 import { SurveyScreen } from "@/components/onboarding/SurveyScreen";
-import { SURVEY_QUESTIONS } from "@/lib/bartle";
+import { SURVEY_QUESTIONS } from "@/data/surveyData";
 import { usePlayerStore } from "@/stores/playerStore";
 
 describe("SurveyScreen", () => {

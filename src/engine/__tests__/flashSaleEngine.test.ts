@@ -73,7 +73,7 @@ describe("flashSaleEngine", () => {
 
   it("proximityCandidateStores returns revealed stores in current + adjacent zones", () => {
     // Player starts at Entrance (revealed). Adjacent East/West wings are
-    // fogged, so only Entrance stores (Bloom, Pulse) are candidates.
+    // fogged, so only Entrance stores (Bloom, Pulse, Murky Playground) are candidates.
     const candidates = proximityCandidateStores(ZONE_ENTRANCE, {
       "zone-entrance": true,
       "zone-east-wing": false,
@@ -82,7 +82,7 @@ describe("flashSaleEngine", () => {
       "zone-food-court": false,
     });
     const ids = candidates.map((s) => s.id).sort();
-    expect(ids).toEqual(["store-bloom", "store-pulse"]);
+    expect(ids).toEqual(["store-bloom", "store-murky-playground", "store-pulse"]);
   });
 
   it("proximityCandidateStores includes adjacent revealed zones", () => {
@@ -93,8 +93,8 @@ describe("flashSaleEngine", () => {
       "zone-central-plaza": false,
       "zone-food-court": false,
     });
-    // Entrance (2) + East Wing (3: TechNova, Chrome, Prism) = 5
-    expect(candidates).toHaveLength(5);
+    // Entrance (3) + East Wing (3: TechNova, Chrome, Prism) = 6
+    expect(candidates).toHaveLength(6);
   });
 
   /* --- Store selection --- */
@@ -123,9 +123,10 @@ describe("flashSaleEngine", () => {
       "zone-central-plaza": false,
       "zone-food-court": false,
     };
-    // Mark both entrance stores refractory.
+    // Mark all entrance stores refractory.
     markRefractory("store-bloom");
     markRefractory("store-pulse");
+    markRefractory("store-murky-playground");
     const store = selectProximityStore(ZONE_ENTRANCE, fog, null);
     expect(store).toBeNull();
   });
@@ -170,6 +171,7 @@ describe("flashSaleEngine", () => {
   it("triggerProximityFlashSale returns null when all nearby stores are refractory", () => {
     markRefractory("store-bloom");
     markRefractory("store-pulse");
+    markRefractory("store-murky-playground");
     const rng = vi.spyOn(Math, "random").mockReturnValue(0); // pass roll
     const sale = triggerProximityFlashSale();
     expect(sale).toBeNull();

@@ -6,7 +6,7 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Check } from "@phosphor-icons/react";
 import type { IconWeight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { SURVEY_QUESTIONS, type SurveyOption } from "@/lib/bartle";
+import { SURVEY_QUESTIONS, type SurveyOption } from "@/data/surveyData";
 import { classifyBartleType } from "@/lib/bartle";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useOnboardingStore } from "@/stores/onboardingStore";

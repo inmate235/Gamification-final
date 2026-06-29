@@ -41,6 +41,7 @@ const STORE_VISUAL_LAYOUT: Record<
   "store-cafe-nuit": { dx: -50, dy: 0, labelDy: 24 },
   "store-sushi-yuki": { dx: 0, dy: -60, labelDy: 24 },
   "store-burger-hex": { dx: 50, dy: 20, labelDy: 24 },
+  "store-murky-playground": { dx: 0, dy: 20, labelDy: 24 },
 };
 
 /* ============================================================================

@@ -18,7 +18,7 @@ import {
   generateInitialTasks,
   __resetTaskIdCounter,
 } from "@/engine/taskGenerator";
-import { useMapStore } from "./mapStore";
+import { useMapStore } from "@/stores/mapStore";
 
 /* ============================================================================
    Store

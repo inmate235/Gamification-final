@@ -44,21 +44,21 @@ function typeStyle(type: TaskType): TypeStyle {
         icon: <Compass size={16} weight="fill" />,
         color: "#14b8a6",
         label: "Explore",
-        image: "/assets/figma/Rectangle 5.png",
+        image: "/assets/tasks/task-explore.png",
       };
     case "find-token":
       return {
         icon: <Coin size={16} weight="fill" />,
         color: "#e6009e",
         label: "Find Token",
-        image: "/assets/figma/Rectangle 8.png",
+        image: "/assets/tasks/task-visit.png",
       };
     case "visit-stores":
       return {
         icon: <Storefront size={16} weight="fill" />,
         color: "#7c3aed",
         label: "Visit Stores",
-        image: "/assets/figma/Rectangle 9.png",
+        image: "/assets/tasks/task-token.png",
       };
   }
 }

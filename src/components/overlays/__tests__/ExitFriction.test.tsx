@@ -84,7 +84,7 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
 });
 
 import { ExitFriction } from "@/components/overlays/ExitFriction";
-import { LeaveMallButton } from "@/components/mall/LeaveMallButton";
+import { LeaveMallButton } from "@/components/mall/exit/LeaveMallButton";
 import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { usePlayerStore } from "@/stores/playerStore";

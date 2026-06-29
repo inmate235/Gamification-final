@@ -20,7 +20,6 @@ import type { PlayerPosition } from "@/types";
  * stores the animated corridor keyframes in state.
  */
 
-const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 const MOVE_DURATION = 2.5; // seconds — slower to match a walking pace
 
 interface AvatarPath {
@@ -126,7 +125,7 @@ export function PlayerAvatar() {
       >
         {/* Animated shopper GIF — 172×129px (player-sized, largest on map) */}
         <image
-          href="/assets/figma/shopper Icon/Original GIF 800x600 Cut.gif"
+          href="/assets/avatar/shopper.gif"
           x={-86}
           y={-64.5}
           width={172}

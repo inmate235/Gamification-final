@@ -17,7 +17,7 @@ import {
   type RewardOutcome,
 } from "@/engine/nearMissAlgorithm";
 import { cn } from "@/lib/utils";
-import { BrainRotCelebration } from "./BrainRotCelebration";
+import { BrainRotCelebration } from "@/components/overlays/BrainRotCelebration";
 import { buySpins } from "@/engine/tokenEconomy";
 
 /**

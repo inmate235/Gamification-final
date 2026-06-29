@@ -39,10 +39,10 @@ import {
   noticeAction,
 } from "@/data/phantomData";
 import { getStoreById, getZoneById, stores as allStores } from "@/data/mallData";
-import { usePlayerStore } from "./playerStore";
-import { useMapStore } from "./mapStore";
-import { useSessionStore } from "./sessionStore";
-import { useEconomyStore } from "./economyStore";
+import { usePlayerStore } from "@/stores/playerStore";
+import { useMapStore } from "@/stores/mapStore";
+import { useSessionStore } from "@/stores/sessionStore";
+import { useEconomyStore } from "@/stores/economyStore";
 
 /* ============================================================================
    Helpers

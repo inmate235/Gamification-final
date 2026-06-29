@@ -39,14 +39,13 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   // Deterministic staggered delay and movement speed derived from the phantom
   // id so the pulsing rings are desynchronized and each phantom walks at a
   // slightly different pace (4–10s) without calling Math.random during render.
-  const { pulseDelay, moveDuration } = useMemo(() => {
+  const { moveDuration } = useMemo(() => {
     let hash = 0;
     for (let i = 0; i < phantom.id.length; i += 1) {
       hash = (hash * 31 + phantom.id.charCodeAt(i)) | 0;
     }
     const absHash = Math.abs(hash);
     return {
-      pulseDelay: (absHash % 1500) / 1000,
       moveDuration: 4 + (absHash % 7), // 4–10 seconds
     };
   }, [phantom.id]);
@@ -121,7 +120,7 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
       >
         {/* Animated shopper GIF — 90×67.5px (smaller than player's) */}
         <image
-          href="/assets/figma/shopper Icon/Original GIF 800x600 Cut.gif"
+          href="/assets/avatar/shopper.gif"
           x={-45}
           y={-33.75}
           width={90}

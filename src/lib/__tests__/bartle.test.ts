@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
-  SURVEY_QUESTIONS,
   classifyBartleType,
   classifyBartleTypeSafe,
 } from "@/lib/bartle";
+import { SURVEY_QUESTIONS } from "@/data/surveyData";
 import type { BartleType } from "@/types";
 
 describe("bartle classification", () => {

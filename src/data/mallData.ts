@@ -1,5 +1,5 @@
 /**
- * Static mall data: 5 zones and 10 stores.
+ * Static mall data: 5 zones and 11 stores.
  * Layout per architecture.md:
  *
  *                 ZONE 5: FOOD COURT (top)
@@ -14,7 +14,7 @@
  *   Z1 <-> Z2, Z1 <-> Z3, Z2 <-> Z4, Z3 <-> Z4, Z4 <-> Z5
  *
  * Store distribution:
- *   Z1: Bloom, Pulse (2)
+ *   Z1: Bloom, Pulse, Murky Playground (3)
  *   Z2: TechNova, Chrome, Prism (3)
  *   Z3: Lumiere, Maison (2)
  *   Z4: (no stores - spinning wheel + leaderboard station)
@@ -24,7 +24,7 @@
  */
 
 import type { Zone, Store } from "@/types";
-import { reviewsForStore } from "./reviewData";
+import { reviewsForStore } from "@/data/reviewData";
 
 /* ============================================================================
    Zones
@@ -110,6 +110,7 @@ export const STORE_MAISON = "store-maison";
 export const STORE_CAFE_NUIT = "store-cafe-nuit";
 export const STORE_SUSHI_YUKI = "store-sushi-yuki";
 export const STORE_BURGER_HEX = "store-burger-hex";
+export const STORE_MURKY_PLAYGROUND = "store-murky-playground";
 
 export const stores: Store[] = [
   // Zone 1: Entrance
@@ -142,6 +143,24 @@ export const stores: Store[] = [
     dealInfo: {
       title: "Glow Earbuds",
       discount: "25% off",
+      tokenCost: 0,
+      countdownSeconds: 0,
+      personalized: false,
+    },
+  },
+  // Zone 1: Entrance — Murky Playground (child drop-off service)
+  {
+    id: STORE_MURKY_PLAYGROUND,
+    name: "Murky Playground",
+    category: "lifestyle",
+    zoneId: ZONE_ENTRANCE,
+    position: { x: 500, y: 1140 },
+    icon: "PuzzlePiece",
+    reviews: reviewsForStore(STORE_MURKY_PLAYGROUND),
+    visitorCount: 15,
+    dealInfo: {
+      title: "Drop & Shop — 2 Hrs Free Childcare",
+      discount: "Free drop-off",
       tokenCost: 0,
       countdownSeconds: 0,
       personalized: false,
