@@ -174,12 +174,14 @@ export function checkStreakOnVisit(now: number = Date.now()): StreakVisitResult 
   const streak = player.streak;
 
   // First-ever visit (lastVisit === 0): streak is already Day 1 from init.
+  // Return "incremented" so the caller can fire a positive milestone toast
+  // (the first visit is the hook moment — the player should see "Day 1
+  // streak!" immediately, not silence).
   if (streak.lastVisit === 0) {
-    // Set lastVisit to now but keep count at 1 (already initialized).
     usePlayerStore.setState((state) => ({
       streak: { ...state.streak, lastVisit: now },
     }));
-    return { type: "same-day" };
+    return { type: "incremented", newCount: streak.count };
   }
 
   const days = daysBetween(streak.lastVisit, now);

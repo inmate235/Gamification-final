@@ -62,8 +62,8 @@ describe("engine/taskEngine", () => {
       // Moved to completed + auto-generated a new task.
       expect(useTaskStore.getState().completedTasks).toContainEqual(task);
       expect(useTaskStore.getState().activeTasks.length).toBeGreaterThanOrEqual(1);
-      // Celebration shown.
-      expect(useUIStore.getState().activeOverlay).toBe("celebration");
+      // Celebration pushed to queue (parallel layer, not activeOverlay).
+      expect(useUIStore.getState().celebrationQueue.length).toBeGreaterThan(0);
     });
 
     it("does NOT complete an explore-zone task for a different zone", () => {

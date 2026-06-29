@@ -134,9 +134,9 @@ describe("engine/streakEngine", () => {
   /* --- checkStreakOnVisit --- */
 
   describe("checkStreakOnVisit", () => {
-    it("returns same-day on first visit (lastVisit=0)", () => {
+    it("returns incremented on first visit (lastVisit=0) so the streak celebration fires", () => {
       const result = checkStreakOnVisit(Date.now());
-      expect(result.type).toBe("same-day");
+      expect(result.type).toBe("incremented");
       expect(usePlayerStore.getState().streak.lastVisit).toBeGreaterThan(0);
     });
 

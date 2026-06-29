@@ -171,10 +171,10 @@ export const TIER_PERKS: Record<Tier, TierPerkSet> = {
     dealRadar: "Deal radar + priority alerts",
     exclusives: [
       {
-        id: "neo-infinite-sugar",
+        id: "neo-token-discount",
         icon: "Lightning",
-        label: "Infinite Sugar Rush",
-        value: "Unlimited refills at the Sugar Station",
+        label: "Token Shop Discount",
+        value: "15% off all token pack purchases",
         neodymiumExclusive: true,
       },
       {

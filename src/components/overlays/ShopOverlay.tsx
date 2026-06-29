@@ -24,6 +24,7 @@ import {
   Medal,
   Gauge,
   PlayCircle,
+  CaretUp,
 } from "@phosphor-icons/react/dist/ssr";
 import { dismissFlashSale, expireFlashSale } from "@/engine/flashSaleEngine";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ import { claimFlashSale, buySugarItem, showTokenFeedback } from "@/engine/tokenE
 import { getStoreById } from "@/data/mallData";
 import { TIER_PERKS, TIER_ORDER } from "@/data/tierData";
 import { setTimelineTargetStore } from "@/components/social/TimelineFeed";
+import { useSocialStore } from "@/stores/socialStore";
 import type { FlashSale, SugarItem, Tier } from "@/types";
 
 const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
@@ -402,8 +404,40 @@ function TabButton({
    ========================================================================== */
 
 function ShopDealsTab({ sales, tokens }: { sales: FlashSale[]; tokens: number }) {
+  const alerts = useSocialStore((s) => s.proximityAlerts);
+  const dismissAlert = useSocialStore((s) => s.dismissProximityAlert);
+  const latestAlert = alerts[alerts.length - 1];
+
   return (
     <div className="space-y-4 pt-4">
+      {/* Inline proximity alert strip — keeps rank pressure visible at the
+          moment of purchase decision (dark pattern: social comparison) */}
+      {latestAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.35, ease: PREMIUM_EASE }}
+          className="flex items-center gap-2.5 rounded-xl bg-[#141414] px-3.5 py-2.5 ring-1 ring-[#ffffff]/10"
+        >
+          <motion.span
+            animate={{ scale: [1, 1.25, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: PREMIUM_EASE }}
+          >
+            <CaretUp size={13} weight="bold" className="text-[#e6b800] shrink-0" />
+          </motion.span>
+          <span className="flex-1 truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
+            {latestAlert.message}
+          </span>
+          <button
+            onClick={() => dismissAlert(latestAlert.id)}
+            aria-label="Dismiss rank alert"
+            className="text-[#8a8a8a] transition-colors hover:text-white"
+          >
+            <X size={12} weight="bold" />
+          </button>
+        </motion.div>
+      )}
       <LivePurchaseTicker />
       {sales.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -527,14 +561,19 @@ function ShopDealCard({ sale, tokens }: { sale: FlashSale; tokens: number }) {
 
   const onGrab = useCallback(() => {
     const cost = sale.tokenCost;
+    const storeName = store?.name;
     const ok = claimFlashSale(sale.id, { showFeedback: false });
     if (ok) {
       setClaimed(true);
+      // Shop overlay stays open — toast renders from the parallel queue at
+      // z-50 on top of the sheet, so context is preserved.
       setTimeout(() => {
-        showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
+        showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`, {
+          label: storeName,
+        });
       }, 1000);
     }
-  }, [sale]);
+  }, [sale, store]);
 
   // Navigate to the trending feed, scrolled to this store's product video
   const onWatch = useCallback(() => {

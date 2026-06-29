@@ -13,6 +13,7 @@ vi.mock("framer-motion", () => {
       whileInView,
       variants,
       layout,
+      layoutId,
       ...rest
     } = props;
     void initial;
@@ -23,6 +24,7 @@ vi.mock("framer-motion", () => {
     void whileInView;
     void variants;
     void layout;
+    void layoutId;
     return rest;
   };
   const mk = (tag: string) => {
@@ -66,6 +68,7 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     "MapPin",
     "Crown",
     "CaretUp",
+    "CaretDown",
   ];
   const map: Record<string, ReturnType<typeof make>> = {};
   for (const i of icons) map[i] = make(i);
@@ -216,7 +219,7 @@ describe("Leaderboard overlay (VAL-LEADER-001..025)", () => {
     expect(text.textContent).toContain("2 tokens");
   });
 
-  it("proximity alert banner is hidden when an overlay is open", () => {
+  it("proximity alert banner is hidden when a non-shopping overlay is open", () => {
     act(() => {
       useSocialStore.getState().triggerProximityAlert(
         "Alex",
@@ -225,9 +228,25 @@ describe("Leaderboard overlay (VAL-LEADER-001..025)", () => {
         "tokens",
         "2 tokens",
       );
-      useUIStore.getState().showOverlay("flash-sale");
+      // tier-upgrade is not a shopping overlay, so the banner should be hidden.
+      useUIStore.getState().showOverlay("tier-upgrade");
     });
     render(<ProximityAlertBanner />);
     expect(screen.queryByTestId("proximity-alert-banner")).not.toBeInTheDocument();
+  });
+
+  it("proximity alert banner stays visible when the shop overlay is open", () => {
+    act(() => {
+      useSocialStore.getState().triggerProximityAlert(
+        "Alex",
+        2,
+        5,
+        "tokens",
+        "2 tokens",
+      );
+      useUIStore.getState().showOverlay("shop");
+    });
+    render(<ProximityAlertBanner />);
+    expect(screen.queryByTestId("proximity-alert-banner")).toBeInTheDocument();
   });
 });

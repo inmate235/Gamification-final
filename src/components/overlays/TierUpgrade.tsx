@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkle,
   ArrowRight,
   Crown,
   Coins,
@@ -11,14 +10,12 @@ import {
   Warning,
   Fire,
   CheckCircle,
-  Tag,
-  Eye,
   Lightning,
   TrendDown,
 } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
 import { usePlayerStore } from "@/stores/playerStore";
-import { TIER_VISUALS, TIER_PERKS } from "@/data/tierData";
+import { TIER_VISUALS } from "@/data/tierData";
 import { cn } from "@/lib/utils";
 import type { Tier, TierUpgradeData } from "@/types";
 
@@ -113,7 +110,6 @@ export function TierUpgrade() {
   const isOpen = activeOverlay === "tier-upgrade" && overlayData !== null;
   const newTier: Tier = overlayData?.newTier ?? tier;
   const visual = TIER_VISUALS[newTier];
-  const perks = TIER_PERKS[newTier];
 
   /* --- Funding type selector (dark pattern: defaults to annual) --- */
   const [selectedFund, setSelectedFund] = useState<TierFundOption["id"]>("annual");
@@ -180,13 +176,12 @@ export function TierUpgrade() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.98 }}
             transition={{ duration: 0.6, ease: PREMIUM_EASE }}
-            className="relative w-full max-w-md max-h-[92vh] flex flex-col sm:rounded-[2.5rem] rounded-t-[2.5rem] overflow-hidden bg-white ring-2 ring-[#141414]/8 shadow-[0_24px_64px_rgba(20,20,20,0.22)]"
+            className="relative w-full max-w-md sm:rounded-[2.5rem] rounded-t-[2.5rem] overflow-hidden bg-white ring-2 ring-[#141414]/8 shadow-[0_24px_64px_rgba(20,20,20,0.22)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="overflow-y-auto flex-1">
-              {/* ── Tier-colored banner with sticker heading ── */}
+              {/* ── Tier-colored banner (illustration carries all heading text) ── */}
               <div
-                className="relative px-6 pt-7 pb-8 overflow-hidden"
+                className="relative px-3 pt-3 pb-2 overflow-hidden"
                 style={{
                   background: `linear-gradient(135deg, ${visual.color} 0%, ${visual.color}cc 60%, ${visual.color}99 100%)`,
                 }}
@@ -194,25 +189,12 @@ export function TierUpgrade() {
                 {/* Decorative scribble dots */}
                 <DecorativeDots />
 
-                {/* Eyebrow — staggered reveal #1 */}
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.1 }}
-                  className="relative z-10 flex items-center justify-center gap-2 mb-5"
-                >
-                  <span className="inline-flex items-center gap-2 rounded-full bg-white/25 px-3.5 py-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-white backdrop-blur-sm ring-1 ring-white/30">
-                    <Sparkle size={12} weight="fill" className="text-white" />
-                    Membership Upgrade
-                  </span>
-                </motion.div>
-
-                {/* Tier hero image — scales in with spring (staggered #2) */}
+                {/* Tier hero image — scales in with spring */}
                 <motion.div
                   initial={{ scale: 0, opacity: 0, rotate: -12 }}
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   transition={{ type: "spring", stiffness: 200, damping: 14, delay: 0.2 }}
-                  className="relative z-10 mx-auto mb-5 flex items-center justify-center"
+                  className="relative z-10 mx-auto w-full overflow-hidden rounded-[2rem]"
                   data-testid="tier-upgrade-badge"
                 >
                   {/* Pulsing ring behind image */}
@@ -225,73 +207,20 @@ export function TierUpgrade() {
                     src={visual.imageUrl}
                     alt={`${visual.label} tier badge`}
                     loading="eager"
-                    className="relative h-44 w-44 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
+                    className="relative block h-auto w-full drop-shadow-[0_8px_24px_rgba(0,0,0,0.18)]"
                   />
                 </motion.div>
-
-                {/* "You are now {Tier}!" — sticker heading (staggered #3) */}
-                <motion.h2
-                  initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.6, ease: PREMIUM_EASE, delay: 0.35 }}
-                  className="sticker-heading relative z-10 text-center text-[2.2rem] leading-tight"
-                  data-testid="tier-upgrade-title"
-                >
-                  You are now {visual.label}!
-                </motion.h2>
-
-                {/* Tagline (staggered #4) */}
-                <motion.p
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.5 }}
-                  className="relative z-10 mt-2 text-center text-sm font-medium text-white/90"
-                >
-                  {visual.tagline}
-                </motion.p>
               </div>
 
               {/* ── White content section ── */}
-              <div className="px-6 py-6 space-y-5">
-                {/* Perks summary — staggered reveal #5 */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.6 }}
-                  data-testid="tier-upgrade-perks"
-                >
-                  <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#8a8a8a]">
-                    Your new perks
-                  </p>
-                  <div className="space-y-2.5">
-                    <PerkRow
-                      icon={<Tag size={14} weight="fill" />}
-                      label="Flash sales"
-                      value={perks.flashSaleFrequency}
-                      color={visual.color}
-                    />
-                    <PerkRow
-                      icon={<Coins size={14} weight="fill" />}
-                      label="Token rate"
-                      value={perks.tokenMultiplier}
-                      color={visual.color}
-                    />
-                    <PerkRow
-                      icon={<Eye size={14} weight="fill" />}
-                      label="Map access"
-                      value={perks.mapVisibility}
-                      color={visual.color}
-                    />
-                  </div>
-                </motion.div>
-
+              <div className="px-6 py-5 space-y-3.5">
                 {/* ── Dark pattern: urgency countdown ── */}
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.72 }}
                   className={cn(
-                    "flex items-center gap-3 rounded-2xl px-4 py-3 ring-1 transition-all",
+                    "flex items-center gap-3 rounded-2xl px-4 py-2.5 ring-1 transition-all",
                     isUrgent
                       ? "bg-[#ef4444]/8 ring-[#ef4444]/25"
                       : "bg-[#ffe600]/15 ring-[#ffe600]/30"
@@ -335,7 +264,7 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.82 }}
-                  className="flex items-center gap-3 rounded-2xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/5"
+                  className="flex items-center gap-3 rounded-2xl bg-[#f4f4f5] px-4 py-2.5 ring-1 ring-[#141414]/5"
                 >
                   <motion.div
                     animate={{ scale: [1, 1.12, 1] }}
@@ -367,7 +296,7 @@ export function TierUpgrade() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, ease: PREMIUM_EASE, delay: 0.9 }}
-                  className="flex items-center gap-3 rounded-2xl bg-[#ef4444]/6 px-4 py-3 ring-1 ring-[#ef4444]/15"
+                  className="flex items-center gap-3 rounded-2xl bg-[#ef4444]/6 px-4 py-2.5 ring-1 ring-[#ef4444]/15"
                 >
                   <motion.div
                     animate={{ y: [0, -3, 0] }}
@@ -457,7 +386,6 @@ export function TierUpgrade() {
                   </p>
                 )}
               </div>
-            </div>
           </motion.div>
         </motion.div>
       )}
@@ -468,35 +396,6 @@ export function TierUpgrade() {
 /* ============================================================================
    Sub-components
    ========================================================================== */
-
-function PerkRow({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  color: string;
-}) {
-  return (
-    <div
-      className="flex items-center justify-between rounded-xl bg-[#f4f4f5] px-4 py-3 ring-1 ring-[#141414]/5 transition-transform hover:scale-[1.01]"
-      style={{ borderLeft: `4px solid ${color}` }}
-    >
-      <div className="flex items-center gap-2.5">
-        <span style={{ color }}>{icon}</span>
-        <span className="text-[11px] uppercase tracking-[0.12em] font-bold text-[#8a8a8a]">
-          {label}
-        </span>
-      </div>
-      <span className="text-[13px] font-bold tracking-tight" style={{ color }}>
-        {value}
-      </span>
-    </div>
-  );
-}
 
 function FundOptionCard({
   option,

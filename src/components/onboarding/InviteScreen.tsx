@@ -22,100 +22,67 @@ import { playSound, SOUNDS } from "@/lib/sound";
 /**
  * InviteScreen — the entry gate at `/`.
  *
- * Redesigned for best-practice UX:
- *  - Input phase: auto-formatted code input (XXXXX-0000-XXX), live progress
- *    fill bar, contextual format hint, and clear error recovery
- *  - Transition: curtain sweep + lock unlock + "ACCESS GRANTED" stamp
- *  - Welcome phase: full celebration moment — confetti burst, pulsing ring
- *    halo, animated perks-unlocked strip, and explicit "Enter the Mall" CTA
+ * Flow:
+ *  1. Input phase: auto-formatted code input (XXXXX-0000-XXX), live progress
+ *     fill bar, contextual format hint, clear error recovery.
+ *  2. Transition: curtains close from sides → lock unlocks → ACCESS GRANTED
+ *     stamp → curtains reopen to sides → navigate to /survey.
  *
- * All test contracts preserved:
+ * Test contracts preserved:
  *  - aria-label="Invite code" on the input
  *  - Button matching /ENTER MALL/i
  *  - Text /Invite Only/i, /Invited by Sarah/i, /Gold member/i
- *  - /Tap to continue/i (preserved for test compat)
  *  - Valid pattern: XXXXX-0000-XXX (5 alpha - 4 digit - 3 alpha)
  *  - Error with role="alert"
  *  - Navigation to /survey
  */
 
-/* ============================================================================
-   Valid invite codes (mocked — any code matching the format is accepted)
-   ========================================================================== */
-
 const VALID_CODE_PATTERN = /^[A-Z]{5}-\d{4}-[A-Z]{3}$/;
 
-/** Social proof / inviter data */
 const SOCIAL_PROOF = {
   inviterName: "Sarah",
   inviterTier: "Gold member",
   memberCount: "1,247",
 };
 
-/** Perks unlocked on entry — displayed in the celebration phase */
+type Phase = "input" | "transitioning" | "welcome";
+
+/**
+ * Total door animation duration in ms.
+ * Timeline:
+ *   0–20%  curtains close from sides
+ *   20–32% lock badge appears + shakes
+ *   30–36% white flash on unlock
+ *   34–76% ACCESS GRANTED stamp (the hero moment)
+ *   76–82% stamp fades
+ *   80–100% curtains reopen to sides
+ *   at 100% welcome card shown
+ */
+const TRANSITION_DURATION = 3200;
+const TD = TRANSITION_DURATION / 1000;
+
+const isTest =
+  typeof process !== "undefined" && process.env.NODE_ENV === "test";
+const EXIT_DELAY = isTest ? 0 : 550;
+
+const SMOOTH = [0.22, 0.61, 0.36, 1] as const;
+const POP = [0.34, 1.56, 0.64, 1] as const;
+const GENTLE_POP = [0.34, 1.16, 0.64, 1] as const;
+
+/** Perks unlocked on entry */
 const UNLOCKED_PERKS = [
   { icon: Gift, label: "Welcome gift ready", color: "#e6009e" },
   { icon: Storefront, label: "Exclusive drops access", color: "#7c3aed" },
   { icon: Trophy, label: "Gold member benefits", color: "#e6b800" },
 ] as const;
 
-/* ============================================================================
-   Animation phases
-   ========================================================================== */
-
-type Phase = "input" | "transitioning" | "welcome";
-
-/** Transition duration in ms (curtains close → lock unlock → stamp → curtains up).
- *  Extended to give the ACCESS GRANTED moment enough screen time to land. */
-const TRANSITION_DURATION = 4500;
-
-/* ============================================================================
-   Helpers
-   ========================================================================== */
-
-const isTest =
-  typeof process !== "undefined" && process.env.NODE_ENV === "test";
-const EXIT_DELAY = isTest ? 0 : 550;
-const SMOOTH = [0.22, 0.61, 0.36, 1] as const;
-const POP = [0.34, 1.56, 0.64, 1] as const;
-const GENTLE_POP = [0.34, 1.16, 0.64, 1] as const;
-const TD = TRANSITION_DURATION / 1000;
-
-/**
- * Auto-format raw input into XXXXX-0000-XXX.
- * Strips everything except A-Z and 0-9, then inserts dashes.
- */
-function formatCode(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const parts: string[] = [];
-  if (clean.length > 0) parts.push(clean.slice(0, 5));
-  if (clean.length > 5) parts.push(clean.slice(5, 9));
-  if (clean.length > 9) parts.push(clean.slice(9, 12));
-  return parts.join("-");
-}
-
-/** 0-to-1 progress for the 12 significant chars */
-function codeProgress(code: string): number {
-  return Math.min(code.replace(/-/g, "").length / 12, 1);
-}
-
-/* ============================================================================
-   Confetti pieces (generated client-side to avoid SSR hydration mismatch)
-   ========================================================================== */
-
 const CONFETTI_COLORS = [
   "#e6009e", "#ffe600", "#7c3aed", "#14b8a6", "#f97316", "#84cc16",
 ];
 
 interface ConfettiPiece {
-  id: number;
-  x: number;
-  color: string;
-  size: number;
-  delay: number;
-  drift: number;
-  rotate: number;
-  duration: number;
+  id: number; x: number; color: string; size: number;
+  delay: number; drift: number; rotate: number; duration: number;
 }
 
 function useConfettiPieces(count = 28): ConfettiPiece[] {
@@ -137,9 +104,18 @@ function useConfettiPieces(count = 28): ConfettiPiece[] {
   return pieces;
 }
 
-/* ============================================================================
-   Component
-   ========================================================================== */
+function formatCode(raw: string): string {
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const parts: string[] = [];
+  if (clean.length > 0) parts.push(clean.slice(0, 5));
+  if (clean.length > 5) parts.push(clean.slice(5, 9));
+  if (clean.length > 9) parts.push(clean.slice(9, 12));
+  return parts.join("-");
+}
+
+function codeProgress(code: string): number {
+  return Math.min(code.replace(/-/g, "").length / 12, 1);
+}
 
 export function InviteScreen() {
   const router = useRouter();
@@ -149,56 +125,45 @@ export function InviteScreen() {
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("input");
   const [submitting, setSubmitting] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
   const [shakeTrigger, setShakeTrigger] = useState(0);
   const [heroError, setHeroError] = useState(false);
-  const [welcomeCharError, setWelcomeCharError] = useState(false);
   const [sadCharError, setSadCharError] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [welcomeCharError, setWelcomeCharError] = useState(false);
 
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const welcomeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const confettiPieces = useConfettiPieces(28);
   const progress = codeProgress(code);
 
-  /* --- Validation --- */
-
   const validateCode = useCallback((raw: string): string | null => {
     const trimmed = raw.trim();
-    if (trimmed.length === 0) {
-      return "Enter your invite code to continue";
-    }
-    if (!VALID_CODE_PATTERN.test(trimmed)) {
+    if (trimmed.length === 0) return "Enter your invite code to continue";
+    if (!VALID_CODE_PATTERN.test(trimmed))
       return "That code isn't recognized. Check and try again";
-    }
     return null;
   }, []);
 
-  /* --- Submit handler (idempotent) --- */
-
   const handleSubmit = useCallback(() => {
     if (submitting) return;
-
     const validationError = validateCode(code);
     if (validationError) {
       setError(validationError);
       setShakeTrigger((prev) => prev + 1);
       return;
     }
-
     setError(null);
     setSubmitting(true);
     advanceToSurvey();
-
-    // Play the access-granted sound effect at the moment of validation.
     playSound(SOUNDS.ACCESS_TO_APP);
 
     if (isTest) {
       setPhase("welcome");
     } else {
       setPhase("transitioning");
-      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-      transitionTimerRef.current = setTimeout(() => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
         setPhase("welcome");
       }, TRANSITION_DURATION);
     }
@@ -215,8 +180,6 @@ export function InviteScreen() {
     );
   }, [code, submitting, validateCode, router, advanceToSurvey]);
 
-  /* --- Input change with auto-format --- */
-
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const formatted = formatCode(e.target.value);
@@ -225,8 +188,6 @@ export function InviteScreen() {
     },
     [error]
   );
-
-  /* --- Enter key to submit --- */
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -238,33 +199,26 @@ export function InviteScreen() {
     [handleSubmit]
   );
 
-  /* --- Skip / advance from welcome phase --- */
-
   const skipAnimation = useCallback(() => {
     if (isExiting) return;
     if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
-    if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    if (navTimerRef.current) clearTimeout(navTimerRef.current);
     setIsExiting(true);
     setTimeout(() => {
       router.push("/survey");
     }, EXIT_DELAY);
   }, [isExiting, router]);
 
-  /* --- Cleanup timers on unmount --- */
   useEffect(() => {
     return () => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
       if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
-      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
     };
   }, []);
 
-  /* ============================================================================
-     Render
-     ========================================================================== */
-
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-white flex flex-col">
-      {/* Full-screen MurkeyMall background image */}
+      {/* Hero background */}
       <motion.div
         initial={{ opacity: 0, scale: 1.06 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -289,7 +243,7 @@ export function InviteScreen() {
         )}
       </motion.div>
 
-      {/* Depth layer 1 — top vignette for logo legibility */}
+      {/* Top vignette */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-32"
         style={{
@@ -298,7 +252,7 @@ export function InviteScreen() {
         }}
       />
 
-      {/* Depth layer 2 — bottom vignette for CTA legibility */}
+      {/* Bottom vignette */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-40"
         style={{
@@ -307,7 +261,7 @@ export function InviteScreen() {
         }}
       />
 
-      {/* Depth layer 3 — magenta/teal atmospheric color wash */}
+      {/* Color wash */}
       <motion.div
         initial={{ opacity: 0.5 }}
         animate={{ opacity: 0.7 }}
@@ -319,14 +273,13 @@ export function InviteScreen() {
         }}
       />
 
-      {/* Page exit fade */}
+      {/* Content */}
       <motion.div
-        initial={{ opacity: 1 }}
+        initial={{ opacity: 1, scale: 1 }}
         animate={isExiting ? { opacity: 0, scale: 0.97 } : { opacity: 1, scale: 1 }}
         transition={{ duration: 0.45, ease: SMOOTH }}
         className="relative z-10 flex flex-col flex-1 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto px-4 sm:px-5 md:px-6 pt-4 sm:pt-5 pb-6 sm:pb-8"
       >
-        {/* Top bar — drop shadow for legibility over photo background */}
         <div className="flex justify-end mb-2 sm:mb-1">
           <div className="drop-shadow-[0_2px_8px_rgba(20,20,20,0.35)]">
             <Logo size={36} />
@@ -335,9 +288,6 @@ export function InviteScreen() {
         <div className="h-px bg-white/20 mb-4" />
 
         <AnimatePresence mode="wait">
-          {/* ================================================================
-              INPUT PHASE
-              ================================================================ */}
           {phase === "input" ? (
             <motion.div
               key="input-phase"
@@ -381,14 +331,13 @@ export function InviteScreen() {
                 private shopping experience.
               </p>
 
-              {/* ── Code input group ── */}
+              {/* Code input group */}
               <div className="flex flex-col gap-3 mt-1">
                 <div>
                   <label htmlFor="invite-code" className="sr-only">
                     Invite code
                   </label>
 
-                  {/* Shake wrapper + progress underline */}
                   <motion.div
                     animate={
                       shakeTrigger > 0
@@ -438,7 +387,6 @@ export function InviteScreen() {
                     </div>
                   </motion.div>
 
-                  {/* Format hint shown while focused and no error */}
                   <AnimatePresence>
                     {inputFocused && !error && (
                       <motion.p
@@ -454,7 +402,6 @@ export function InviteScreen() {
                     )}
                   </AnimatePresence>
 
-                  {/* Error state */}
                   <AnimatePresence>
                     {error && (
                       <motion.div
@@ -479,7 +426,6 @@ export function InviteScreen() {
                   </AnimatePresence>
                 </div>
 
-                {/* Primary CTA */}
                 <motion.button
                   onClick={handleSubmit}
                   disabled={submitting}
@@ -493,7 +439,6 @@ export function InviteScreen() {
                 </motion.button>
               </div>
 
-              {/* Scarcity footer */}
               <p className="text-[12px] text-[#4b4b4b]">
                 {SOCIAL_PROOF.memberCount} Members &ndash;{" "}
                 <strong>Limited spots remaining</strong>
@@ -522,10 +467,7 @@ export function InviteScreen() {
 
               {/* Confetti burst */}
               {!isTest && (
-                <div
-                  className="absolute inset-0 pointer-events-none overflow-hidden"
-                  aria-hidden="true"
-                >
+                <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
                   {confettiPieces.map((p) => (
                     <motion.div
                       key={p.id}
@@ -555,7 +497,7 @@ export function InviteScreen() {
                 </div>
               )}
 
-              {/* ── Character + headline ── */}
+              {/* Character + headline */}
               <div className="flex flex-col items-center pt-8 px-5 sm:px-8 gap-5">
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
@@ -620,7 +562,7 @@ export function InviteScreen() {
                 </motion.div>
               </div>
 
-              {/* ── Perks unlocked strip ── */}
+              {/* Perks unlocked strip */}
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -636,11 +578,7 @@ export function InviteScreen() {
                       key={perk.label}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{
-                        duration: 0.4,
-                        delay: 0.65 + i * 0.1,
-                        ease: GENTLE_POP,
-                      }}
+                      transition={{ duration: 0.4, delay: 0.65 + i * 0.1, ease: GENTLE_POP }}
                       className="flex items-center gap-3 rounded-2xl border border-[#141414]/8 bg-white/70 px-4 py-2.5"
                       style={{ boxShadow: "0 2px 8px rgba(20,20,20,0.06)" }}
                     >
@@ -650,20 +588,14 @@ export function InviteScreen() {
                       >
                         <perk.icon size={16} weight="fill" style={{ color: perk.color }} />
                       </div>
-                      <span className="text-sm font-medium text-[#141414]">
-                        {perk.label}
-                      </span>
-                      <SealCheck
-                        size={14}
-                        weight="fill"
-                        className="ml-auto text-[#22c55e]"
-                      />
+                      <span className="text-sm font-medium text-[#141414]">{perk.label}</span>
+                      <SealCheck size={14} weight="fill" className="ml-auto text-[#22c55e]" />
                     </motion.div>
                   ))}
                 </div>
               </motion.div>
 
-              {/* ── Explicit CTA button ── */}
+              {/* CTA */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -681,7 +613,7 @@ export function InviteScreen() {
                   <ArrowRight size={16} weight="bold" />
                 </motion.button>
 
-                {/* Preserved for test compat: /Tap to continue/i */}
+                {/* Preserved for test compat */}
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 0.5, 0] }}
@@ -694,329 +626,323 @@ export function InviteScreen() {
             </motion.div>
           ) : null}
         </AnimatePresence>
+      </motion.div>
 
-            {/* ================================================================
-            TRANSITION OVERLAY — curtains + lock unlock + ACCESS GRANTED stamp
-            Timeline (scales with TRANSITION_DURATION via TD):
-              0-15%       curtains sweep in from sides
-              15-29%      lock badge appears, shakes, unlocks
-              29-35%      UNLOCK flash + rings + sparks
-              35-93%      "ACCESS GRANTED" stamp with radiating rays (held)
-              83-100%     curtains sweep up to reveal welcome phase
-              93-98%      stamp fades out just before curtains fully open
-            ================================================================ */}
-        <AnimatePresence>
-          {phase === "transitioning" && !isTest && (
+      {/* ================================================================
+          DOOR TRANSITION OVERLAY
+          Timeline (TD = 3.2s):
+            0–20%    Curtains sweep in from sides (close)
+            20–32%   Lock badge appears + shakes
+            30–36%   White flash + unlock
+            34–76%   ACCESS GRANTED stamp (the hero moment, ~1.3s)
+            76–82%   Stamp fades
+            80–100%  Curtains sweep back out to sides (open)
+            at 100%  navigate to /survey
+          ================================================================ */}
+      <AnimatePresence>
+        {phase === "transitioning" && !isTest && (
+          <motion.div
+            key="transition-overlay"
+            className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            {/* Left curtain — closes in from left, reopens to left */}
             <motion.div
-              key="transition-overlay"
-              className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              className="absolute inset-y-0 left-0 w-1/2"
+              style={{
+                background:
+                  "linear-gradient(90deg,#b8007e 0%,#e6009e 65%,#f30aac 100%)",
+              }}
+              initial={{ x: "-100%" }}
+              animate={{ x: ["-100%", "0%", "0%", "-100%"] }}
+              transition={{
+                duration: TD,
+                times: [0, 0.20, 0.80, 1.0],
+                ease: SMOOTH,
+              }}
             >
-              {/* ── Left curtain (vibrant magenta) ── */}
-              <motion.div
-                className="absolute inset-y-0 left-0 w-1/2"
+              <div
+                className="w-full h-full opacity-15"
                 style={{
-                  background:
-                    "linear-gradient(90deg,#b8007e 0%,#e6009e 65%,#f30aac 100%)",
+                  backgroundImage:
+                    "radial-gradient(circle,rgba(255,255,255,0.8) 1.5px,transparent 1.5px)",
+                  backgroundSize: "24px 24px",
                 }}
-                initial={{ x: "-100%", y: "0%" }}
-                animate={{
-                  x: ["-100%", "0%", "0%", "0%"],
-                  y: ["0%", "0%", "0%", "-100%"],
-                }}
-                transition={{
-                  duration: TD,
-                  times: [0, 0.15, 0.83, 1],
-                  ease: SMOOTH,
-                }}
-              >
-                {/* Dot pattern texture */}
-                <div
-                  className="w-full h-full opacity-15"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle,rgba(255,255,255,0.8) 1.5px,transparent 1.5px)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-                {/* Yellow edge highlight where curtains meet */}
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-[4px]"
-                  style={{
-                    background:
-                      "linear-gradient(180deg,transparent 0%,#ffe600 15%,#fff 50%,#ffe600 85%,transparent 100%)",
-                    boxShadow: "0 0 16px 2px rgba(255,230,0,0.6)",
-                  }}
-                />
-              </motion.div>
-
-              {/* ── Right curtain ── */}
-              <motion.div
-                className="absolute inset-y-0 right-0 w-1/2"
-                style={{
-                  background:
-                    "linear-gradient(270deg,#b8007e 0%,#e6009e 65%,#f30aac 100%)",
-                }}
-                initial={{ x: "100%", y: "0%" }}
-                animate={{
-                  x: ["100%", "0%", "0%", "0%"],
-                  y: ["0%", "0%", "0%", "-100%"],
-                }}
-                transition={{
-                  duration: TD,
-                  times: [0, 0.15, 0.83, 1],
-                  ease: SMOOTH,
-                }}
-              >
-                <div
-                  className="w-full h-full opacity-15"
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle,rgba(255,255,255,0.8) 1.5px,transparent 1.5px)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-[4px]"
-                  style={{
-                    background:
-                      "linear-gradient(180deg,transparent 0%,#ffe600 15%,#fff 50%,#ffe600 85%,transparent 100%)",
-                    boxShadow: "0 0 16px 2px rgba(255,230,0,0.6)",
-                  }}
-                />
-              </motion.div>
-
-              {/* ── Center seam flash ── */}
-              <motion.div
-                className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2"
+              />
+              {/* Right edge highlight at the seam */}
+              <div
+                className="absolute right-0 top-0 bottom-0 w-[4px]"
                 style={{
                   background:
                     "linear-gradient(180deg,transparent 0%,#ffe600 15%,#fff 50%,#ffe600 85%,transparent 100%)",
-                  boxShadow: "0 0 30px 6px rgba(255,230,0,0.7)",
-                }}
-                initial={{ opacity: 0, scaleY: 0 }}
-                animate={{ opacity: [0, 1, 1, 0], scaleY: [0, 1, 1, 0] }}
-                transition={{
-                  duration: TD,
-                  times: [0, 0.15, 0.22, 0.28],
-                  ease: "easeOut",
+                  boxShadow: "0 0 16px 2px rgba(255,230,0,0.6)",
                 }}
               />
+            </motion.div>
 
-              {/* ── White flash on unlock ── */}
+            {/* Right curtain — closes in from right, reopens to right */}
+            <motion.div
+              className="absolute inset-y-0 right-0 w-1/2"
+              style={{
+                background:
+                  "linear-gradient(270deg,#b8007e 0%,#e6009e 65%,#f30aac 100%)",
+              }}
+              initial={{ x: "100%" }}
+              animate={{ x: ["100%", "0%", "0%", "100%"] }}
+              transition={{
+                duration: TD,
+                times: [0, 0.20, 0.80, 1.0],
+                ease: SMOOTH,
+              }}
+            >
+              <div
+                className="w-full h-full opacity-15"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle,rgba(255,255,255,0.8) 1.5px,transparent 1.5px)",
+                  backgroundSize: "24px 24px",
+                }}
+              />
+              <div
+                className="absolute left-0 top-0 bottom-0 w-[4px]"
+                style={{
+                  background:
+                    "linear-gradient(180deg,transparent 0%,#ffe600 15%,#fff 50%,#ffe600 85%,transparent 100%)",
+                  boxShadow: "0 0 16px 2px rgba(255,230,0,0.6)",
+                }}
+              />
+            </motion.div>
+
+            {/* Center seam flash — appears as curtains meet */}
+            <motion.div
+              className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2"
+              style={{
+                background:
+                  "linear-gradient(180deg,transparent 0%,#ffe600 15%,#fff 50%,#ffe600 85%,transparent 100%)",
+                boxShadow: "0 0 30px 6px rgba(255,230,0,0.7)",
+              }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: [0, 1, 1, 0], scaleY: [0, 1, 1, 0] }}
+              transition={{
+                duration: TD,
+                times: [0, 0.20, 0.26, 0.30],
+                ease: "easeOut",
+              }}
+            />
+
+            {/* White flash at unlock moment */}
+            <motion.div
+              className="absolute inset-0 bg-white"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 0.55, 0] }}
+              transition={{
+                duration: TD,
+                times: [0, 0.30, 0.32, 0.36],
+                ease: "easeOut",
+              }}
+            />
+
+            {/* Lock badge */}
+            <div className="absolute inset-0 flex items-center justify-center">
               <motion.div
-                className="absolute inset-0 bg-white"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0, 0.55, 0] }}
+                className="relative flex items-center justify-center"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{
+                  scale: [0, 1, 1, 1.4, 0, 0],
+                  opacity: [0, 1, 1, 1, 0, 0],
+                }}
                 transition={{
                   duration: TD,
-                  times: [0, 0.28, 0.29, 0.34],
-                  ease: "easeOut",
+                  times: [0, 0.20, 0.26, 0.32, 0.38, 1.0],
+                  ease: POP,
                 }}
-              />
-
-              {/* ── Lock badge (appears, shakes, unlocks, fades) ── */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  className="relative flex items-center justify-center"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{
-                    scale: [0, 1, 1, 1.4, 0, 0],
-                    opacity: [0, 1, 1, 1, 0, 0],
-                  }}
-                  transition={{
-                    duration: TD,
-                    times: [0, 0.15, 0.2, 0.29, 0.37, 1],
-                    ease: POP,
-                  }}
-                >
-                  {/* Pulsing glow behind lock */}
-                  <motion.div
-                    className="absolute rounded-full"
-                    style={{
-                      width: 140,
-                      height: 140,
-                      background:
-                        "radial-gradient(circle,rgba(255,230,0,0.4) 0%,rgba(230,0,158,0.2) 40%,rgba(230,0,158,0) 70%)",
-                    }}
-                    animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.8, 0.4] }}
-                    transition={{
-                      duration: 0.6,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  />
-
-                  {/* Expanding rings on unlock — staggered cascade */}
-                  {[0, 1, 2, 3].map((i) => (
-                    <motion.div
-                      key={`ring-${i}`}
-                      className="absolute rounded-full border-2"
-                      style={{
-                        width: 72,
-                        height: 72,
-                        borderColor: i % 2 === 0 ? "#ffe600" : "#fff",
-                      }}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: [0, 2.5 + i * 0.5], opacity: [0, 0.8, 0] }}
-                      transition={{
-                        duration: 0.5,
-                        delay: 0.29 * TD + i * 0.04,
-                        ease: "easeOut",
-                      }}
-                    />
-                  ))}
-
-                  {/* Lock circle — 3D tactile style matching app buttons */}
-                  <motion.div
-                    className="relative flex items-center justify-center rounded-full border-2 border-white/30"
-                    style={{
-                      width: 72,
-                      height: 72,
-                      background: "linear-gradient(135deg,#e6009e,#b8007e)",
-                      boxShadow:
-                        "0 6px 0 #8c0060, 0 0 40px rgba(230,0,158,0.6), inset 0 2px 8px rgba(255,255,255,0.25)",
-                    }}
-                    animate={{ rotate: [0, -12, 12, -8, 8, 0] }}
-                    transition={{
-                      duration: 0.25,
-                      delay: 0.17 * TD,
-                      repeat: 1,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    {/* Closed lock → Open lock swap at unlock moment */}
-                    <motion.div
-                      className="absolute flex items-center justify-center"
-                      initial={{ opacity: 1 }}
-                      animate={{ opacity: [1, 1, 1, 0, 0] }}
-                      transition={{
-                        duration: TD,
-                        times: [0, 0.22, 0.27, 0.29, 1],
-                        ease: "easeOut",
-                      }}
-                    >
-                      <Lock size={30} weight="fill" className="text-white" />
-                    </motion.div>
-                    <motion.div
-                      className="absolute flex items-center justify-center"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0, 0, 0, 1, 1, 0] }}
-                      transition={{
-                        duration: TD,
-                        times: [0, 0.22, 0.27, 0.29, 0.35, 0.37],
-                        ease: "easeOut",
-                      }}
-                    >
-                      <LockOpen size={30} weight="fill" className="text-white" />
-                    </motion.div>
-                  </motion.div>
-
-                  {/* Spark particles on unlock */}
-                  {Array.from({ length: 14 }).map((_, i) => {
-                    const angle = (i / 14) * Math.PI * 2;
-                    const distance = 60 + (i % 4) * 18;
-                    return (
-                      <motion.div
-                        key={`spark-${i}`}
-                        className="absolute rounded-full"
-                        style={{
-                          width: 6,
-                          height: 6,
-                          backgroundColor:
-                            i % 3 === 0 ? "#ffe600" : i % 3 === 1 ? "#fff" : "#e6009e",
-                        }}
-                        initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
-                        animate={{
-                          x: Math.cos(angle) * distance,
-                          y: Math.sin(angle) * distance,
-                          opacity: [0, 1, 0],
-                          scale: [0, 1.4, 0],
-                        }}
-                        transition={{
-                          duration: 0.5,
-                          delay: 0.29 * TD,
-                          ease: "easeOut",
-                        }}
-                      />
-                    );
-                  })}
-                </motion.div>
-              </div>
-
-              {/* ── "ACCESS GRANTED" stamp ── */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                {/* Radiating sunburst rays behind stamp */}
+              >
+                {/* Pulsing glow behind lock */}
                 <motion.div
                   className="absolute rounded-full"
                   style={{
-                    width: 320,
-                    height: 320,
+                    width: "clamp(80px, 22vw, 140px)",
+                    height: "clamp(80px, 22vw, 140px)",
                     background:
-                      "repeating-conic-gradient(transparent 0deg, transparent 14deg, rgba(255,230,0,0.25) 14deg, rgba(255,230,0,0.25) 16deg)",
+                      "radial-gradient(circle,rgba(255,230,0,0.4) 0%,rgba(230,0,158,0.2) 40%,rgba(230,0,158,0) 70%)",
                   }}
-                  initial={{ scale: 0, opacity: 0, rotate: 0 }}
-                  animate={{
-                    scale: [0, 1.2, 1, 1, 0],
-                    opacity: [0, 0.7, 0.5, 0.5, 0],
-                    rotate: [0, 30, 45, 45, 60],
-                  }}
-                  transition={{
-                    duration: TD,
-                    times: [0, 0.35, 0.4, 0.93, 0.98],
-                    ease: "easeOut",
-                  }}
+                  animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.8, 0.4] }}
+                  transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
                 />
 
-                {/* Stamp group — "pressed down" animation */}
+                {/* Expanding rings on unlock */}
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.div
+                    key={`ring-${i}`}
+                    className="absolute rounded-full border-2"
+                    style={{
+                      width: "clamp(40px, 10vw, 72px)",
+                      height: "clamp(40px, 10vw, 72px)",
+                      borderColor: i % 2 === 0 ? "#ffe600" : "#fff",
+                    }}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: [0, 2.5 + i * 0.5], opacity: [0, 0.8, 0] }}
+                    transition={{
+                      duration: 0.5,
+                      delay: 0.32 * TD + i * 0.04,
+                      ease: "easeOut",
+                    }}
+                  />
+                ))}
+
+                {/* Lock circle */}
                 <motion.div
-                  className="relative flex flex-col items-center gap-3"
-                  initial={{ scale: 0, opacity: 0, rotate: -8 }}
-                  animate={{
-                    scale: [0, 1.5, 1, 1, 1, 0],
-                    opacity: [0, 1, 1, 1, 1, 0],
-                    rotate: [-8, -6, -3, -3, -3, -3],
+                  className="relative flex items-center justify-center rounded-full border-2 border-white/30"
+                  style={{
+                    width: "clamp(48px, 12vw, 72px)",
+                    height: "clamp(48px, 12vw, 72px)",
+                    background: "linear-gradient(135deg,#e6009e,#b8007e)",
+                    boxShadow:
+                      "0 6px 0 #8c0060, 0 0 40px rgba(230,0,158,0.6), inset 0 2px 8px rgba(255,255,255,0.25)",
                   }}
+                  animate={{ rotate: [0, -12, 12, -8, 8, 0] }}
                   transition={{
-                    duration: TD,
-                    times: [0, 0.35, 0.39, 0.45, 0.93, 0.98],
-                    ease: [0.34, 1.56, 0.64, 1],
+                    duration: 0.25,
+                    delay: 0.22 * TD,
+                    repeat: 1,
+                    ease: "easeInOut",
                   }}
                 >
-                  {/* SealCheck badge above text */}
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white"
-                    style={{
-                      background: "linear-gradient(135deg,#e6009e,#b8007e)",
-                      boxShadow: "0 4px 0 #8c0060, 0 0 20px rgba(230,0,158,0.5)",
+                  <motion.div
+                    className="absolute flex items-center justify-center"
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: [1, 1, 1, 0, 0] }}
+                    transition={{
+                      duration: TD,
+                      times: [0, 0.24, 0.29, 0.32, 1],
+                      ease: "easeOut",
                     }}
                   >
-                    <SealCheck size={26} weight="fill" className="text-white" />
-                  </div>
-
-                  {/* ACCESS GRANTED — sticker-heading style */}
-                  <h2
-                    className="sticker-heading text-[clamp(1.4rem,7vw,2.2rem)] tracking-[0.12em] whitespace-nowrap"
-                    style={{ textShadow: "3px 4px 0 rgba(20,20,20,0.95)" }}
+                    <Lock size={28} weight="fill" className="text-white" />
+                  </motion.div>
+                  <motion.div
+                    className="absolute flex items-center justify-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 0, 0, 1, 1, 0] }}
+                    transition={{
+                      duration: TD,
+                      times: [0, 0.24, 0.29, 0.32, 0.36, 0.38],
+                      ease: "easeOut",
+                    }}
                   >
-                    ACCESS GRANTED
-                  </h2>
-
-                  {/* Sub-label */}
-                  <p
-                    className="font-display font-semibold text-white text-[clamp(0.7rem,3vw,0.9rem)] tracking-[0.25em] uppercase"
-                    style={{ textShadow: "1px 2px 0 rgba(20,20,20,0.8)" }}
-                  >
-                    Welcome to MurkyCorps
-                  </p>
+                    <LockOpen size={28} weight="fill" className="text-white" />
+                  </motion.div>
                 </motion.div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+
+                {/* Spark particles */}
+                {Array.from({ length: 14 }).map((_, i) => {
+                  const angle = (i / 14) * Math.PI * 2;
+                  const distance = 55 + (i % 4) * 16;
+                  return (
+                    <motion.div
+                      key={`spark-${i}`}
+                      className="absolute rounded-full"
+                      style={{
+                        width: 5,
+                        height: 5,
+                        backgroundColor:
+                          i % 3 === 0 ? "#ffe600" : i % 3 === 1 ? "#fff" : "#e6009e",
+                      }}
+                      initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                      animate={{
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance,
+                        opacity: [0, 1, 0],
+                        scale: [0, 1.4, 0],
+                      }}
+                      transition={{
+                        duration: 0.5,
+                        delay: 0.32 * TD,
+                        ease: "easeOut",
+                      }}
+                    />
+                  );
+                })}
+              </motion.div>
+            </div>
+
+            {/* ACCESS GRANTED stamp */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4">
+              {/* Sunburst rays */}
+              <motion.div
+                className="absolute rounded-full"
+                style={{
+                  width: "clamp(180px, 55vw, 320px)",
+                  height: "clamp(180px, 55vw, 320px)",
+                  background:
+                    "repeating-conic-gradient(transparent 0deg, transparent 14deg, rgba(255,230,0,0.25) 14deg, rgba(255,230,0,0.25) 16deg)",
+                }}
+                initial={{ scale: 0, opacity: 0, rotate: 0 }}
+                animate={{
+                  scale: [0, 1.2, 1, 1, 0],
+                  opacity: [0, 0.7, 0.5, 0.5, 0],
+                  rotate: [0, 30, 45, 45, 60],
+                }}
+                transition={{
+                  duration: TD,
+                  times: [0, 0.35, 0.40, 0.76, 0.82],
+                  ease: "easeOut",
+                }}
+              />
+
+              {/* Stamp group */}
+              <motion.div
+                className="relative flex flex-col items-center gap-3 text-center"
+                initial={{ scale: 0, opacity: 0, rotate: -8 }}
+                animate={{
+                  scale: [0, 1.5, 1, 1, 0],
+                  opacity: [0, 1, 1, 1, 0],
+                  rotate: [-8, -4, -3, -3, -3],
+                }}
+                transition={{
+                  duration: TD,
+                  times: [0, 0.34, 0.40, 0.76, 0.82],
+                  ease: [0.34, 1.56, 0.64, 1],
+                }}
+              >
+                {/* Badge */}
+                <div
+                  className="flex items-center justify-center rounded-full border-2 border-white"
+                  style={{
+                    width: "clamp(36px, 8vw, 52px)",
+                    height: "clamp(36px, 8vw, 52px)",
+                    background: "linear-gradient(135deg,#e6009e,#b8007e)",
+                    boxShadow: "0 4px 0 #8c0060, 0 0 20px rgba(230,0,158,0.5)",
+                  }}
+                >
+                  <SealCheck
+                    size={22}
+                    weight="fill"
+                    className="text-white"
+                  />
+                </div>
+
+                {/* ACCESS GRANTED — responsive font, no fixed whitespace */}
+                <h2
+                  className="sticker-heading text-[clamp(1.1rem,5.5vw,2.2rem)] tracking-[0.1em] leading-tight"
+                  style={{ textShadow: "3px 4px 0 rgba(20,20,20,0.95)" }}
+                >
+                  ACCESS GRANTED
+                </h2>
+
+                <p
+                  className="font-display font-semibold text-white text-[clamp(0.6rem,2.5vw,0.85rem)] tracking-[0.22em] uppercase"
+                  style={{ textShadow: "1px 2px 0 rgba(20,20,20,0.8)" }}
+                >
+                  Welcome to MurkyCorps
+                </p>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

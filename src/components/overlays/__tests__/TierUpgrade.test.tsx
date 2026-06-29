@@ -57,7 +57,6 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     return Cmp;
   };
   return {
-    Sparkle: make("Sparkle"),
     ArrowRight: make("ArrowRight"),
     Medal: make("Medal"),
     Crown: make("Crown"),
@@ -67,8 +66,6 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Warning: make("Warning"),
     Fire: make("Fire"),
     CheckCircle: make("CheckCircle"),
-    Tag: make("Tag"),
-    Eye: make("Eye"),
     Lightning: make("Lightning"),
     TrendDown: make("TrendDown"),
   };
@@ -89,7 +86,7 @@ describe("TierUpgrade celebration overlay (VAL-TIER-006..008)", () => {
     expect(screen.queryByTestId("tier-upgrade-overlay")).not.toBeInTheDocument();
   });
 
-  it("renders the full-screen celebration with the new tier name (Silver)", () => {
+  it("renders the full-screen celebration with the tier badge (Silver)", () => {
     act(() => {
       usePlayerStore.getState().setTier("silver");
       useUIStore.getState().showOverlay("tier-upgrade", {
@@ -99,24 +96,7 @@ describe("TierUpgrade celebration overlay (VAL-TIER-006..008)", () => {
     });
     render(<TierUpgrade />);
     expect(screen.getByTestId("tier-upgrade-overlay")).toBeInTheDocument();
-    expect(screen.getByTestId("tier-upgrade-title")).toHaveTextContent(
-      "You are now Silver!"
-    );
     expect(screen.getByTestId("tier-upgrade-badge")).toBeInTheDocument();
-  });
-
-  it("shows the perks summary for the new tier", () => {
-    act(() => {
-      usePlayerStore.getState().setTier("gold");
-      useUIStore.getState().showOverlay("tier-upgrade", {
-        newTier: "gold",
-        previousTier: "silver",
-      });
-    });
-    render(<TierUpgrade />);
-    const perks = screen.getByTestId("tier-upgrade-perks");
-    expect(perks.textContent).toContain("3 flash sales / hour");
-    expect(perks.textContent).toContain("2x tokens");
   });
 
   it("dismisses on CTA click", () => {

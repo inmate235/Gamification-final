@@ -79,27 +79,36 @@ const containerVariants: Variants = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: { staggerChildren: 0.07, delayChildren: 0.04 },
+    transition: { staggerChildren: 0.06, delayChildren: 0 },
   },
   exit: {
     opacity: 0,
     x: -32,
-    transition: { duration: 0.4, ease: SMOOTH },
+    transition: { duration: 0.35, ease: SMOOTH },
   },
 };
 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: SMOOTH } },
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: SMOOTH } },
+};
+
+/** Orchestrates staggered card entrance — no own animation, only controls children timing. */
+const cardGridVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.07 },
+  },
+  exit: {},
 };
 
 const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20, scale: 0.94 },
+  hidden: { opacity: 0, y: 18, scale: 0.93 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.5, ease: GENTLE_POP },
+    transition: { duration: 0.4, ease: GENTLE_POP },
   },
 };
 
@@ -296,13 +305,12 @@ export function SurveyScreen() {
               </motion.p>
             )}
 
-            {/* Options — image card grid */}
-            <motion.div variants={itemVariants} className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 sm:gap-3.5">
-              {currentQuestion.options.map((option, index) => (
+            {/* Options — image card grid (cardGridVariants propagates stagger to cards) */}
+            <motion.div variants={cardGridVariants} className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 sm:gap-3.5">
+              {currentQuestion.options.map((option) => (
                 <SurveyOptionCard
                   key={option.id}
                   option={option}
-                  index={index}
                   isSelected={selectedOption === option.id}
                   hasSelection={selectedOption !== null}
                   disabled={isAdvancing}
@@ -348,7 +356,6 @@ export default SurveyScreen;
 
 interface SurveyOptionCardProps {
   option: SurveyOption;
-  index: number;
   isSelected: boolean;
   hasSelection: boolean;
   disabled: boolean;
@@ -357,7 +364,6 @@ interface SurveyOptionCardProps {
 
 function SurveyOptionCard({
   option,
-  index,
   isSelected,
   hasSelection,
   disabled,
@@ -375,10 +381,10 @@ function SurveyOptionCard({
       disabled={disabled}
       animate={
         !hasSelection
-          ? { opacity: 1, scale: 1 }
+          ? { opacity: 1, scale: 1, y: 0 }
           : isSelected
-          ? { opacity: 1, scale: 1.02 }
-          : { opacity: 0.4, scale: 0.98 }
+          ? { opacity: 1, scale: 1.02, y: 0 }
+          : { opacity: 0.4, scale: 0.98, y: 0 }
       }
       transition={{ duration: 0.4, ease: SMOOTH }}
       className={cn(
@@ -389,7 +395,6 @@ function SurveyOptionCard({
           ? "border-[#e6009e] shadow-[0_6px_0_rgba(184,0,126,0.22)]"
           : "border-[#141414]/12 hover:border-[#e6009e]/40"
       )}
-      style={{ transitionDelay: `${index * 50}ms` }}
       aria-pressed={isSelected}
     >
       {/* Image / gradient icon tile */}

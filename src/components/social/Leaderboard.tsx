@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
@@ -10,6 +10,7 @@ import {
   MapPin,
   Crown,
   CaretUp,
+  CaretDown,
 } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
 import { useSocialStore } from "@/stores/socialStore";
@@ -71,6 +72,95 @@ const METRIC_TABS: MetricTab[] = [
   },
 ];
 
+interface MetricVisual {
+  accent: string;
+  softAccent: string;
+  ring: string;
+  panelBackground: string;
+}
+
+const METRIC_VISUALS: Record<LeaderboardMetric, MetricVisual> = {
+  tokens: {
+    accent: "#e6b800",
+    softAccent: "rgba(230, 184, 0, 0.16)",
+    ring: "rgba(230, 184, 0, 0.35)",
+    panelBackground:
+      "linear-gradient(135deg, rgba(230,184,0,0.18) 0%, rgba(255,255,255,0.95) 70%)",
+  },
+  time: {
+    accent: "#7c3aed",
+    softAccent: "rgba(124, 58, 237, 0.14)",
+    ring: "rgba(124, 58, 237, 0.3)",
+    panelBackground:
+      "linear-gradient(135deg, rgba(124,58,237,0.14) 0%, rgba(255,255,255,0.95) 70%)",
+  },
+  exploration: {
+    accent: "#14b8a6",
+    softAccent: "rgba(20, 184, 166, 0.14)",
+    ring: "rgba(20, 184, 166, 0.3)",
+    panelBackground:
+      "linear-gradient(135deg, rgba(20,184,166,0.15) 0%, rgba(255,255,255,0.95) 70%)",
+  },
+};
+
+const METRIC_PHASE_SHIFT: Record<LeaderboardMetric, number> = {
+  tokens: 0,
+  time: 2,
+  exploration: 4,
+};
+
+type MetricTrend = "up" | "down" | "flat";
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function simulatedMetricValue(
+  entry: LeaderboardEntry,
+  tabMetric: LeaderboardMetric,
+  tick: number,
+  activeMetric: LeaderboardMetric,
+): number {
+  const base = entryMetricValue(entry, tabMetric);
+  if (entry.isPlayer) return base;
+
+  const phase = tick + entry.rank * 0.75 + METRIC_PHASE_SHIFT[tabMetric];
+  const pulse = Math.sin(phase * 0.9);
+  const drift = Math.cos(phase * 0.45);
+  const amplitude =
+    tabMetric === activeMetric
+      ? tabMetric === "tokens"
+        ? 3
+        : tabMetric === "time"
+          ? 2
+          : 4
+      : 1;
+  const delta = Math.round(pulse * amplitude + drift);
+
+  if (tabMetric === "exploration") {
+    return clamp(base + delta, 1, 99);
+  }
+  return Math.max(0, base + delta);
+}
+
+function simulatedMetricTrend(
+  entry: LeaderboardEntry,
+  tabMetric: LeaderboardMetric,
+  tick: number,
+  activeMetric: LeaderboardMetric,
+): MetricTrend {
+  if (entry.isPlayer) return "flat";
+  const previous = simulatedMetricValue(
+    entry,
+    tabMetric,
+    Math.max(0, tick - 1),
+    activeMetric,
+  );
+  const current = simulatedMetricValue(entry, tabMetric, tick, activeMetric);
+  if (current === previous) return "flat";
+  return current > previous ? "up" : "down";
+}
+
 /* ============================================================================
    Floating entry button (always visible from the mall view)
    ========================================================================== */
@@ -118,8 +208,10 @@ export function Leaderboard() {
   const leaderboard = useSocialStore((s) => s.leaderboard);
   const activeMetric = useSocialStore((s) => s.activeMetric);
   const setActiveMetric = useSocialStore((s) => s.setActiveMetric);
+  const [pulseTick, setPulseTick] = useState(0);
 
   const isOpen = activeOverlay === "leaderboard";
+  const activeVisual = METRIC_VISUALS[activeMetric];
 
   /* Esc to dismiss */
   useEffect(() => {
@@ -151,6 +243,22 @@ export function Leaderboard() {
   }, [leaderboard]);
 
   const playerEntry = leaderboard.find((e) => e.isPlayer) ?? null;
+  const maxPrimaryMetric = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...displayEntries.map((entry) => entryMetricValue(entry, activeMetric)),
+      ),
+    [displayEntries, activeMetric],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = window.setInterval(() => {
+      setPulseTick((tick) => tick + 1);
+    }, 1300);
+    return () => window.clearInterval(id);
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -210,11 +318,20 @@ export function Leaderboard() {
 
                 {/* Metric sort tabs (VAL-LEADER-019) */}
                 <div
-                  className="mb-4 flex gap-1.5 rounded-full bg-[#f4f4f5] p-1 ring-1 ring-[#141414]/8"
+                  className="relative mb-3 flex gap-1.5 overflow-hidden rounded-full bg-[#f4f4f5] p-1 ring-1 ring-[#141414]/8"
                   data-testid="leaderboard-metric-tabs"
                   role="tablist"
                   aria-label="Sort leaderboard by metric"
                 >
+                  <motion.div
+                    key={`metric-tabs-bg-${activeMetric}`}
+                    initial={{ opacity: 0.3 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0.2 }}
+                    transition={{ duration: 0.35, ease: PREMIUM_EASE }}
+                    className="pointer-events-none absolute inset-1 rounded-full"
+                    style={{ background: activeVisual.panelBackground }}
+                  />
                   {METRIC_TABS.map((tab) => {
                     const active = tab.metric === activeMetric;
                     return (
@@ -224,34 +341,75 @@ export function Leaderboard() {
                         aria-selected={active}
                         onClick={() => setActiveMetric(tab.metric)}
                         className={cn(
-                          "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200",
+                          "relative z-10 flex flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200",
                           active
-                            ? "bg-[#e6009e]/15 text-[#e6009e]"
+                            ? "text-[#141414]"
                             : "text-[#8a8a8a] hover:text-[#4b4b4b]",
                         )}
                         data-testid={`leaderboard-metric-${tab.metric}`}
                         data-active={active ? "true" : "false"}
                       >
-                        {tab.icon}
-                        {tab.label}
+                        {active && (
+                          <motion.span
+                            layoutId="leaderboard-tab-pill"
+                            className="absolute inset-0 rounded-full"
+                            style={{
+                              background: METRIC_VISUALS[tab.metric].softAccent,
+                              boxShadow: `inset 0 0 0 1px ${METRIC_VISUALS[tab.metric].ring}`,
+                            }}
+                            transition={{ duration: 0.35, ease: PREMIUM_EASE }}
+                          />
+                        )}
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          {tab.icon}
+                          {tab.label}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
 
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={`metric-highlight-${activeMetric}`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.28, ease: PREMIUM_EASE }}
+                    className="mb-4 flex items-center justify-between rounded-2xl px-3 py-2 ring-1"
+                    style={{
+                      background: activeVisual.panelBackground,
+                      borderColor: activeVisual.ring,
+                    }}
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4b4b4b]">
+                      Live {activeMetric === "time" ? "time pressure" : activeMetric}
+                    </span>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: activeVisual.accent }}
+                    >
+                      Scores shifting in real time
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
+
                 {/* Ranked list */}
-                <ol
+                <motion.ol
+                  layout
                   className="space-y-1.5"
                   data-testid="leaderboard-list"
                 >
                   {displayEntries.map((entry) => (
                     <LeaderboardRow
-                      key={`${entry.rank}-${entry.name}`}
+                      key={entry.isPlayer ? "player-entry" : entry.avatarSeed}
                       entry={entry}
                       metric={activeMetric}
+                      pulseTick={pulseTick}
+                      maxPrimaryMetric={maxPrimaryMetric}
                     />
                   ))}
-                </ol>
+                </motion.ol>
 
                 {/* Caption */}
                 <p className="mt-4 text-center text-[10px] uppercase tracking-[0.18em] text-[#8a8a8a]">
@@ -273,15 +431,37 @@ export function Leaderboard() {
 function LeaderboardRow({
   entry,
   metric,
+  pulseTick,
+  maxPrimaryMetric,
 }: {
   entry: LeaderboardEntry;
   metric: LeaderboardMetric;
+  pulseTick: number;
+  maxPrimaryMetric: number;
 }) {
   const isPlayer = entry.isPlayer;
   const isTop = entry.rank === 1;
   const tierVisual = TIER_VISUALS[entry.tier];
+  const metricVisual = METRIC_VISUALS[metric];
 
-  const primaryValue = entryMetricValue(entry, metric);
+  const tokenValue = simulatedMetricValue(entry, "tokens", pulseTick, metric);
+  const timeValue = simulatedMetricValue(entry, "time", pulseTick, metric);
+  const explorationValue = simulatedMetricValue(
+    entry,
+    "exploration",
+    pulseTick,
+    metric,
+  );
+
+  const primaryValue =
+    metric === "tokens"
+      ? tokenValue
+      : metric === "time"
+        ? timeValue
+        : explorationValue;
+  const primaryProgress = clamp(primaryValue / maxPrimaryMetric, 0.08, 1);
+  const primaryTrend = simulatedMetricTrend(entry, metric, pulseTick, metric);
+
   const primaryLabel =
     metric === "tokens"
       ? `${primaryValue}`
@@ -290,17 +470,37 @@ function LeaderboardRow({
         : `${primaryValue}%`;
 
   return (
-    <li
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      transition={{ duration: 0.3, ease: PREMIUM_EASE }}
       className={cn(
-        "flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 transition-all duration-200",
+        "relative overflow-hidden flex items-center gap-3 rounded-2xl px-3 py-2.5 ring-1 transition-all duration-200",
         isPlayer
           ? "bg-[#e6009e]/8 ring-[#e6009e]/30"
-          : "bg-[#f4f4f5] ring-[#141414]/8",
+          : "bg-[#f4f4f5]",
       )}
+      style={
+        isPlayer
+          ? undefined
+          : {
+              boxShadow: `inset 0 0 0 1px ${metricVisual.ring}`,
+            }
+      }
       data-testid="leaderboard-row"
       data-player={isPlayer ? "true" : "false"}
       data-rank={entry.rank}
     >
+      {!isPlayer && (
+        <span
+          className="pointer-events-none absolute inset-y-0 left-0 w-1.5"
+          style={{ background: metricVisual.softAccent }}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Rank */}
       <div
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums"
@@ -345,32 +545,57 @@ function LeaderboardRow({
       <div className="flex shrink-0 items-center gap-2.5 font-mono tabular-nums">
         <MetricChip
           icon={<Coin size={11} weight="fill" />}
-          value={`${entry.tokenCount}`}
+          value={`${tokenValue}`}
           color={metric === "tokens" ? "#e6b800" : "#8a8a8a"}
           active={metric === "tokens"}
+          trend={simulatedMetricTrend(entry, "tokens", pulseTick, metric)}
         />
         <MetricChip
           icon={<Clock size={11} weight="fill" />}
-          value={`${entry.timeInMall}m`}
+          value={`${timeValue}m`}
           color={metric === "time" ? "#7c3aed" : "#8a8a8a"}
           active={metric === "time"}
+          trend={simulatedMetricTrend(entry, "time", pulseTick, metric)}
         />
         <MetricChip
           icon={<MapPin size={11} weight="fill" />}
-          value={`${entry.explorationPercent}%`}
+          value={`${explorationValue}%`}
           color={metric === "exploration" ? "#14b8a6" : "#8a8a8a"}
           active={metric === "exploration"}
+          trend={simulatedMetricTrend(entry, "exploration", pulseTick, metric)}
         />
       </div>
 
       {/* Primary metric value (the active sort metric) for quick scanning */}
-      <span
-        className="hidden shrink-0 text-sm font-bold tabular-nums sm:block"
-        style={{ color: isPlayer ? "#e6009e" : "#141414" }}
-      >
-        {primaryLabel}
-      </span>
-    </li>
+      <div className="hidden shrink-0 items-center gap-1 sm:flex">
+        <span
+          className="text-sm font-bold tabular-nums"
+          style={{ color: isPlayer ? "#e6009e" : "#141414" }}
+        >
+          {primaryLabel}
+        </span>
+        {!isPlayer && primaryTrend !== "flat" && (
+          <span
+            style={{ color: metricVisual.accent }}
+            aria-label={primaryTrend === "up" ? "Trending up" : "Trending down"}
+          >
+            {primaryTrend === "up" ? (
+              <CaretUp size={10} weight="bold" />
+            ) : (
+              <CaretDown size={10} weight="bold" />
+            )}
+          </span>
+        )}
+      </div>
+
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[#141414]/6" />
+      <motion.span
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] origin-left"
+        style={{ background: metricVisual.accent }}
+        animate={{ scaleX: primaryProgress }}
+        transition={{ duration: 0.45, ease: PREMIUM_EASE }}
+      />
+    </motion.li>
   );
 }
 
@@ -379,22 +604,37 @@ function MetricChip({
   value,
   color,
   active,
+  trend,
 }: {
   icon: React.ReactNode;
   value: string;
   color: string;
   active: boolean;
+  trend: MetricTrend;
 }) {
   return (
     <span
       className={cn(
         "flex items-center gap-0.5 text-[11px] transition-all duration-200",
-        active && "scale-110",
+        active && "scale-110 font-semibold",
       )}
       style={{ color }}
     >
       {icon}
       {value}
+      {active && trend !== "flat" && (
+        <motion.span
+          initial={{ opacity: 0, y: 3 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: PREMIUM_EASE }}
+        >
+          {trend === "up" ? (
+            <CaretUp size={9} weight="bold" />
+          ) : (
+            <CaretDown size={9} weight="bold" />
+          )}
+        </motion.span>
+      )}
     </span>
   );
 }
@@ -415,9 +655,16 @@ export function ProximityAlertBanner() {
   const activeOverlay = useUIStore((s) => s.activeOverlay);
   const exited = useSessionStore((s) => s.exited);
 
-  // Don't show the banner while an overlay is open or after exit.
+  // Don't show the banner while a non-shopping overlay is open or after exit.
+  // Allow it to persist when the shop or flash-sale is open — rank pressure
+  // is most persuasive exactly at the purchase decision moment.
   if (exited) return null;
-  if (activeOverlay !== "none") return null;
+  if (
+    activeOverlay !== "none" &&
+    activeOverlay !== "shop" &&
+    activeOverlay !== "flash-sale"
+  )
+    return null;
 
   const latest = alerts[alerts.length - 1];
   if (!latest) return null;

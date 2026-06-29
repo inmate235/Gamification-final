@@ -9,9 +9,10 @@
  * (VAL-TOKEN-012..015). Spending uses `playerStore.spendTokens`, which enforces
  * the non-negative integer invariant (VAL-TOKEN-016).
  *
- * Each event also triggers a transient token-feedback overlay. Earn events
- * use the gold +N upward treatment; spend events use the distinct red -N
- * downward treatment (VAL-TOKEN-017).
+ * Each event also triggers a transient token-feedback toast pushed to the
+ * parallel `celebrationQueue` in uiStore. Because celebrations use their own
+ * queue (independent of `activeOverlay`), they render at z-50 on top of any
+ * open overlay without unmounting it (VAL-TOKEN-017).
  *
  * Exploration + secret-token earning is wired directly in `MallMap` (it needs
  * zone-reveal context); this module provides the earning paths for tasks and
@@ -22,21 +23,104 @@
 import { usePlayerStore } from "@/stores/playerStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useSocialStore } from "@/stores/socialStore";
 import { markRefractory } from "@/engine/flashSaleEngine";
 import { playAchievement } from "@/lib/sound";
-import type { Task } from "@/types";
+import type { CelebrationHook, Task } from "@/types";
 
 /* ============================================================================
-   Feedback helper
+   Post-purchase hook selector
    ========================================================================== */
 
-/** Show the transient token-feedback celebration overlay. */
+/**
+ * Choose the single most contextually relevant post-purchase hook CTA.
+ * Priority: proximity alert > low balance > active streak > default (shop).
+ */
+function choosePurchaseHook(): CelebrationHook {
+  const alerts = useSocialStore.getState().proximityAlerts;
+  if (alerts.length > 0) {
+    const latest = alerts[alerts.length - 1]!;
+    return {
+      label: `Only ${latest.tokenGap} token${latest.tokenGap !== 1 ? "s" : ""} behind ${latest.targetName} for #${latest.rank}`,
+      action: "explore",
+    };
+  }
+
+  const tokens = usePlayerStore.getState().tokens;
+  if (tokens < 5) {
+    return {
+      label: "Spin the Wheel to earn tokens back",
+      action: "wheel",
+    };
+  }
+
+  const streak = usePlayerStore.getState().streak;
+  if (streak.count > 0 && !streak.broken) {
+    return {
+      label: `Day ${streak.count} streak — come back tomorrow!`,
+      action: "dismiss",
+    };
+  }
+
+  return {
+    label: "Keep Shopping",
+    action: "shop",
+  };
+}
+
+/* ============================================================================
+   Feedback helpers
+   ========================================================================== */
+
+/**
+ * Push a token-feedback toast to the parallel celebration queue.
+ *
+ * For `kind="spend"`: computes before/after balances and attaches a
+ * post-purchase hook CTA so the spend moment loops back into an earn/explore
+ * action. Accepts an optional `label` (item or deal name) shown in the receipt.
+ *
+ * Unlike the old `showOverlay("celebration", ...)` approach, this never
+ * touches `activeOverlay`, so any open overlay (shop, flash-sale) stays
+ * mounted while the toast floats above it at z-50.
+ */
 export function showTokenFeedback(
   kind: "earn" | "spend",
   amount: number,
-  message: string
+  message: string,
+  opts: { label?: string } = {}
 ): void {
-  useUIStore.getState().showOverlay("celebration", { message, amount, kind });
+  const newBalance = usePlayerStore.getState().tokens;
+  const balanceBefore = kind === "spend" ? newBalance + amount : Math.max(0, newBalance - amount);
+
+  useUIStore.getState().pushCelebration({
+    message,
+    amount,
+    kind,
+    label: opts.label,
+    balanceBefore,
+    balanceAfter: newBalance,
+    hook: kind === "spend" ? choosePurchaseHook() : undefined,
+  });
+}
+
+/**
+ * Push a streak milestone celebration toast. Called when `checkStreakOnVisit`
+ * returns `incremented` or `recovered` so the visit hook is positive and
+ * rewarding rather than anxiety-only.
+ */
+export function showStreakCelebration(streakCount: number): void {
+  const message =
+    streakCount === 1
+      ? "Streak started! Come back tomorrow."
+      : streakCount >= 7
+        ? `Day ${streakCount} — you're on fire!`
+        : `Day ${streakCount} streak — keep it going!`;
+
+  useUIStore.getState().pushCelebration({
+    message,
+    amount: streakCount,
+    kind: "streak",
+  });
 }
 
 /* ============================================================================
@@ -73,17 +157,19 @@ export function awardWheelReward(baseTokens: number): number {
    ========================================================================== */
 
 /**
- * Buy a sugar consumable: deducts the dynamic tokenCost and shows a spend feedback.
- * Returns true when the purchase succeeded.
+ * Buy a real-money token pack: credits the pack's tokenAmount to the player
+ * balance and shows a purchase feedback. Returns true when the purchase
+ * succeeded.
  */
-export function buySugarItem(itemId: string): boolean {
-  const item = useEconomyStore
+export function buyTokenPack(packId: string): boolean {
+  const pack = useEconomyStore
     .getState()
-    .sugarItems.find((s) => s.id === itemId);
-  const cost = item?.tokenCost ?? 0;
-  const ok = useEconomyStore.getState().buySugarItem(itemId);
+    .tokenPacks.find((p) => p.id === packId);
+  const ok = useEconomyStore.getState().buyTokenPack(packId);
   if (ok) {
-    showTokenFeedback("spend", cost, `-${cost} Tokens`);
+    showTokenFeedback("earn", pack?.tokenAmount ?? 0, `+${pack?.tokenAmount ?? 0} Tokens`, {
+      label: pack?.name,
+    });
   }
   return ok;
 }
@@ -126,16 +212,19 @@ export function claimFlashSale(
 export function buySpins(amount: number, cost: number): boolean {
   const ok = useEconomyStore.getState().buySpins(amount, cost);
   if (ok) {
-    showTokenFeedback("spend", cost, `Spins Purchased! -${cost} Tokens`);
+    showTokenFeedback("spend", cost, `Spins Purchased! -${cost} Tokens`, {
+      label: `${amount} extra spin${amount !== 1 ? "s" : ""}`,
+    });
   }
   return ok;
 }
 
 const tokenEconomy = {
   showTokenFeedback,
+  showStreakCelebration,
   awardTaskReward,
   awardWheelReward,
-  buySugarItem,
+  buyTokenPack,
   claimFlashSale,
   buySpins,
 };

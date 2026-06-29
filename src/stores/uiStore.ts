@@ -6,7 +6,7 @@
  */
 
 import { create } from "zustand";
-import type { OverlayType, UIState } from "@/types";
+import type { CelebrationData, OverlayType, UIState } from "@/types";
 
 /* ============================================================================
    Store
@@ -22,6 +22,8 @@ export interface UIStore extends UIState {
   setMuted: (muted: boolean) => void;
   setSoundEnabled: (enabled: boolean) => void;
   toggleSound: () => void;
+  pushCelebration: (data: CelebrationData) => void;
+  shiftCelebration: () => void;
   reset: () => void;
 }
 
@@ -33,6 +35,7 @@ const initialUIState: UIState = {
   hasSeenTimelineOnboarding: false,
   isMuted: true,
   isSoundEnabled: true,
+  celebrationQueue: [],
 };
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -63,6 +66,12 @@ export const useUIStore = create<UIStore>((set) => ({
 
   toggleSound: () =>
     set((state) => ({ isSoundEnabled: !state.isSoundEnabled })),
+
+  pushCelebration: (data) =>
+    set((state) => ({ celebrationQueue: [...state.celebrationQueue, data] })),
+
+  shiftCelebration: () =>
+    set((state) => ({ celebrationQueue: state.celebrationQueue.slice(1) })),
 
   reset: () => set({ ...initialUIState }),
 }));

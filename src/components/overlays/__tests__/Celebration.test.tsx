@@ -53,46 +53,72 @@ vi.mock("@phosphor-icons/react/dist/ssr", () => {
     Cmp.displayName = `Icon-${name}`;
     return Cmp;
   };
-  return { Coin: make("Coin"), Minus: make("Minus") };
+  return {
+    Coin: make("Coin"),
+    Minus: make("Minus"),
+    Fire: make("Fire"),
+    Lightning: make("Lightning"),
+    MapPin: make("MapPin"),
+    SpinnerGap: make("SpinnerGap"),
+    ShoppingBag: make("ShoppingBag"),
+    X: make("X"),
+  };
 });
 
 import { Celebration } from "@/components/overlays/Celebration";
 import { useUIStore } from "@/stores/uiStore";
 
-describe("Celebration overlay (earn vs spend)", () => {
+describe("Celebration overlay (earn vs spend vs streak)", () => {
   beforeEach(() => {
     useUIStore.getState().reset();
   });
 
-  it("renders nothing when no celebration is active", () => {
+  it("renders nothing when the queue is empty", () => {
     render(<Celebration />);
     expect(screen.queryByTestId("celebration-overlay")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("celebration-overlay-wrapper")).not.toBeInTheDocument();
   });
 
-  it("renders an earn celebration with the earn kind", () => {
+  it("renders an earn celebration pushed to the queue", () => {
     act(() => {
-      useUIStore.getState().showOverlay("celebration", {
+      useUIStore.getState().pushCelebration({
         message: "+5 Tokens",
         amount: 5,
         kind: "earn",
       });
     });
     render(<Celebration />);
-    expect(screen.getByTestId("celebration-overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("celebration-overlay-wrapper")).toBeInTheDocument();
     expect(screen.getByTestId("celebration-message")).toHaveTextContent("+5 Tokens");
     expect(screen.getByTestId("celebration-kind")).toHaveTextContent("earn");
   });
 
-  it("renders a spend celebration with the spend kind (distinct from earn)", () => {
+  it("renders a spend receipt card pushed to the queue (distinct from earn)", () => {
     act(() => {
-      useUIStore.getState().showOverlay("celebration", {
-        message: "-3 Tokens",
+      useUIStore.getState().pushCelebration({
+        message: "Deal Claimed! -3 Tokens",
         amount: 3,
         kind: "spend",
+        label: "Bloom",
+        balanceBefore: 10,
+        balanceAfter: 7,
       });
     });
     render(<Celebration />);
-    expect(screen.getByTestId("celebration-message")).toHaveTextContent("-3 Tokens");
+    expect(screen.getByTestId("celebration-overlay-wrapper")).toBeInTheDocument();
     expect(screen.getByTestId("celebration-kind")).toHaveTextContent("spend");
+  });
+
+  it("renders a streak celebration pushed to the queue", () => {
+    act(() => {
+      useUIStore.getState().pushCelebration({
+        message: "Day 3 streak — keep it going!",
+        amount: 3,
+        kind: "streak",
+      });
+    });
+    render(<Celebration />);
+    expect(screen.getByTestId("celebration-overlay-wrapper")).toBeInTheDocument();
+    expect(screen.getByTestId("celebration-kind")).toHaveTextContent("streak");
   });
 });

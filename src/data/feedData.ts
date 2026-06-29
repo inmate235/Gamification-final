@@ -81,4 +81,24 @@ export const timelineFeed: FeedItem[] = [
     comments: 71,
     shares: 289,
   },
+  {
+    id: "feed-buy-tokens-brainrot",
+    storeId: STORE_TECHNOVA,
+    videoUrl: "",
+    prompt:
+      "BRAIN ROT TOKEN AD: A hyper-stimulating split-screen video. Top half shows a hypnotic kinetic sand cutting compilation, bottom half shows GTA V car parkour. Flashing neon text screams 'YOU ARE BROKE!!! BUY MORE TOKENS NOW!!! NO CAP 🧢🔥'. An AI voice aggressively reads the text over extremely loud phonk music.",
+    likes: 999999,
+    comments: 8520,
+    shares: 4200,
+  },
+  {
+    id: "feed-spend-more-brainrot",
+    storeId: STORE_PULSE,
+    videoUrl: "",
+    prompt:
+      "BRAIN ROT SPEND AD: A weird looping video of Subway Surfers gameplay but the character is just running into walls repeatedly. Overlay text aggressively pulses: 'YOU HAVE TOKENS JUST SITTING THERE. SPEND THEM NOW!! GET THE TIER UPGRADE!! SIGMA GRINDSET 📈💀'. Audio is heavily bass-boosted and distorted.",
+    likes: 777777,
+    comments: 6969,
+    shares: 1337,
+  },
 ];

@@ -55,11 +55,11 @@ export const PROXIMITY_CHECK_EVERY_N_TICKS = 2;
  * rises with time-in-mall so sales become more frequent later in the session
  * (VAL-SALE-014).
  */
-const BASE_PROBABILITY = 0.06;
+const BASE_PROBABILITY = 0.22;
 /** Per-minute probability growth (linear), capped at MAX_PROBABILITY. */
-const PROBABILITY_GROWTH_PER_MIN = 0.012;
+const PROBABILITY_GROWTH_PER_MIN = 0.02;
 /** Ceiling for the per-check trigger probability. */
-const MAX_PROBABILITY = 0.22;
+const MAX_PROBABILITY = 0.45;
 
 /** Default synthetic countdown length (displayed seconds). */
 const DEFAULT_COUNTDOWN_SECONDS = 90;

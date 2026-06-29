@@ -12,7 +12,7 @@
 import { create } from "zustand";
 import type { EconomyState, FlashSale } from "@/types";
 import { usePlayerStore } from "@/stores/playerStore";
-import { SUGAR_ITEMS } from "@/data/sugarData";
+import { TOKEN_PACKS, BONUS_EVENT_CYCLE, BONUS_EVENT_DURATION_MS } from "@/data/tokenPackData";
 
 /* ============================================================================
    Constants
@@ -86,13 +86,25 @@ export interface EconomyStore extends EconomyState {
   /** Recompute the live deficit teaser price (called each scheduler tick). */
   refreshLiveDeficitPrice: () => void;
   /**
-   * Buy an addictive sugar consumable from the Sugar Station.
+   * Buy a real-money token pack: credits the pack's tokenAmount to the
+   * player's balance. Returns true on success. The actual "payment" is
+   * simulated (this is a research prototype).
    */
-  buySugarItem: (itemId: string) => boolean;
+  buyTokenPack: (packId: string) => boolean;
+  /**
+   * Advance the fake bonus event: when the current cycle expires, rotate
+   * to the next multiplier and reset the countdown.
+   */
+  advanceBonusEvent: () => void;
+  /**
+   * Decrement the fake scarcity stock on the whale pack; "restocks" to a
+   * fresh count when it hits 1.
+   */
+  decrementWhaleStock: () => void;
   reset: () => void;
 }
 
-const initialEconomyState: Omit<EconomyState, "sugarItems" | "liveDeficitPrice"> = {
+const initialEconomyState: Omit<EconomyState, "tokenPacks" | "liveDeficitPrice" | "bonusEventMultiplier" | "bonusEventEndsAt" | "firstPurchaseBonusUsed"> = {
   flashSales: [],
   spinningWheel: { available: false, lastSpin: 0, spinCount: 0, extraSpins: 0, lastSpinNearMiss: false },
   rewardDensity: { phase: "hook", sessionMinutes: 0 },
@@ -101,8 +113,11 @@ const initialEconomyState: Omit<EconomyState, "sugarItems" | "liveDeficitPrice">
 
 export const useEconomyStore = create<EconomyStore>((set, get) => ({
   ...initialEconomyState,
-  sugarItems: SUGAR_ITEMS,
+  tokenPacks: TOKEN_PACKS,
   liveDeficitPrice: calculateDeficitPrice(0),
+  bonusEventMultiplier: BONUS_EVENT_CYCLE[1]!,
+  bonusEventEndsAt: Date.now() + BONUS_EVENT_DURATION_MS,
+  firstPurchaseBonusUsed: false,
 
   triggerFlashSale: (sale) => {
     const newSale: FlashSale = {
@@ -261,30 +276,48 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
   refreshLiveDeficitPrice: () =>
     set({ liveDeficitPrice: calculateDeficitPrice(usePlayerStore.getState().tokens) }),
 
-  buySugarItem: (itemId) => {
+  buyTokenPack: (packId) => {
     const state = get();
-    const item = state.sugarItems.find((s) => s.id === itemId);
-    if (!item) return false;
-    const ok = usePlayerStore.getState().spendTokens(item.tokenCost);
-    if (!ok) return false;
-    
-    // Scale token cost slightly after purchase to build sunk cost and scarcity
-    const newBalance = usePlayerStore.getState().tokens;
-    const updated = state.sugarItems.map((s) =>
-      s.id === itemId ? { ...s, tokenCost: Math.floor(s.tokenCost * 1.5) } : s
-    );
-    set({
-      sugarItems: updated,
-      liveDeficitPrice: calculateDeficitPrice(newBalance),
-    });
+    const pack = state.tokenPacks.find((p) => p.id === packId);
+    if (!pack) return false;
+    // Credit tokens to the player (this is a "purchase" — money in, tokens out)
+    usePlayerStore.getState().addTokens(pack.tokenAmount);
     return true;
+  },
+
+  advanceBonusEvent: () => {
+    const state = get();
+    const currentIdx = BONUS_EVENT_CYCLE.indexOf(
+      state.bonusEventMultiplier as (typeof BONUS_EVENT_CYCLE)[number]
+    );
+    const nextIdx = (currentIdx + 1) % BONUS_EVENT_CYCLE.length;
+    set({
+      bonusEventMultiplier: BONUS_EVENT_CYCLE[nextIdx]!,
+      bonusEventEndsAt: Date.now() + BONUS_EVENT_DURATION_MS,
+    });
+  },
+
+  decrementWhaleStock: () => {
+    const state = get();
+    set({
+      tokenPacks: state.tokenPacks.map((p) => {
+        if (p.id !== "pack-whale") return p;
+        const current = p.stockLeft ?? 3;
+        // "Restock" cycically when it hits 1
+        const next = current <= 1 ? 5 + Math.floor(Math.random() * 4) : current - 1;
+        return { ...p, stockLeft: next };
+      }),
+    });
   },
 
   reset: () =>
     set({
       ...initialEconomyState,
-      sugarItems: SUGAR_ITEMS,
+      tokenPacks: TOKEN_PACKS,
       liveDeficitPrice: calculateDeficitPrice(0),
+      bonusEventMultiplier: BONUS_EVENT_CYCLE[1]!,
+      bonusEventEndsAt: Date.now() + BONUS_EVENT_DURATION_MS,
+      firstPurchaseBonusUsed: false,
     }),
 }));
 

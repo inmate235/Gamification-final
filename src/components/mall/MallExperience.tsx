@@ -9,6 +9,12 @@ import {
   checkStreakOnVisit,
   processMissedDayPenalties,
 } from "@/engine/streakEngine";
+import { showStreakCelebration } from "@/engine/tokenEconomy";
+import {
+  ensurePhantomJustAbove,
+  checkProximityAndAlert,
+} from "@/engine/phantomEngine";
+import { triggerProximityFlashSale } from "@/engine/flashSaleEngine";
 import { startBackgroundMusic, stopBackgroundMusic } from "@/lib/sound";
 import { StatusBar } from "@/components/mall/StatusBar";
 import { MallMap } from "@/components/mall/MallMap";
@@ -76,8 +82,12 @@ export function MallExperience() {
 
     // Check the streak on visit: increments on a new day, recovers within the
     // 48h window, or resets if the window expired (VAL-STREAK-004, -009,
-    // -013, -017).
-    checkStreakOnVisit();
+    // -013, -017). Surface a positive milestone celebration toast when the
+    // streak increments or recovers so the entry hook is rewarding.
+    const streakResult = checkStreakOnVisit();
+    if (streakResult.type === "incremented" || streakResult.type === "recovered") {
+      setTimeout(() => showStreakCelebration(streakResult.newCount), 600);
+    }
 
     const scheduler = getEventScheduler({
       onTrialPerkExpired: (_perkId, _perkName) => {
@@ -120,6 +130,22 @@ export function MallExperience() {
     // any onboarding trial perks / tier changes before the first scheduler
     // tick fires).
     useSocialStore.getState().updateLeaderboard();
+
+    // Pull a phantom within the "just barely ahead" gap immediately and fire
+    // a proximity alert right away so the social-pressure banner is visible
+    // from the first seconds of the demo (instead of waiting 2+ seconds for
+    // the first scheduler tick).
+    ensurePhantomJustAbove();
+    useSocialStore.getState().updateLeaderboard();
+    checkProximityAndAlert();
+
+    // Seed a flash sale immediately so the user has a deal to grab from the
+    // start of the demo (the proximity check runs every 2s via the scheduler,
+    // but at 22% base probability the first sale could take 10+ seconds).
+    // Try a handful of times — each call is an independent probability roll.
+    for (let i = 0; i < 6; i++) {
+      if (triggerProximityFlashSale()) break;
+    }
 
     // Start the ambient background music (fades in over ~800ms, loops).
     startBackgroundMusic();

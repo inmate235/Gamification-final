@@ -264,15 +264,33 @@ export interface FlashSale {
 }
 
 /**
- * A highly addictive consumable item purchased from the Sugar Station.
- * Tapping "buy" deducts the exact tokenCost and triggers an instant
- * celebration.
+ * A real-money token pack purchasable from the Buy Tokens tab. Prices are
+ * shown in an obfuscated "gems" currency (non-round conversion to USD) so
+ * users cannot easily compute the real-world cost per token. The
+ * `fakeRetailPrice` is a crossed-out anchor that never represented an actual
+ * price; `bonusPercent` is baked into `tokenAmount` already but displayed as
+ * an extra "bonus" to create urgency.
  */
-export interface SugarItem {
+export interface TokenPack {
   id: string;
   name: string;
   description: string;
-  tokenCost: number; // dynamically scaling price
+  /** Tokens the user receives (already includes the fake "bonus"). */
+  tokenAmount: number;
+  /** Real-world USD price. */
+  price: number;
+  /** Obfuscated currency price (gems). 137 gems ≈ $1.99 — deliberately non-round. */
+  gemsPrice: number;
+  /** Crossed-out anchor price (never a real price). */
+  fakeRetailPrice: number;
+  /** Fake "bonus" percentage (already baked into tokenAmount). */
+  bonusPercent: number;
+  badge?: string;
+  highlighted?: boolean;
+  /** Fake scarcity stock count (decremented over time, "restocked" cyclically). */
+  stockLeft?: number;
+  /** Whether this pack has the fake "first purchase 300% bonus" applied. */
+  firstPurchaseBonus?: boolean;
 }
 
 export type RewardDensityPhase = "hook" | "chase";
@@ -290,8 +308,21 @@ export interface EconomyState {
   spinningWheel: SpinningWheelState;
   rewardDensity: { phase: RewardDensityPhase; sessionMinutes: number };
   deficitMultiplier: number;
-  /** Addictive consumables purchased from the Sugar Station. */
-  sugarItems: SugarItem[];
+  /** Real-money token packs purchasable from the Buy Tokens tab. */
+  tokenPacks: TokenPack[];
+  /**
+   * Fake "limited-time" bonus event that cycles endlessly. The multiplier
+   * rotates between 30/50/75/100% and the countdown resets on each cycle,
+   * creating perpetual urgency that never actually expires.
+   */
+  bonusEventMultiplier: number;
+  /** Epoch ms when the current bonus event "expires" (resets on expiry). */
+  bonusEventEndsAt: number;
+  /**
+   * Fake "first purchase bonus" flag. Never actually set to true — the
+   * 300% first-purchase bait persists every session.
+   */
+  firstPurchaseBonusUsed: boolean;
   /**
    * The live deficit price (current balance + 2..3), recalculated every
    * scheduler tick. Used for the persistent "always short" spend teaser so
@@ -443,15 +474,29 @@ export type OverlayType =
  * Payload for the celebration / token-feedback overlay.
  * - `earn` events render a gold +N upward burst (exploration, tasks, wheel,
  *   secret token).
- * - `spend` events render a distinct red -N downward dim (shortcut unlocks,
- *   flash sale purchases) so the two are visually distinguishable.
+ * - `spend` events render a purchase receipt card with balance animation and
+ *   a post-purchase hook CTA that loops the impulse.
+ * - `streak` events render a fire/gold milestone card on day increments.
  */
-export type TokenFeedbackKind = "earn" | "spend";
+export type TokenFeedbackKind = "earn" | "spend" | "streak";
+
+export interface CelebrationHook {
+  label: string;
+  action: "explore" | "wheel" | "shop" | "dismiss";
+}
 
 export interface CelebrationData {
   message: string;
   amount: number;
   kind?: TokenFeedbackKind;
+  /** Deal/item name shown in the spend receipt card. */
+  label?: string;
+  /** Token balance before the transaction (for animated counter). */
+  balanceBefore?: number;
+  /** Token balance after the transaction. */
+  balanceAfter?: number;
+  /** Post-purchase hook CTA shown at the bottom of the spend receipt. */
+  hook?: CelebrationHook;
 }
 
 /**
@@ -546,4 +591,6 @@ export interface UIState {
   isMuted: boolean;
   /** Whether sound effects are enabled (separate from feed video mute). */
   isSoundEnabled: boolean;
+  /** Parallel celebration toast queue — independent of activeOverlay. */
+  celebrationQueue: CelebrationData[];
 }

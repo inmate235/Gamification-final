@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 /**
  * LoadingTransition — a full-screen loading overlay shown during the
@@ -14,8 +14,13 @@ import { motion, AnimatePresence } from "framer-motion";
  * been committed. The component handles only the visual transition + navigation.
  */
 
-const VIDEO_DURATION_MS = 2500;
-const FADE_OUT_MS = 400;
+/**
+ * Video play duration before navigating. The overlay stays fully opaque
+ * until navigation fires, then MallExperience's own entrance animation
+ * (fade-in from opacity 0) handles the visual handoff. This avoids a
+ * brief flash of the survey card underneath during route transition.
+ */
+const VIDEO_DURATION_MS = 5500;
 const SMOOTH = [0.32, 0.72, 0, 1] as const;
 
 const isTest =
@@ -23,16 +28,9 @@ const isTest =
 
 export function LoadingTransition() {
   const router = useRouter();
-  const [isFadingOut, setIsFadingOut] = useState(false);
   const navigatedRef = useRef(false);
 
   useEffect(() => {
-    const delay = isTest ? 0 : VIDEO_DURATION_MS;
-
-    const fadeTimer = setTimeout(() => {
-      setIsFadingOut(true);
-    }, delay);
-
     const navTimer = setTimeout(
       () => {
         if (!navigatedRef.current) {
@@ -40,26 +38,22 @@ export function LoadingTransition() {
           router.push("/mall");
         }
       },
-      isTest ? 0 : delay + FADE_OUT_MS
+      isTest ? 0 : VIDEO_DURATION_MS
     );
 
     return () => {
-      clearTimeout(fadeTimer);
       clearTimeout(navTimer);
     };
   }, [router]);
 
   return (
-    <AnimatePresence>
-      {!isFadingOut && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: SMOOTH }}
-          className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#141414] overflow-hidden"
-          data-testid="loading-transition"
-        >
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3, ease: SMOOTH }}
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#141414] overflow-hidden"
+      data-testid="loading-transition"
+    >
           {/* Full-screen background video */}
           <video
             autoPlay
@@ -120,8 +114,6 @@ export function LoadingTransition() {
               Preparing your personalized experience
             </motion.p>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </motion.div>
   );
 }

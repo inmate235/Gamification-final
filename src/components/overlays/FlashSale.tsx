@@ -119,25 +119,28 @@ export function FlashSale() {
     expireFlashSale(current);
   }, [sale?.id]);
 
-  // Grab Deal: deduct tokens, show claimed state for ~1s, then the spend
-  // celebration overlay. The celebration is delayed so the inline "Deal
-  // Claimed!" confirmation is visible before the overlay switches.
+  // Grab Deal: deduct tokens, show claimed state for ~1s, then close the
+  // overlay and fire the spend receipt toast. The toast renders from the
+  // parallel celebration queue at z-50 — the sheet closing and the toast
+  // appearing are now a single smooth sequence rather than an abrupt swap.
   const onGrab = useCallback(() => {
     const current = sale?.id;
     if (!current) return;
     const cost = sale.tokenCost;
-    // Claim without immediate feedback — we'll show the celebration after the
-    // claimed state has been visible for ~1s.
+    const storeName = getStoreById(sale.storeId)?.name;
     const ok = claimFlashSale(current, { showFeedback: false });
     if (ok) {
       setClaimed(true);
       if (claimedTimerRef.current) clearTimeout(claimedTimerRef.current);
       claimedTimerRef.current = setTimeout(() => {
-        showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`);
+        hideOverlay();
+        showTokenFeedback("spend", cost, `Deal Claimed! -${cost} Tokens`, {
+          label: storeName,
+        });
         setClaimed(false);
       }, 1000);
     }
-  }, [sale]);
+  }, [sale, hideOverlay]);
 
   useEffect(() => {
     if (!isOpen) return;
