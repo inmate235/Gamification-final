@@ -85,6 +85,9 @@ let bgMusicPending = false;
 /** Active sound clones currently playing (for stopAllSounds). */
 const activeClones = new Set<HTMLAudioElement>();
 
+/** Last time the achievement sound was played, to prevent overlapping echoes. */
+let lastAchievementTime = 0;
+
 /* ============================================================================
    Initialization
    ========================================================================== */
@@ -192,6 +195,9 @@ export function playSound(
 
 /** Convenience: play the achievement sound at a higher volume. */
 export function playAchievement(): void {
+  const now = Date.now();
+  if (now - lastAchievementTime < 1000) return;
+  lastAchievementTime = now;
   playSound(SOUNDS.ACHIEVEMENT, VOLUME.achievement);
 }
 
@@ -323,6 +329,7 @@ export function _resetSound(): void {
   initialized = false;
   soundEnabled = true;
   bgMusicPending = false;
+  lastAchievementTime = 0;
   if (bgAudio) {
     bgAudio.pause();
     bgAudio = null;
