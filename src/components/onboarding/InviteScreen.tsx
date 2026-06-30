@@ -529,7 +529,7 @@ export function InviteScreen() {
               )}
 
               {/* Character + headline */}
-              <div className="flex flex-col items-center pt-8 px-5 sm:px-8 gap-5">
+              <div className="flex flex-col items-center pt-7 sm:pt-8 px-5 sm:px-8 gap-4 sm:gap-5">
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -539,23 +539,23 @@ export function InviteScreen() {
                   {/* Outer pulsing ring */}
                   <motion.div
                     className="absolute rounded-full border-2 border-[#e6009e]/25"
-                    style={{ width: 188, height: 188 }}
+                    style={{ width: 238, height: 238 }}
                     animate={{ scale: [1, 1.12, 1], opacity: [0.25, 0.5, 0.25] }}
                     transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
                   />
                   {/* Inner glow */}
-                  <div className="pointer-events-none absolute h-36 w-36 sm:h-40 sm:w-40 rounded-full bg-[radial-gradient(circle,rgba(230,0,158,0.22)_0%,rgba(230,0,158,0.08)_45%,rgba(230,0,158,0)_75%)] blur-[2px]" />
+                  <div className="pointer-events-none absolute h-44 w-44 sm:h-48 sm:w-48 rounded-full bg-[radial-gradient(circle,rgba(230,0,158,0.26)_0%,rgba(230,0,158,0.1)_45%,rgba(230,0,158,0)_75%)] blur-[2px]" />
 
                   {!welcomeCharError ? (
                     <img
                       src="/assets/onboarding/verified.png"
                       alt="Welcome to MurkyCorps Mall"
-                      className="relative z-10 h-40 sm:h-44 w-auto object-contain drop-shadow-[0_14px_28px_rgba(20,20,20,0.24)]"
+                      className="relative z-10 h-46 sm:h-[202px] w-auto object-contain drop-shadow-[0_18px_34px_rgba(20,20,20,0.3)]"
                       onError={() => setWelcomeCharError(true)}
                     />
                   ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#e6009e]">
-                      <SealCheck size={40} weight="bold" className="text-white" />
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#e6009e]">
+                      <SealCheck size={46} weight="bold" className="text-white" />
                     </div>
                   )}
 
@@ -564,10 +564,10 @@ export function InviteScreen() {
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.55, ease: POP }}
-                    className="absolute -top-1 -right-1 z-20 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white shadow-md"
+                    className="absolute -top-1.5 -right-1.5 z-20 flex h-10 w-10 items-center justify-center rounded-full border-2 border-white shadow-md"
                     style={{ background: "linear-gradient(135deg,#e6009e,#b8007e)" }}
                   >
-                    <SealCheck size={18} weight="bold" className="text-white" />
+                    <SealCheck size={20} weight="bold" className="text-white" />
                   </motion.div>
                 </motion.div>
 
