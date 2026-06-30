@@ -9,9 +9,9 @@ static constexpr float DEG2RAD = M_PI / 180.0f;
 #define PANEL_X    180
 #define PANEL_W    (DISPLAY_WIDTH - PANEL_X - 5)
 
-// Near-miss weights matching the app's BASE_WEIGHTS
-static const float BASE_WEIGHTS[7] = {0.10f, 0.15f, 0.16f, 0.16f, 0.13f, 0.15f, 0.15f};
-#define NEAR_MISS_THRESHOLD 0.40f
+// Near-miss weights — tuned for demo (more wins, fewer misses)
+static const float BASE_WEIGHTS[7] = {0.15f, 0.18f, 0.12f, 0.18f, 0.12f, 0.20f, 0.05f};
+#define NEAR_MISS_THRESHOLD 0.10f   // 10% near-miss (was 40%)
 #define NEAR_MISS_INDEX     6
 
 void WheelScreen::init(LGFX* display) {
@@ -107,8 +107,8 @@ void WheelScreen::update(uint32_t now) {
       _rotation = _targetRotation;
       _phase = Phase::RESULT;
       _resultShownAt = now;
-      // Spawn confetti on a win (not near-miss, not "nothing" segment 6)
-      if (!_resultNearMiss && _resultSegment >= 0 && _resultSegment != 6) {
+      // Spawn confetti on any win (not near-miss)
+      if (!_resultNearMiss && _resultSegment >= 0) {
         spawnConfetti();
       }
     }
@@ -127,14 +127,14 @@ void WheelScreen::spawnConfetti() {
   };
   for (int i = 0; i < MAX_CONFETTI; i++) {
     float angle = (float)(rand() % 360) * DEG2RAD;
-    float speed = 2.0f + (float)(rand() % 40) / 10.0f;
-    _confetti[i].x = WHEEL_CX;
-    _confetti[i].y = WHEEL_CY;
+    float speed = 1.0f + (float)(rand() % 20) / 10.0f;
+    _confetti[i].x = DISPLAY_WIDTH / 2;   // center of screen
+    _confetti[i].y = DISPLAY_HEIGHT / 2;
     _confetti[i].vx = cosf(angle) * speed;
-    _confetti[i].vy = sinf(angle) * speed - 2.0f;
+    _confetti[i].vy = sinf(angle) * speed - 1.0f;
     _confetti[i].color = confettiColors[rand() % 8];
-    _confetti[i].life = 50 + rand() % 40;
-    _confetti[i].size = 3 + rand() % 3;
+    _confetti[i].life = 60 + rand() % 40;
+    _confetti[i].size = 4 + rand() % 3;   // bigger particles
   }
   _confettiActive = true;
 }

@@ -292,9 +292,10 @@ function SpinningWheelContent() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 24, scale: 0.95 }}
         transition={{ duration: 0.6, ease: POP }}
-        className="relative w-full max-w-sm rounded-3xl bg-white shadow-[0_24px_64px_rgba(20,20,20,0.22)] ring-2 ring-[#141414]/8"
+        className="relative w-full max-w-sm rounded-3xl bg-white shadow-[0_24px_64px_rgba(20,20,20,0.22)] ring-2 ring-[#141414]/8 overflow-hidden"
         data-testid="wheel-card"
       >
+        {phase === "result" && <WheelConfetti />}
         <div className="relative p-6 sm:p-8">
           {/* Close button */}
           <button
@@ -761,6 +762,37 @@ function ResultBadge({
           near-miss
         </span>
       )}
+    </div>
+  );
+}
+
+/* ============================================================================
+   Wheel Confetti Component
+   ========================================================================== */
+
+function WheelConfetti() {
+  const [particles] = useState(() =>
+    Array.from({ length: 30 }).map((_, i) => ({
+      id: i,
+      color: ["#e6009e", "#ffe600", "#14b8a6", "#7c3aed", "#ff8cdb"][Math.floor(Math.random() * 5)],
+      left: Math.random() * 100 + "%",
+      animationDelay: Math.random() * 0.5 + "s",
+    }))
+  );
+
+  return (
+    <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden rounded-3xl">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute -top-4 h-3 w-3 rounded-full animate-confetti"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animationDelay: p.animationDelay,
+          }}
+        />
+      ))}
     </div>
   );
 }
