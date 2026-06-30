@@ -47,6 +47,8 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { useSocialStore } from "@/stores/socialStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useCrowdStore } from "@/stores/crowdStore";
+import { useESP32Sync } from "@/hooks/useESP32Sync";
+import { ESP32ConnectButton } from "@/components/ui/ESP32ConnectButton";
 
 /**
  * MallExperience — the full `/mall` screen.
@@ -67,6 +69,8 @@ const PREMIUM_EASE = [0.32, 0.72, 0, 1] as const;
 export function MallExperience() {
   const grantOnboardingTrialPerks = usePlayerStore((s) => s.grantOnboardingTrialPerks);
   const exited = useSessionStore((s) => s.exited);
+
+  useESP32Sync();
 
   /* --- Start / stop the game loop on mount / unmount --- */
   useEffect(() => {
@@ -219,6 +223,7 @@ export function MallExperience() {
           {/* Top Right Actions */}
           <div className="fixed top-20 right-4 z-30 flex flex-col items-end gap-3 sm:top-24">
             <SpinningWheelEntryButton />
+            <ESP32ConnectButton />
           </div>
 
           {/* Map area — padded to clear the fixed status bar + bottom panel */}

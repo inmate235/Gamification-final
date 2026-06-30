@@ -333,7 +333,7 @@ export function InviteScreen() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
-              className="rounded-[1.65rem] border border-white/40 bg-white/92 backdrop-blur-md p-4 sm:p-5 md:p-6 shadow-[0_20px_50px_rgba(20,20,20,0.22),0_4px_12px_rgba(20,20,20,0.12)] flex flex-col gap-4 sm:gap-5"
+              className="rounded-[1.65rem] border border-white/40 bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-md p-4 sm:p-5 md:p-6 shadow-[0_20px_50px_rgba(20,20,20,0.22),0_4px_12px_rgba(20,20,20,0.12)] flex flex-col gap-4 sm:gap-5"
             >
               {/* Eyebrow */}
               <div className="flex items-center gap-1.5">
@@ -492,7 +492,7 @@ export function InviteScreen() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.5, ease: SMOOTH }}
-              className="rounded-[1.8rem] border border-white/40 bg-white/92 backdrop-blur-md shadow-[0_20px_50px_rgba(20,20,20,0.22),0_4px_12px_rgba(20,20,20,0.12)] flex flex-col items-center justify-between flex-1 text-center overflow-hidden relative"
+              className="rounded-[1.8rem] border border-white/40 bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-md shadow-[0_20px_50px_rgba(20,20,20,0.22),0_4px_12px_rgba(20,20,20,0.12)] flex flex-col items-center justify-between flex-1 text-center overflow-hidden relative"
               onClick={skipAnimation}
             >
               {/* Ambient particles */}

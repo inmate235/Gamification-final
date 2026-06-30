@@ -58,13 +58,13 @@ export interface SpinResult {
  * click past it to index 6.  This is the near-miss visual.
  */
 export const WHEEL_SEGMENTS: WheelSegment[] = [
-  { index: 0, type: "tokens", tokens: 10, label: "10 Tokens", color: "#ffd700" }, // Bright Gold Candy
-  { index: 1, type: "tokens", tokens: 5, label: "5 Tokens", color: "#10b981" },  // Vibrant Emerald Green
-  { index: 2, type: "map-reveal", tokens: 0, label: "Map Reveal", color: "#7c3aed" }, // Sweet Purple Candy
-  { index: 3, type: "tokens", tokens: 3, label: "3 Tokens", color: "#06b6d4" },  // Cyan Candy Blue
-  { index: 4, type: "flash-sale", tokens: 0, label: "Flash Sale", color: "#f43f5e" }, // Hot Cherry Pink
-  { index: 5, type: "tokens", tokens: 1, label: "1 Token", color: "#f97316" },   // Orange Pop
-  { index: 6, type: "nothing", tokens: 0, label: "Nothing", color: "#475569" },  // Slate Candy Gray
+  { index: 0, type: "tokens", tokens: 10, label: "10 Tokens", color: "#FEF9F0" }, // White
+  { index: 1, type: "tokens", tokens: 5, label: "5 Tokens", color: "#2EE5F6" },  // Cyan
+  { index: 2, type: "map-reveal", tokens: 0, label: "Map Reveal", color: "#B269FB" }, // Purple
+  { index: 3, type: "tokens", tokens: 3, label: "3 Tokens", color: "#2EE5F6" },  // Cyan
+  { index: 4, type: "flash-sale", tokens: 0, label: "Flash Sale", color: "#FFEA00" }, // Yellow
+  { index: 5, type: "tokens", tokens: 1, label: "1 Token", color: "#B269FB" },   // Purple
+  { index: 6, type: "nothing", tokens: 0, label: "Nothing", color: "#FF5EBE" },  // Pink
 ];
 
 export const BIG_PRIZE_INDEX = 0;

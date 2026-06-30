@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkle, MapTrifold, Storefront, Coins } from "@phosphor-icons/react/dist/ssr";
+import { X, Sparkle, MapTrifold, Storefront, Coins, Star } from "@phosphor-icons/react/dist/ssr";
 import { useUIStore } from "@/stores/uiStore";
 import { useEconomyStore } from "@/stores/economyStore";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -408,9 +408,9 @@ function SpinningWheelContent() {
             >
               <defs>
                 <linearGradient id="candyHubGrad" x1={CX} y1={CY - R_INNER} x2={CX} y2={CY + R_INNER} gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#ff8cdb" />
-                  <stop offset="0.6" stopColor="#e6009e" />
-                  <stop offset="1" stopColor="#b8007e" />
+                  <stop stopColor="#ffe76b" />
+                  <stop offset="0.6" stopColor="#ffc700" />
+                  <stop offset="1" stopColor="#d99b00" />
                 </linearGradient>
                 <radialGradient id="glossyShine" cx="35%" cy="35%" r="65%" fx="35%" fy="35%">
                   <stop offset="0%" stopColor="#ffffff" stopOpacity="0.45" />
@@ -427,10 +427,9 @@ function SpinningWheelContent() {
                     <path
                       d={w.path}
                       fill={w.color}
-                      fillOpacity={isBigPrize ? 0.95 : 0.85}
-                      stroke="#ffffff"
-                      strokeOpacity={0.9}
-                      strokeWidth={2}
+                      fillOpacity={1}
+                      stroke="rgba(0,0,0,0.1)"
+                      strokeWidth={1}
                       className={cn(
                         isBigPrize && highlightBigPrize && "animate-pulse"
                       )}
@@ -447,12 +446,11 @@ function SpinningWheelContent() {
                       <text
                         textAnchor="middle"
                         dominantBaseline="middle"
-                        fill="#ffffff"
-                        fontSize={isBigPrize ? 13 : 11}
-                        fontWeight={isBigPrize ? 700 : 600}
+                        fill="#000000"
+                        fontSize={isBigPrize ? 14 : 12}
+                        fontWeight={isBigPrize ? 800 : 700}
                         style={{ 
                           userSelect: "none",
-                          filter: "drop-shadow(0 1.5px 2px rgba(20,20,20,0.65))"
                         }}
                       >
                         {w.label}
@@ -485,7 +483,7 @@ function SpinningWheelContent() {
                 pointerEvents="none"
               />
 
-              {/* Center hub — Glossy 3D Candy Pink */}
+              {/* Center hub — Glossy Gold */}
               <circle
                 cx={CX}
                 cy={CY}
@@ -493,7 +491,7 @@ function SpinningWheelContent() {
                 fill="url(#candyHubGrad)"
                 stroke="#ffffff"
                 strokeWidth={2.5}
-                style={{ filter: "drop-shadow(0 3px 6px rgba(184,0,126,0.6))" }}
+                style={{ filter: "drop-shadow(0 3px 6px rgba(217,155,0,0.6))" }}
               />
               <path
                 d={`M ${CX - 16} ${CY - 16} A 22 22 0 0 1 ${CX + 16} ${CY - 16}`}
@@ -506,7 +504,7 @@ function SpinningWheelContent() {
             </motion.svg>
             {/* Center icon */}
             <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-              <Coins size={24} weight="fill" className="text-white drop-shadow-[0_2px_4px_rgba(184,0,126,0.6)]" />
+              <Star size={24} weight="fill" className="text-[#ff47b6] drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
             </div>
           </div>
 
