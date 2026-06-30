@@ -3,15 +3,21 @@
 #include "lgfx_config.h"
 #include "shared_state.h"
 
+#define MAX_CONFETTI 30
+
+struct ConfettiParticle {
+  float x, y, vx, vy;
+  uint32_t color;
+  int life;
+  int size;
+};
+
 class WheelScreen {
 public:
   void init(LGFX* display);
-  // Called every frame. Pass current millis().
   void update(uint32_t now);
   void draw(LGFX_Sprite& spr);
-  // Called when the phone sends a spin result (segment + near-miss flag).
   void onSpinResult(int segment, bool nearMiss);
-  // Called by touch handler when user taps this screen.
   void onTap(int x, int y);
 
 private:
@@ -27,14 +33,22 @@ private:
   int      _resultSegment     = -1;
   bool     _resultNearMiss    = false;
   uint32_t _resultShownAt     = 0;
-  bool     _lastWheelAvail    = false;  // detect edge: wheel becomes available
+  bool     _lastWheelAvail    = false;
+  uint32_t _pulseTimer        = 0;
 
-  // Helpers
+  ConfettiParticle _confetti[MAX_CONFETTI];
+  bool _confettiActive = false;
+
   void     drawWheel(LGFX_Sprite& spr, float angle);
   void     drawPointer(LGFX_Sprite& spr);
   void     drawStatusRow(LGFX_Sprite& spr);
   void     drawSpinButton(LGFX_Sprite& spr);
   void     drawResultLabel(LGFX_Sprite& spr);
+  void     drawSegmentLabels(LGFX_Sprite& spr, float angle);
+  void     drawConfetti(LGFX_Sprite& spr);
+  void     spawnConfetti();
+  void     updateConfetti();
   float    easeOut(float t);
   float    computeTarget(float current, int segIndex);
+  void     startLocalSpin();
 };

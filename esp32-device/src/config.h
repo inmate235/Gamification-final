@@ -1,19 +1,29 @@
 #pragma once
 
 // ── Display dimensions ────────────────────────────────────────────────────────
-// T-Display-S3: 1.9" ST7789, 170×320, portrait
-// Adjust if your specific board variant differs.
-#define DISPLAY_WIDTH  170
-#define DISPLAY_HEIGHT 320
+// T-Display-S3: 1.9" ST7789, landscape orientation (320×170)
+#define DISPLAY_WIDTH  320
+#define DISPLAY_HEIGHT 170
 
 // ── T-Display-S3 CAP TOUCH pin mapping ───────────────────────────────────────
-// Display SPI
-#define TFT_MOSI 11
-#define TFT_SCLK 12
-#define TFT_CS   10
-#define TFT_DC    7
-#define TFT_RST   5
-#define TFT_BL   38
+// Display: 8-bit parallel interface (NOT SPI!)
+#define PIN_LCD_BL    38
+#define PIN_LCD_RES    5
+#define PIN_LCD_CS     6
+#define PIN_LCD_DC     7
+#define PIN_LCD_WR     8
+#define PIN_LCD_RD     9
+#define PIN_LCD_D0    39
+#define PIN_LCD_D1    40
+#define PIN_LCD_D2    41
+#define PIN_LCD_D3    42
+#define PIN_LCD_D4    45
+#define PIN_LCD_D5    46
+#define PIN_LCD_D6    47
+#define PIN_LCD_D7    48
+
+// Power enable (must be HIGH for backlight)
+#define PIN_POWER_ON  15
 
 // Capacitive touch (CST816S via I2C)
 #define TOUCH_SDA 18
@@ -33,11 +43,11 @@
 // ESP32 notifies user actions here; phone subscribes
 #define ACTION_CHAR_UUID "1c95d5e3-d8f7-413a-bf3d-7a2e5d7be87e"
 
-// ── Wheel geometry ────────────────────────────────────────────────────────────
-#define WHEEL_CX          85     // center x (display_width / 2)
-#define WHEEL_CY         145     // center y
-#define WHEEL_R           65     // outer radius
-#define WHEEL_HUB_R       16     // center hub radius
+// ── Wheel geometry (landscape: wheel on left half) ───────────────────────────
+#define WHEEL_CX          85
+#define WHEEL_CY          85
+#define WHEEL_R           62
+#define WHEEL_HUB_R       14
 #define NUM_SEGMENTS       7
 #define SEGMENT_ANGLE    (360.0f / NUM_SEGMENTS)  // ~51.43°
 #define SPIN_DURATION_MS  3000.0f

@@ -8,7 +8,8 @@ struct SaleData {
   char     discount[20]     = "";
   int      countdownSeconds = 0;
   int      direction        = -1;   // 0=N 1=NE 2=E 3=SE 4=S 5=SW 6=W 7=NW
-  uint32_t receivedAt       = 0;    // millis() when state was last written
+  int      distanceMeters   = 0;    // walking distance to display under arrow
+  uint32_t receivedAt       = 0;
 };
 
 struct SharedState {
