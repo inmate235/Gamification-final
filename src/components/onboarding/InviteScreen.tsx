@@ -232,6 +232,7 @@ export function InviteScreen() {
 
   const skipAnimation = useCallback(() => {
     if (isExiting) return;
+    playSound(SOUNDS.SWOOSH);
     if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
     setIsExiting(true);
@@ -246,6 +247,12 @@ export function InviteScreen() {
       if (welcomeTimerRef.current) clearTimeout(welcomeTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (phase === "welcome") {
+      playSound(SOUNDS.SURVEY_FRIENDS);
+    }
+  }, [phase]);
 
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-white flex flex-col">

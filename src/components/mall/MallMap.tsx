@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useMapStore } from "@/stores/mapStore";
 import { useUIStore } from "@/stores/uiStore";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useFountainStore } from "@/stores/fountainStore";
 import {
   EXPLORE_REWARD,
   FIRST_TOKEN_BONUS,
@@ -395,8 +396,8 @@ export function MallMap() {
           {/* Floor tile grid pattern — renders inside revealed zone rooms */}
           <pattern id="floor-tiles" patternUnits="userSpaceOnUse" width="36" height="36">
             <rect width="36" height="36" fill="none" />
-            <line x1="0" y1="0" x2="36" y2="0" stroke="rgba(20,20,20,0.04)" strokeWidth="1" />
-            <line x1="0" y1="0" x2="0" y2="36" stroke="rgba(20,20,20,0.04)" strokeWidth="1" />
+            <line x1="0" y1="0" x2="36" y2="0" stroke="rgba(20,20,20,0.14)" strokeWidth="1" />
+            <line x1="0" y1="0" x2="0" y2="36" stroke="rgba(20,20,20,0.14)" strokeWidth="1" />
           </pattern>
 
           {/* Corridor hatching pattern — crosshatch for the hallway strips */}
@@ -713,7 +714,8 @@ export function MallMap() {
 
         {/* ── Atrium fountain — between West Wing and East Wing ──────────────
             Sits in the 120 SVG-unit gap (x=440–560, y=640–980) that
-            separates the two wings. Appears when either wing is revealed.  */}
+            separates the two wings. Appears when either wing is revealed.
+            Tapping the fountain opens the Wishing Fountain cinematic overlay.  */}
         <FountainLandmark
           visible={
             fogState[ZONE_WEST_WING] === true ||
@@ -790,6 +792,9 @@ export function MallMap() {
  * horizontally and vertically.
  */
 function FountainLandmark({ visible }: { visible: boolean }) {
+  const showOverlay = useUIStore((s) => s.showOverlay);
+  const hasMet = useFountainStore((s) => s.hasMet);
+  const canWish = useFountainStore((s) => s.canWish);
   // Fountain centre in SVG space — original atrium midpoint
   const cx = 500;
   const cy = 810;
@@ -800,13 +805,15 @@ function FountainLandmark({ visible }: { visible: boolean }) {
   const fy = cy - fh / 2;
   // Water basin base Y (slightly below image centre)
   const basinY = cy + fh * 0.34;
+  // Show a "tap me" hint while the player has not met the fountain yet, or
+  // when a wish is available again after cooldown.
+  const showHint = visible && (!hasMet || canWish());
 
   return (
     <motion.g
       initial={false}
       animate={{ opacity: visible ? 1 : 0 }}
       transition={{ duration: 1.2, ease: [0.32, 0.72, 0, 1] }}
-      pointerEvents="none"
       data-testid="fountain-landmark"
     >
       {/* ── Atrium floor disc — grounds the fountain in the corridor ── */}
@@ -849,7 +856,26 @@ function FountainLandmark({ visible }: { visible: boolean }) {
         />
       ))}
 
-      {/* ── Fountain PNG — gently floating ── */}
+      {/* ── "Tap me" hint ring — pulses to invite interaction ── */}
+      {showHint && (
+        <motion.ellipse
+          cx={cx}
+          cy={cy + 10}
+          rx={fw * 0.42}
+          ry={fw * 0.42}
+          fill="none"
+          stroke="rgba(245,158,11,0.55)"
+          strokeWidth={2.5}
+          strokeDasharray="6 6"
+          animate={{ scale: [1, 1.12, 1], opacity: [0.65, 0.15, 0.65] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          style={{ transformOrigin: `${cx}px ${cy + 10}px` }}
+          pointerEvents="none"
+          data-testid="fountain-tap-hint"
+        />
+      )}
+
+      {/* ── Fountain PNG — gently floating; tappable to open the cinematic ── */}
       <motion.image
         href="/assets/map/fountain.png"
         x={fx}
@@ -866,7 +892,11 @@ function FountainLandmark({ visible }: { visible: boolean }) {
         style={{
           filter:
             "drop-shadow(0 16px 26px rgba(56,189,248,0.50)) drop-shadow(0 4px 8px rgba(20,20,20,0.20))",
+          cursor: visible ? "pointer" : "default",
         }}
+        onClick={() => visible && showOverlay("fountain")}
+        role={visible ? "button" : undefined}
+        aria-label={visible ? "Open the MurkyMall Wishing Fountain" : undefined}
       />
     </motion.g>
   );

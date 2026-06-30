@@ -51,7 +51,7 @@ export function LoadingTransition() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: SMOOTH }}
-      className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#141414] overflow-hidden"
+      className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-[#2C1142] overflow-hidden"
       data-testid="loading-transition"
     >
           {/* Full-screen background video */}
@@ -60,56 +60,62 @@ export function LoadingTransition() {
             loop
             muted
             playsInline
-            className="absolute inset-0 h-full w-full object-cover opacity-60"
+            className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-luminosity"
           >
             <source src="/assets/onboarding/shopper-walking.mp4" type="video/mp4" />
           </video>
 
-          {/* Dark vignette for text legibility */}
+          {/* Dark purple vignette for text legibility and matching theme */}
           <div
             className="absolute inset-0"
             style={{
               background:
-                "radial-gradient(ellipse at center, rgba(20,20,20,0.2) 0%, rgba(20,20,20,0.6) 70%, rgba(20,20,20,0.85) 100%)",
+                "radial-gradient(ellipse at center, rgba(44,17,66,0.4) 0%, rgba(44,17,66,0.85) 70%, rgba(30,10,45,0.95) 100%)",
             }}
           />
 
           {/* Centered content */}
-          <div className="relative z-10 flex flex-col items-center gap-6 px-6">
-            {/* Animated walking dots */}
-            <div className="flex items-center gap-2">
-              {[0, 1, 2].map((i) => (
+          <div className="relative z-10 flex flex-col items-center gap-8 px-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: SMOOTH, delay: 0.1 }}
+              className="w-72 sm:w-96 md:w-[28rem] drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]"
+            >
+              <img 
+                src="/assets/survey/murkmall-logo.png" 
+                alt="Entering MurkMall..." 
+                className="w-full h-auto drop-shadow-2xl"
+              />
+            </motion.div>
+
+            {/* Animated loading dots with logo colors */}
+            <div className="flex items-center gap-3">
+              {["#FF69B4", "#A870E8", "#FFD300"].map((color, i) => (
                 <motion.div
                   key={i}
-                  className="h-2.5 w-2.5 rounded-full bg-[#e6009e]"
+                  className="h-3.5 w-3.5 rounded-full shadow-lg"
+                  style={{ backgroundColor: color }}
                   animate={{
-                    y: [0, -12, 0],
-                    opacity: [0.4, 1, 0.4],
+                    y: [0, -14, 0],
+                    opacity: [0.5, 1, 0.5],
+                    scale: [1, 1.2, 1],
                   }}
                   transition={{
-                    duration: 0.8,
+                    duration: 0.9,
                     repeat: Infinity,
                     ease: "easeInOut",
-                    delay: i * 0.15,
+                    delay: i * 0.2,
                   }}
                 />
               ))}
             </div>
 
-            <motion.h2
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: SMOOTH, delay: 0.2 }}
-              className="font-display text-center text-2xl font-bold text-pink-500 sm:text-3xl"
-            >
-              Entering MurkyCorps Mall...
-            </motion.h2>
-
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, ease: SMOOTH, delay: 0.5 }}
-              className="text-center text-sm text-white/80"
+              transition={{ duration: 0.6, ease: SMOOTH, delay: 0.6 }}
+              className="text-center text-sm sm:text-base font-medium max-w-sm px-4 text-[#E1C49C] drop-shadow-md"
             >
               Sprinkling candy-coated reward loops onto your screen to make spending money feel just like unwrapping a sweet treat!
             </motion.p>

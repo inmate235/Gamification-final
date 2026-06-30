@@ -53,7 +53,7 @@ const VOLUME = {
   effect: 0.7,
   achievement: 0.85,
   /** Super quiet — a barely-there ambient presence, still recognizable. */
-  background: 0.06,
+  background: 0.051,
 } as const;
 
 /** Fade duration in ms for background music fade in/out (smooth wave). */
@@ -244,11 +244,25 @@ export function stopAllSounds(): void {
 
 /**
  * Start the looping ambient background track with a smooth fade-in.
- * Safe to call when already playing (no-op). Respects the sound-enabled flag.
+ * Safe to call when already playing. If a fade-out is in progress (e.g. from
+ * React Strict Mode cleanup), the fade is cancelled and volume is restored.
+ * Respects the sound-enabled flag.
  */
 export function startBackgroundMusic(): void {
   if (!isClient || !soundEnabled) return;
-  if (bgAudio) return; // already playing
+  if (bgAudio) {
+    // Music element already exists — either playing normally or in the middle
+    // of an async fade-out (e.g. React Strict Mode cleanup called
+    // stopBackgroundMusic() which started a 1.5s fade, then the effect
+    // re-invoked and called us). Cancel any in-progress fade and restore
+    // target volume so the music keeps playing instead of fading to silence.
+    if (bgFadeTimer) {
+      clearInterval(bgFadeTimer);
+      bgFadeTimer = null;
+    }
+    bgAudio.volume = VOLUME.background;
+    return;
+  }
 
   bgAudio = new Audio(SOUNDS.BACKGROUND);
   bgAudio.loop = true;

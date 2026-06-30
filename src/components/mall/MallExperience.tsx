@@ -24,6 +24,7 @@ import { Celebration } from "@/components/overlays/Celebration";
 import { FlashSale } from "@/components/overlays/FlashSale";
 import { ShopOverlay, ShopEntryButton } from "@/components/overlays/ShopOverlay";
 import { SpinningWheel, SpinningWheelEntryButton } from "@/components/overlays/SpinningWheel";
+import { FountainOverlay } from "@/components/overlays/FountainOverlay";
 import { TierUpgrade } from "@/components/overlays/TierUpgrade";
 import { TierPerksPanel } from "@/components/overlays/TierPerksPanel";
 import { ExitFriction } from "@/components/overlays/ExitFriction";
@@ -274,6 +275,7 @@ export function MallExperience() {
           <ShopOverlay />
           <FlashSale />
           <SpinningWheel />
+          <FountainOverlay />
           <TierUpgrade />
           <TierPerksPanel />
           <ExitFriction />

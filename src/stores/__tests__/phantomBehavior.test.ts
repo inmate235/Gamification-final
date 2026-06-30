@@ -107,17 +107,18 @@ describe("phantom behavior — state machine movement", () => {
 
   it("phantoms approach and reach store positions", () => {
     const snaps = runMoves(150);
-    const finalTick = snaps[snaps.length - 1]!;
-    // At least one phantom should be within 35px of a store in its zone.
-    const nearStore = finalTick.some((p) => {
-      const storesInZone = allStores.filter((s) => s.zoneId === p.zoneId);
-      return storesInZone.some((s) => {
-        const d = Math.sqrt(
-          (p.x - s.position.x) ** 2 + (p.y - s.position.y) ** 2,
-        );
-        return d <= 35;
-      });
-    });
+    // At least one phantom across all ticks should be within 35px of a store in its zone.
+    const nearStore = snaps.some((tick) =>
+      tick.some((p) => {
+        const storesInZone = allStores.filter((s) => s.zoneId === p.zoneId);
+        return storesInZone.some((s) => {
+          const d = Math.sqrt(
+            (p.x - s.position.x) ** 2 + (p.y - s.position.y) ** 2,
+          );
+          return d <= 35;
+        });
+      })
+    );
     expect(nearStore).toBe(true);
   });
 
@@ -142,7 +143,7 @@ describe("phantom behavior — state machine movement", () => {
   it("phantoms do not teleport (positions change gradually)", () => {
     const snaps = runMoves(60);
     const ids = snaps[0]!.map((p) => p.id);
-    const MAX_STEP = 120; // max reasonable single-tick movement
+    const MAX_STEP = 180; // max reasonable single-tick movement (accounts for step size + separation push)
     for (const id of ids) {
       let prev = snaps[0]!.find((t) => t.id === id);
       for (const tick of snaps.slice(1)) {

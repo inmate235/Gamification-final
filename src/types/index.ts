@@ -468,7 +468,8 @@ export type OverlayType =
   | "celebration"
   | "shortcut-unlock"
   | "leaderboard"
-  | "shop";
+  | "shop"
+  | "fountain";
 
 /**
  * Payload for the celebration / token-feedback overlay.

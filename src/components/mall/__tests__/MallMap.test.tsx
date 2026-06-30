@@ -53,6 +53,8 @@ vi.mock("framer-motion", () => {
       line: mk("line"),
       path: mk("path"),
       foreignObject: mk("foreignObject"),
+      ellipse: mk("ellipse"),
+      image: mk("image"),
     },
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
