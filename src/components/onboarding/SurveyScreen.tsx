@@ -140,6 +140,7 @@ export function SurveyScreen() {
   const totalQuestions = SURVEY_QUESTIONS.length;
   const currentQuestion = SURVEY_QUESTIONS[currentIndex];
   const isLastQuestion = currentIndex === totalQuestions - 1;
+  const showStyleMascot = currentQuestion.id === "style";
   const progressPercent = ((currentIndex + 1) / totalQuestions) * 100;
 
   /* --- Clean up timers on unmount --- */
@@ -289,17 +290,39 @@ export function SurveyScreen() {
             className="rounded-[1.65rem] border border-[#141414]/10 bg-white/84 backdrop-blur-[2px] shadow-[0_12px_30px_rgba(20,20,20,0.08)] p-4 sm:p-5 md:p-6 flex flex-col"
           >
             {/* Prompt — sticker heading */}
-            <motion.h2
-              variants={itemVariants}
-              className="mb-2 text-center sticker-heading text-[clamp(1.6rem,6vw,2.15rem)] leading-[1.02]"
-            >
-              {currentQuestion.prompt}
-            </motion.h2>
+            <div className={cn("mb-2", showStyleMascot && "relative")}>
+              <motion.h2
+                variants={itemVariants}
+                className={cn(
+                  "sticker-heading text-[clamp(1.6rem,6vw,2.15rem)] leading-[1.02]",
+                  showStyleMascot
+                    ? "text-left pr-[7.4rem] sm:pr-[9.2rem]"
+                    : "text-center"
+                )}
+              >
+                {currentQuestion.prompt}
+              </motion.h2>
+
+              {showStyleMascot && (
+                <img
+                  src="/assets/unused/boi.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-0 top-1 w-[114px] sm:w-[139px] h-auto select-none"
+                  draggable={false}
+                />
+              )}
+            </div>
             {/* Per-question description */}
             {currentQuestion.subtitle && (
               <motion.p
                 variants={itemVariants}
-                className="mb-6 sm:mb-7 text-center text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] text-[#e6009e]"
+                className={cn(
+                  "mb-6 sm:mb-7 text-[11px] sm:text-xs font-medium uppercase tracking-[0.14em] text-[#e6009e]",
+                  showStyleMascot
+                    ? "text-left pr-[7.4rem] sm:pr-[9.2rem]"
+                    : "text-center"
+                )}
               >
                 {currentQuestion.subtitle}
               </motion.p>

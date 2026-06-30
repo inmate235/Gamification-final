@@ -41,7 +41,7 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   {
     id: "style",
     prompt: "Which style speaks to you?",
-    subtitle: "Pick the aesthetic that feels most you",
+    subtitle: "Pick the vibe that fits you",
     options: [
       {
         id: "bold",

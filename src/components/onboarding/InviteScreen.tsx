@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -53,13 +53,36 @@ type Phase = "input" | "transitioning" | "welcome";
  *   0–20%  curtains close from sides
  *   20–32% lock badge appears + shakes
  *   30–36% white flash on unlock
- *   34–76% ACCESS GRANTED stamp (the hero moment)
- *   76–82% stamp fades
- *   80–100% curtains reopen to sides
+ *   34–70% ACCESS GRANTED stamp (the hero moment)
+ *   70–86% center glow hold (~1s)
+ *   86–100% curtains reopen to sides
  *   at 100% welcome card shown
  */
-const TRANSITION_DURATION = 3200;
+/** Extra hold time for ACCESS GRANTED before welcome appears. */
+const ACCESS_GRANTED_EXTRA_MS = 2000;
+const CENTER_GLOW_HOLD_MS = 1000;
+const DOOR_REOPEN_MS = 900;
+const TRANSITION_DURATION =
+  3200 + ACCESS_GRANTED_EXTRA_MS + CENTER_GLOW_HOLD_MS;
 const TD = TRANSITION_DURATION / 1000;
+
+const DOOR_CLOSE_END = 0.2;
+const UNLOCK_FLASH_START = 0.3;
+const UNLOCK_FLASH_END = 0.36;
+const STAMP_IN_START = 0.34;
+const STAMP_SETTLE = 0.4;
+const LOCK_SHAKE_START = DOOR_CLOSE_END + 0.02;
+const LOCK_UNLOCK_START = UNLOCK_FLASH_START + 0.01;
+const LOCK_FADE_END = UNLOCK_FLASH_END + 0.02;
+const CURTAIN_REOPEN_START = 1 - DOOR_REOPEN_MS / TRANSITION_DURATION;
+const CENTER_GLOW_START =
+  CURTAIN_REOPEN_START - CENTER_GLOW_HOLD_MS / TRANSITION_DURATION;
+const STAMP_HOLD_END = Math.max(STAMP_SETTLE + 0.18, CENTER_GLOW_START - 0.06);
+const STAMP_FADE_START = STAMP_HOLD_END;
+const STAMP_FADE_END = Math.min(CURTAIN_REOPEN_START - 0.01, CENTER_GLOW_START + 0.02);
+const GLOW_RAMP_UP_END = CENTER_GLOW_START + 0.03;
+const GLOW_HOLD_END = Math.max(GLOW_RAMP_UP_END + 0.04, CURTAIN_REOPEN_START - 0.02);
+const GLOW_EXIT_END = Math.min(1, CURTAIN_REOPEN_START + 0.05);
 
 const isTest =
   typeof process !== "undefined" && process.env.NODE_ENV === "test";
@@ -85,23 +108,26 @@ interface ConfettiPiece {
   delay: number; drift: number; rotate: number; duration: number;
 }
 
+function seededUnit(seed: number): number {
+  const value = Math.sin(seed * 12.9898) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
 function useConfettiPieces(count = 28): ConfettiPiece[] {
-  const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
-  useEffect(() => {
-    setPieces(
+  return useMemo(
+    () =>
       Array.from({ length: count }, (_, i) => ({
         id: i,
-        x: Math.random() * 100,
+        x: seededUnit(i * 7 + 11) * 100,
         color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        size: 6 + Math.random() * 8,
-        delay: Math.random() * 0.8,
-        drift: (Math.random() - 0.5) * 120,
-        rotate: Math.random() * 720 - 360,
-        duration: 1.4 + Math.random() * 1.2,
-      }))
-    );
-  }, [count]);
-  return pieces;
+        size: 6 + seededUnit(i * 7 + 13) * 8,
+        delay: seededUnit(i * 7 + 17) * 0.8,
+        drift: (seededUnit(i * 7 + 19) - 0.5) * 120,
+        rotate: seededUnit(i * 7 + 23) * 720 - 360,
+        duration: 1.4 + seededUnit(i * 7 + 29) * 1.2,
+      })),
+    [count]
+  );
 }
 
 function formatCode(raw: string): string {
@@ -145,6 +171,11 @@ export function InviteScreen() {
     return null;
   }, []);
 
+  const routeToSurvey = useCallback(() => {
+    advanceToSurvey();
+    router.push("/survey");
+  }, [advanceToSurvey, router]);
+
   const handleSubmit = useCallback(() => {
     if (submitting) return;
     const validationError = validateCode(code);
@@ -173,12 +204,12 @@ export function InviteScreen() {
       () => {
         setIsExiting(true);
         setTimeout(() => {
-          router.push("/survey");
+          routeToSurvey();
         }, EXIT_DELAY);
       },
       isTest ? 0 : 6650 + TRANSITION_DURATION
     );
-  }, [code, submitting, validateCode, router, advanceToSurvey]);
+  }, [code, submitting, validateCode, advanceToSurvey, routeToSurvey]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,9 +236,9 @@ export function InviteScreen() {
     if (navTimerRef.current) clearTimeout(navTimerRef.current);
     setIsExiting(true);
     setTimeout(() => {
-      router.push("/survey");
+      routeToSurvey();
     }, EXIT_DELAY);
-  }, [isExiting, router]);
+  }, [isExiting, routeToSurvey]);
 
   useEffect(() => {
     return () => {
@@ -630,13 +661,12 @@ export function InviteScreen() {
 
       {/* ================================================================
           DOOR TRANSITION OVERLAY
-          Timeline (TD = 3.2s):
+          Timeline (TD = TRANSITION_DURATION / 1000):
             0–20%    Curtains sweep in from sides (close)
-            20–32%   Lock badge appears + shakes
-            30–36%   White flash + unlock
-            34–76%   ACCESS GRANTED stamp (the hero moment, ~1.3s)
-            76–82%   Stamp fades
-            80–100%  Curtains sweep back out to sides (open)
+            20–36%   Unlock sequence (lock + flash)
+            34–66%   ACCESS GRANTED stamp (hero moment)
+            66–85%   Center glow hold (~1s)
+            85–100%  Curtains sweep back out to sides (open)
             at 100%  navigate to /survey
           ================================================================ */}
       <AnimatePresence>
@@ -659,7 +689,7 @@ export function InviteScreen() {
               animate={{ x: ["-100%", "0%", "0%", "-100%"] }}
               transition={{
                 duration: TD,
-                times: [0, 0.20, 0.80, 1.0],
+                times: [0, DOOR_CLOSE_END, CURTAIN_REOPEN_START, 1.0],
                 ease: SMOOTH,
               }}
             >
@@ -693,7 +723,7 @@ export function InviteScreen() {
               animate={{ x: ["100%", "0%", "0%", "100%"] }}
               transition={{
                 duration: TD,
-                times: [0, 0.20, 0.80, 1.0],
+                times: [0, DOOR_CLOSE_END, CURTAIN_REOPEN_START, 1.0],
                 ease: SMOOTH,
               }}
             >
@@ -727,8 +757,34 @@ export function InviteScreen() {
               animate={{ opacity: [0, 1, 1, 0], scaleY: [0, 1, 1, 0] }}
               transition={{
                 duration: TD,
-                times: [0, 0.20, 0.26, 0.30],
+                times: [0, DOOR_CLOSE_END, LOCK_SHAKE_START, UNLOCK_FLASH_START],
                 ease: "easeOut",
+              }}
+            />
+
+            {/* Center core glow hold before doors reopen */}
+            <motion.div
+              className="absolute inset-y-0 left-1/2 w-[22px] -translate-x-1/2"
+              style={{
+                background:
+                  "linear-gradient(180deg,rgba(255,230,0,0.10) 0%,rgba(255,255,255,0.86) 40%,rgba(255,230,0,0.14) 100%)",
+                filter: "blur(6px)",
+              }}
+              initial={{ opacity: 0, scaleY: 0.65 }}
+              animate={{
+                opacity: [0, 0, 1, 1, 0],
+                scaleY: [0.65, 0.65, 1, 1.06, 1.12],
+              }}
+              transition={{
+                duration: TD,
+                times: [
+                  0,
+                  CENTER_GLOW_START,
+                  GLOW_RAMP_UP_END,
+                  GLOW_HOLD_END,
+                  GLOW_EXIT_END,
+                ],
+                ease: "easeInOut",
               }}
             />
 
@@ -739,7 +795,7 @@ export function InviteScreen() {
               animate={{ opacity: [0, 0, 0.55, 0] }}
               transition={{
                 duration: TD,
-                times: [0, 0.30, 0.32, 0.36],
+                times: [0, UNLOCK_FLASH_START, UNLOCK_FLASH_START + 0.02, UNLOCK_FLASH_END],
                 ease: "easeOut",
               }}
             />
@@ -755,7 +811,7 @@ export function InviteScreen() {
                 }}
                 transition={{
                   duration: TD,
-                  times: [0, 0.20, 0.26, 0.32, 0.38, 1.0],
+                  times: [0, DOOR_CLOSE_END, LOCK_SHAKE_START, LOCK_UNLOCK_START, LOCK_FADE_END, 1.0],
                   ease: POP,
                 }}
               >
@@ -805,7 +861,7 @@ export function InviteScreen() {
                   animate={{ rotate: [0, -12, 12, -8, 8, 0] }}
                   transition={{
                     duration: 0.25,
-                    delay: 0.22 * TD,
+                    delay: LOCK_SHAKE_START * TD,
                     repeat: 1,
                     ease: "easeInOut",
                   }}
@@ -816,7 +872,7 @@ export function InviteScreen() {
                     animate={{ opacity: [1, 1, 1, 0, 0] }}
                     transition={{
                       duration: TD,
-                      times: [0, 0.24, 0.29, 0.32, 1],
+                      times: [0, LOCK_SHAKE_START, LOCK_UNLOCK_START - 0.01, LOCK_UNLOCK_START, 1],
                       ease: "easeOut",
                     }}
                   >
@@ -828,7 +884,7 @@ export function InviteScreen() {
                     animate={{ opacity: [0, 0, 0, 1, 1, 0] }}
                     transition={{
                       duration: TD,
-                      times: [0, 0.24, 0.29, 0.32, 0.36, 0.38],
+                      times: [0, LOCK_SHAKE_START, LOCK_UNLOCK_START - 0.01, LOCK_UNLOCK_START, LOCK_FADE_END, LOCK_FADE_END + 0.02],
                       ease: "easeOut",
                     }}
                   >
@@ -859,7 +915,7 @@ export function InviteScreen() {
                       }}
                       transition={{
                         duration: 0.5,
-                        delay: 0.32 * TD,
+                        delay: LOCK_UNLOCK_START * TD + i * 0.04,
                         ease: "easeOut",
                       }}
                     />
@@ -887,7 +943,7 @@ export function InviteScreen() {
                 }}
                 transition={{
                   duration: TD,
-                  times: [0, 0.35, 0.40, 0.76, 0.82],
+                  times: [0, STAMP_IN_START + 0.01, STAMP_SETTLE, STAMP_FADE_START, STAMP_FADE_END],
                   ease: "easeOut",
                 }}
               />
@@ -903,7 +959,7 @@ export function InviteScreen() {
                 }}
                 transition={{
                   duration: TD,
-                  times: [0, 0.34, 0.40, 0.76, 0.82],
+                  times: [0, STAMP_IN_START, STAMP_SETTLE, STAMP_FADE_START, STAMP_FADE_END],
                   ease: [0.34, 1.56, 0.64, 1],
                 }}
               >

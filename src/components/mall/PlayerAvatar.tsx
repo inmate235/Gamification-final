@@ -37,6 +37,8 @@ export function PlayerAvatar() {
     zone: playerPosition.zoneId,
   });
   const prevZoneRef = useRef<string>(playerPosition.zoneId);
+  const [isMoving, setIsMoving] = useState(false);
+  const moveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* --- Recompute the corridor keyframes whenever the zone changes --- */
   useEffect(() => {
@@ -49,6 +51,12 @@ export function PlayerAvatar() {
       zone: playerPosition.zoneId,
     });
     prevZoneRef.current = playerPosition.zoneId;
+    setIsMoving(true);
+    if (moveTimerRef.current) clearTimeout(moveTimerRef.current);
+    moveTimerRef.current = setTimeout(() => setIsMoving(false), MOVE_DURATION * 1000);
+    return () => {
+      if (moveTimerRef.current) clearTimeout(moveTimerRef.current);
+    };
   }, [playerPosition.zoneId, playerPosition.x, playerPosition.y]);
 
   const hasWaypoints = path.x.length > 1;
@@ -109,17 +117,33 @@ export function PlayerAvatar() {
         </text>
       </g>
 
-      {/* Walking sway/bobbing animation wrapper */}
+      {/* Walking animation with moving/idle distinction.
+          When moving: strong bob + sway + rotation at a walking stride.
+          When idle: gentle breathing sway so the avatar feels alive but calm. */}
       <motion.g
         animate={{
-          y: [0, -4, 0],
-          rotate: [-3, 3, -3],
+          y: isMoving ? [0, -5, 0] : [0, -1.5, 0],
+          x: isMoving ? [0, 2, 0] : [0, 0.8, 0],
+          rotate: isMoving ? [-4, 3, -4] : [-1, 1, -1],
           scaleX: isFlipped ? -1 : 1,
         }}
         transition={{
-          y: { duration: 0.7, repeat: Infinity, ease: "easeInOut" },
-          rotate: { duration: 0.7, repeat: Infinity, ease: "easeInOut" },
-          scaleX: { duration: 0.25 }
+          y: {
+            duration: isMoving ? 0.6 : 1.8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+          x: {
+            duration: isMoving ? 0.6 : 1.8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+          rotate: {
+            duration: isMoving ? 0.6 : 1.8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+          scaleX: { duration: 0.25 },
         }}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
       >

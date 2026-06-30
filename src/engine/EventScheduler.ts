@@ -166,12 +166,13 @@ export class EventScheduler {
     }
 
     // 5. Phantom movement -> update positions every 2s (every 2nd tick) so
-    //    walking reads as continuous rather than jump-then-freeze. The
-    //    ambient background crowd ticks on the same cadence
-    //    (VAL-CROSS-039, VAL-CROSS-051).
+    //    walking reads as continuous rather than jump-then-freeze
+    //    (VAL-CROSS-039, VAL-CROSS-051). The ambient background crowd ticks
+    //    every 1s so per-NPC staggered scheduling (each NPC moves every 2-3s
+    //    on its own phase) produces smooth, desynchronised movement.
+    useCrowdStore.getState().tickCrowd();
     if (this.tickCount % 2 === 0) {
       useSocialStore.getState().movePhantoms();
-      useCrowdStore.getState().tickCrowd();
     }
 
     // 6. Flash sale background timer tick — decrement countdowns for ALL

@@ -10,6 +10,7 @@
  */
 
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { OnboardingState, OnboardingStep } from "@/types";
 
 /* ============================================================================
@@ -49,28 +50,37 @@ const initialOnboardingState: OnboardingState = {
   onboardingStep: "invite",
 };
 
-export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
-  ...initialOnboardingState,
+export const useOnboardingStore = create<OnboardingStore>()(
+  persist(
+    (set, get) => ({
+      ...initialOnboardingState,
 
-  setStep: (step) =>
-    set((state) => ({
-      onboardingStep: canAdvanceTo(state.onboardingStep, step)
-        ? step
-        : state.onboardingStep,
-    })),
+      setStep: (step) =>
+        set((state) => ({
+          onboardingStep: canAdvanceTo(state.onboardingStep, step)
+            ? step
+            : state.onboardingStep,
+        })),
 
-  advanceToSurvey: () => get().setStep("survey"),
+      advanceToSurvey: () => get().setStep("survey"),
 
-  advanceToMall: () => get().setStep("mall"),
+      advanceToMall: () => get().setStep("mall"),
 
-  isInviteValidated: () => {
-    const step = get().onboardingStep;
-    return step === "survey" || step === "mall";
-  },
+      isInviteValidated: () => {
+        const step = get().onboardingStep;
+        return step === "survey" || step === "mall";
+      },
 
-  isOnboardingComplete: () => get().onboardingStep === "mall",
+      isOnboardingComplete: () => get().onboardingStep === "mall",
 
-  reset: () => set({ ...initialOnboardingState }),
-}));
+      reset: () => set({ ...initialOnboardingState }),
+    }),
+    {
+      name: "murky-onboarding-step",
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({ onboardingStep: state.onboardingStep }),
+    }
+  )
+);
 
 export default useOnboardingStore;

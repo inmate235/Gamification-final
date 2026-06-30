@@ -39,28 +39,49 @@ interface PhantomAvatarProps {
   phantom: PhantomUser;
 }
 
+/** Deterministic 0..1 hash from a string with a seed multiplier. */
+function hash01(id: string, seed: number = 1): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    h = (h * 31 + id.charCodeAt(i) * seed) | 0;
+  }
+  return (Math.abs(h) % 1000) / 1000;
+}
+
 /** A single phantom avatar on the map. */
 function PhantomAvatar({ phantom }: PhantomAvatarProps) {
   const { x, y } = phantom.position;
 
-  // Deterministic movement speed per phantom. Durations are kept just under
-  // the 2-second phantom tick so the walk animation is continuous — the
-  // avatar is always mid-stride when the next position arrives.
-  const { moveDuration } = useMemo(() => {
-    let hash = 0;
-    for (let i = 0; i < phantom.id.length; i += 1) {
-      hash = (hash * 31 + phantom.id.charCodeAt(i)) | 0;
-    }
-    const absHash = Math.abs(hash);
+  // Per-phantom animation parameters derived from deterministic hashes so
+  // each phantom walks with a unique gait — different bob heights, rotation
+  // amounts, and stride speeds. moveDuration slightly exceeds the 2-second
+  // phantom tick so some phantoms are still mid-stride when the next position
+  // arrives, and Framer Motion smoothly retargets instead of freeze-jumping.
+  const {
+    moveDuration,
+    walkBobAmp,
+    walkRotateAmp,
+    walkSpeed,
+    idleBobAmp,
+    idleSpeed,
+  } = useMemo(() => {
+    const r1 = hash01(phantom.id, 1);
+    const r2 = hash01(phantom.id, 3);
+    const r3 = hash01(phantom.id, 7);
     return {
-      moveDuration: 1.4 + (absHash % 4) * 0.15, // 1.4 .. 1.85 seconds
+      // 1.9..2.3s — slightly overlaps the 2s tick for continuous motion.
+      moveDuration: 1.9 + r1 * 0.4,
+      walkBobAmp: 2 + r2 * 2.5, // 2 .. 4.5 SVG units
+      walkRotateAmp: 2 + r3 * 3, // 2 .. 5 degrees
+      walkSpeed: 0.45 + r1 * 0.25, // 0.45 .. 0.7s per stride
+      idleBobAmp: 0.8 + r2 * 1.2, // 0.8 .. 2 — gentle breathing when idle
+      idleSpeed: 1.5 + r3 * 1.0, // 1.5 .. 2.5s — slow idle sway
     };
   }, [phantom.id]);
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const prevPosRef = useRef({ x, y });
-  // Brief grace period after a position change before we mark idle again.
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -71,7 +92,6 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
       prevPosRef.current = { x, y };
       setIsMoving(true);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      // Keep walking animation alive for the full moveDuration, then idle.
       idleTimerRef.current = setTimeout(() => setIsMoving(false), moveDuration * 1000);
     }
     return () => {
@@ -122,16 +142,30 @@ function PhantomAvatar({ phantom }: PhantomAvatarProps) {
         </text>
       </g>
 
-      {/* Walking sway/bobbing — active only while position is changing */}
+      {/* Walking sway/bobbing with per-phantom variety.
+          When moving: full bob + rotate at the phantom's stride speed.
+          When idle: gentle breathing sway so the phantom never freezes. */}
       <motion.g
         animate={{
-          y: isMoving ? [0, -3, 0] : 0,
-          rotate: isMoving ? [-3, 3, -3] : 0,
+          y: isMoving
+            ? [0, -walkBobAmp, 0]
+            : [0, -idleBobAmp, 0],
+          rotate: isMoving
+            ? [-walkRotateAmp, walkRotateAmp, -walkRotateAmp]
+            : [-1, 1, -1],
           scaleX: isFlipped ? -1 : 1,
         }}
         transition={{
-          y: { duration: 0.55, repeat: isMoving ? Infinity : 0, ease: "easeInOut" },
-          rotate: { duration: 0.55, repeat: isMoving ? Infinity : 0, ease: "easeInOut" },
+          y: {
+            duration: isMoving ? walkSpeed : idleSpeed,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
+          rotate: {
+            duration: isMoving ? walkSpeed : idleSpeed,
+            repeat: Infinity,
+            ease: "easeInOut",
+          },
           scaleX: { duration: 0.2 },
         }}
         style={{ transformBox: "fill-box", transformOrigin: "center" }}
